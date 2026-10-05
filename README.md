@@ -108,6 +108,8 @@ python3 tools/bench.py                                   # all suites
 python3 tools/bench.py --baseline tools/baseline.json    # report what got better or worse
 ```
 
+`tools/book_cases.py` cuts real exercise screenshots out of a textbook PDF that has a text layer (ebook conversions work well) and writes ground truth from the PDF's own text and italics. Put them in the gitignored `tools/fixtures/private/` and run `python3 tools/bench.py --suite real`; the crops are copyrighted, so they are never committed. `tools/bakeoff.py` scores vision-language OCR models served by llama.cpp on the same cases (see `docs/REVIEW.md`).
+
 ## Limitations
 
 - **Proofread the output.** texcopy warns about tokens the model was under 50% sure of, and refuses to copy output where the model got stuck repeating itself, but a confident answer can still be wrong. It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.

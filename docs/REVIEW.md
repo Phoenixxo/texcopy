@@ -26,6 +26,8 @@ image source ──► preprocess ──► ENCODER ──► 578 feature vector
 | `src/prose.rs` | sentence with inline math → text with `$...$` (13 unit tests) | ~600 |
 | `tools/bench.py` | regression benchmark (needs `pdflatex`, `pdftoppm`, `magick`) | ~300 |
 | `tools/gallery.py` | visual report: inputs, outputs, confidence (writes `gallery/index.html`, gitignored) | ~200 |
+| `tools/book_cases.py` | cuts real exercise crops + ground truth out of a textbook PDF into `tools/fixtures/private/` (gitignored) | ~230 |
+| `tools/bakeoff.py` | scores vision-language OCR models (llama.cpp servers) on the benchmark cases | ~200 |
 | `tools/fixtures/textbook-5.4.png` | your real textbook screenshot, used by the prose suite | |
 | `tools/baseline.json` | saved benchmark results to compare against | |
 | `.github/workflows/ci.yml` | build + lint + test on macOS ARM, Windows, Linux | |
@@ -216,6 +218,7 @@ Resolve these over time; tick when closed.
 - [ ] **Phase 2** — spike: one `egui` window from full-screen frozen overlay to small popup (**check in after it**)
 - [ ] **Phase 3** — popup app: drag-select overlay, editable result, copy button, wrap selector, low-confidence highlighting, background model load with progress bar
 - [ ] **Phase 4** — packaging: shortcut docs per OS, macOS `.app`, release builds from CI
+- [ ] **Decision pending:** vision-language backend (OvisOCR2 / MinerU2.5-Pro / PaddleOCR-VL). On 45 real textbook exercises: texcopy's small model 22 exact / 14 close / 9 wrong; all three vision models 44 exact / 1 close / 0 wrong, ~0.3-0.45 s each, ~1.35-1.5 GB RAM while loaded (with `--cache-ram 0`), 1.0-1.8 GB on disk.
 - [ ] **Next candidate** — split images into text lines and read each (fixes 3+ line paragraphs and very long lines); decide how to handle `v` vs `\nu`
 - [ ] **Later** — train or fine-tune your own model (the data can be generated with `pdflatex`); minimal ONNX Runtime build for a much smaller binary; row-splitting for multi-line formulas; splitting very wide equations
 
