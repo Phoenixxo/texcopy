@@ -18,9 +18,26 @@ LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recoverin
 2. The image is flattened onto white, inverted if it's dark mode, and resized to the model's 384x384 input (stretched by default, which handles wide formulas best; `--fit pad` keeps the aspect ratio instead).
 3. A vision transformer (the *encoder*) turns it into 578 feature vectors.
 4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
-5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning.
+5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning. If the image turns out to be a sentence rather than a formula, `prose.rs` takes over (see below).
 
 The model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to your OS's per-user cache folder (for example `~/Library/Caches/texcopy` on macOS). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
+
+## Sentences with inline math
+
+Point it at a line or two of a textbook problem and it returns running text with the math marked:
+
+```
+$ texcopy problem.png
+5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.
+```
+
+The model is trained on formulas, so it writes sentences as `\mathrm{W o r d s ~ l i k e ~ t h i s}`, wraps visual lines in an `array`, and doesn't say which letters were italic. Prose mode (`src/prose.rs`) flattens the lines into one paragraph, glues words broken at a line end (`cut-` + `vertex`), re-joins a formula cut by a line break, and wraps the math in `$...$` using rules: a lone letter other than `a`, `A`, `I` is math; so are intervals like `[a,b]`, expressions with `= < > + ^ _`, and digit-letter mixes like `n-1` (but not `3-regular`). It only activates when there are at least four real words and no more math-like tokens than word-like ones, so formulas with a bit of `\text{if }` are untouched. `--wrap` is ignored for sentences, and `--json` reports `"kind": "prose"` or `"math"`.
+
+Limits, measured on `tools/bench.py --suite prose` (21 cases, 17 exact):
+
+- **One or two lines work; three or more are unreliable.** The model reads the whole image at once and on a tall block it can lose the spaces between words (`beaconnectedgraphwith`). texcopy warns when it sees that. Select one line at a time.
+- **It can't see italics**, so it cannot tell the variable `a` from the article "a" (both stay words), and it sometimes reads an italic `v` as `\nu`. texcopy prints a note whenever it outputs `\nu`.
+- Wording errors by the model (`Euler` read as `Enler`) are flagged by the low-confidence warning when it was unsure.
 
 ## Using a different model
 
@@ -95,7 +112,8 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 
 - **Proofread the output.** texcopy warns about tokens the model was under 50% sure of, and refuses to copy output where the model got stuck repeating itself, but a confident answer can still be wrong. It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
 - The cleaned-up output uses `\text`, `\binom` and `pmatrix`-style environments, so the document you paste into needs `amsmath` (use `--raw` to see exactly what the model produced).
-- One formula per selection. Paragraphs, tables and multi-line alignments are out of scope.
+- One formula or one or two lines of text per selection. Longer paragraphs, tables and multi-line alignments are out of scope. Tables sometimes come out nearly right, but don't rely on it.
+- **Math fonts matter.** Times-style math is read well. In the benchmark, formulas typeset in Palatino (`mathpazo`) came out as garbage, so unusual math fonts are a known weakness.
 - Interactive drag-select is macOS-only for now. Only macOS has actually been run: the Windows and Linux clipboard and capture code type-checks against those targets but has not been exercised on a real machine.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
 

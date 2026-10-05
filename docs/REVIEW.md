@@ -1,6 +1,6 @@
 # texcopy review checklist
 
-Come back to this any time to remember what exists, why, and how to check it. Tick boxes as you go (`- [x]`). Everything here describes the state after **Phase 1** (git history up to `5511c2f`).
+Come back to this any time to remember what exists, why, and how to check it. Tick boxes as you go (`- [x]`). Everything here describes the state after **Phase 1** plus the **prose mode** work that followed (git history up to `9fcf054`).
 
 ## 0. The picture in one minute
 
@@ -22,8 +22,11 @@ image source ──► preprocess ──► ENCODER ──► 578 feature vector
 | `src/fetch.rs` | find the model folder, first-run download, cache dir | ~105 |
 | `src/capture.rs` | screenshots (`xcap`), `--region` crop, macOS selector | ~115 |
 | `src/clipboard.rs` | read image / write text; Linux helper process | ~75 |
-| `src/tidy.rs` | raw tokens → idiomatic LaTeX (9 unit tests) | ~625 |
-| `tools/bench.py` | regression benchmark (needs `pdflatex`, `pdftoppm`, `magick`) | ~255 |
+| `src/tidy.rs` | raw tokens → idiomatic LaTeX (10 unit tests) | ~650 |
+| `src/prose.rs` | sentence with inline math → text with `$...$` (13 unit tests) | ~600 |
+| `tools/bench.py` | regression benchmark (needs `pdflatex`, `pdftoppm`, `magick`) | ~300 |
+| `tools/gallery.py` | visual report: inputs, outputs, confidence (writes `gallery/index.html`, gitignored) | ~200 |
+| `tools/fixtures/textbook-5.4.png` | your real textbook screenshot, used by the prose suite | |
 | `tools/baseline.json` | saved benchmark results to compare against | |
 | `.github/workflows/ci.yml` | build + lint + test on macOS ARM, Windows, Linux | |
 
@@ -33,13 +36,15 @@ image source ──► preprocess ──► ENCODER ──► 578 feature vector
 
 Run from the repo root. Tick each when it behaves as stated.
 
-- [ ] `cargo test --release` → **17 passed** (tidy 9, model 4, capture 2, fetch 1, spec 1)
+- [ ] `cargo test --release` → **31 passed** (prose 13, tidy 10, model 4, capture 2, fetch 1, spec 1)
 - [ ] `cargo clippy --locked --all-targets -- -D warnings` → no warnings
 - [ ] `cargo fmt --check` → no output
 - [ ] `cargo build --release && ls -l target/release/texcopy` → about **22.9 MB** on Apple Silicon
-- [ ] `python3 tools/bench.py --baseline tools/baseline.json` → totals **48 exact / 5 close / 3 differs / 1 FAIL**, and "**0 improved, 0 regressed**" (takes about a minute; needs the LaTeX tools)
+- [ ] `python3 tools/bench.py --baseline tools/baseline.json` → totals **67 exact / 9 close / 3 differs / 3 FAIL** (82 cases), and "**0 improved, 0 regressed**" (takes about a minute; needs the LaTeX tools)
 - [ ] `./target/release/texcopy some-formula.png --no-copy` prints LaTeX
-- [ ] `./target/release/texcopy some-formula.png --json` shows `latex`, `raw`, `stop`, `min_prob`, `tokens[]`
+- [ ] `./target/release/texcopy some-formula.png --json` shows `latex`, `kind`, `raw`, `stop`, `min_prob`, `tokens[]`
+- [ ] `./target/release/texcopy tools/fixtures/textbook-5.4.png --no-copy` prints exactly `5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.`
+- [ ] `python3 tools/gallery.py --open` opens a page with 17 cards
 
 If the benchmark says "REGRESSED", something changed behaviour: find which commit (`git bisect` works well here).
 
@@ -87,15 +92,28 @@ Order in `tidy()`: `compact` → `modernize_fonts` → `known_operators` → `de
 - [ ] Output needs `amsmath` in the destination document (`\text`, `\binom`, `pmatrix`). `--raw` shows the model's untouched output.
 - [ ] Safety property: the benchmark's re-render check proves tidy changes formatting, not appearance. Run `python3 tools/bench.py --verbose` and read the outputs yourself.
 
+### D2. Prose mode (`src/prose.rs`)
+Runs *before* the math rules: `tidy_with_kind` compacts the text, tries `prose::convert`, and falls back to the formula pipeline if it returns `None`.
+
+- [ ] **Rows** (`rows`): strips a single-column `array` wrapper (`{l}`, `{c}`, `{r}`; anything else is a table and is rejected), splits at top-level `\\`, drops a `[-2pt]` spacing argument, strips redundant outer braces.
+- [ ] **Pieces** (`scan`): `\mathrm`/`\text`/`\textup`... groups are text; `~`, `\;`, `\,`, `\ ` are spaces; `\vspace{..}`, `\hfill`, `\noindent` are dropped; other commands (`\overline{G}`) are math; outside a text group, runs of digits are text and everything else is math; trailing `. , ; :` always go back to text; `^`/`_` keep their argument verbatim (including inside a text group; this was a bug once).
+- [ ] **Words → math** (`looks_math`, `explode_math_words`): a lone letter except `a`, `A`, `I`; words with `= < > + ^ _ [ ] \`; a digit with letters but no run of 3 letters (`n-1` yes, `3-regular` no).
+- [ ] **Joining** (`repair_line_breaks`, `join_math`): `cut-` + `vertex`; neighbouring math, an operator and its operand (`n\geq` + `1`), a formula cut by a line break (`1+2+` / `\cdots+n`).
+- [ ] **Deciding** (`is_prose`): at least 4 real words (3+ letters) and word-like tokens ≥ math-like tokens. Check the test `formulas_stay_formulas`.
+- [ ] **Rendering** (`render`): space between words; none before punctuation; between a word and a formula a space unless the text side is punctuation or a hyphen (`$x$-axis`, `$G$.`).
+- [ ] `has_run_together_words`: any 20+ letter run in running text means the model lost the spaces; the CLI warns.
+- [ ] Real outputs are in the tests; two are reconstructed, not captured: the `\vspace` case and the glued `\textup` case (they are marked in comments).
+
 ### E. The command line (`src/main.rs`)
 - [ ] Input options are mutually exclusive: file, `--clipboard`, `--screen` (with `--monitor`, `--region`), or none (macOS selector). Try the invalid combos and confirm the errors.
-- [ ] Output options: `-w none|inline|display`, `--no-copy`, `--raw`, `--json`, `--fit stretch|pad`, `--max-tokens`, `--model-dir` (also `TEXCOPY_MODEL_DIR`).
+- [ ] Output options (`-w` is ignored for sentences): `-w none|inline|display`, `--no-copy`, `--raw`, `--json`, `--fit stretch|pad`, `--max-tokens`, `--model-dir` (also `TEXCOPY_MODEL_DIR`).
 - [ ] Warnings go to stderr, the result to stdout, so `texcopy x.png > out.tex` stays clean.
 - [ ] `--json` never touches the clipboard.
 
 ### F. The benchmark (`tools/bench.py`)
 - [ ] How a case is graded: render true LaTeX → run texcopy → compile its output → compare pixels (`magick compare -metric AE`). **EXACT** = identical, **close** = differs but ≥ 90% text similarity, **differs**, **FAIL** = doesn't compile.
-- [ ] Suites: `basic` (T1–T4), `degraded` (dpi, blur, dark, JPEG, noise, margins, fonts), `stress` (wide, aligned rows, matrices, rare symbols). Table and paragraph are **info only**.
+- [ ] Suites: `basic` (T1–T4), `degraded` (dpi, blur, dark, JPEG, noise, margins, fonts), `stress` (wide, aligned rows, matrices, rare symbols), `prose` (your screenshot plus five sentences at four sizes, graded as text with spacing mattering outside `$...$`). Table and paragraph are **info only**.
+- [ ] Cases that can't be rendered are printed as `SKIPPED` (they used to be dropped silently; see section 5).
 - [ ] `--baseline` diffs per-case grades; `--save` records; `--tool-args "--fit pad"` passes flags through.
 - [ ] Confidence report at the end of each run: how well the least-sure token predicts a wrong answer (~0.82 separation, where 0.5 is useless and 1.0 perfect).
 - [ ] Limits: 57 cases, mostly textbook formulas, so treat the numbers as directional.
@@ -125,6 +143,11 @@ Resolve these over time; tick when closed.
 - [ ] A larger, less textbook benchmark (real paper screenshots, tables of different fonts).
 - [ ] The model reads some symbols wrongly with confidence (e.g. `\nexists` as `\exists`).
 - [ ] Words without explicit spaces in `\mathrm{…}` stay `\mathrm` (can't tell operator from prose).
+- [ ] Prose: three or more lines lose the spaces between words (warned, not fixed). Fix would be splitting the image into lines and reading each; also would help wide single lines.
+- [ ] Prose: italic `v` is sometimes read as `\nu` (4 of the 21 prose cases); the CLI notes it but can't resolve it. `a`/`A`/`I` are always treated as words.
+- [ ] Math fonts: Palatino (`mathpazo`) formulas come out as garbage (2 FAIL in the degraded suite). Times is fine. Other fonts untested.
+- [ ] `tools/fixtures/textbook-5.4.png` is a screenshot from a textbook. Decide whether to keep it in the repo before publishing it.
+- [ ] `\vspace` and glued-`\textup` unit tests use reconstructed model output, not verbatim captures.
 
 ---
 
@@ -150,6 +173,9 @@ Resolve these over time; tick when closed.
 - [ ] README Build section silently deleted in step 3; restored in `5511c2f`.
 - [ ] First four commits had bodies and a co-author trailer; rewritten with identical contents.
 - [ ] One test of mine expected `^{n}` where the code correctly produced `^n` (test fixed, code was right).
+- [ ] The benchmark's **font cases never ran** for most of the project: `-halt-on-error` treated a harmless missing-font warning as failure and the harness skipped them silently. Now they run, reference renders use a tolerant mode, and skips are printed. Result: Times passes, Palatino fails.
+- [ ] Prose grading first ignored all whitespace, which hid lost spaces (a glued 3-line paragraph graded "close"). Now spacing outside `$...$` counts.
+- [ ] Prose mode first dropped the braces in `e^{i\pi}` inside a text group (found by looking at the gallery, not by a test). Fixed and tested.
 
 ---
 
@@ -172,6 +198,12 @@ Resolve these over time; tick when closed.
 | `9de93d4` | Pure-Rust regex in `tokenizers` |
 | `4708deb` | Fat LTO, `panic=abort`, fewer codecs |
 | `5511c2f` | README Build section restored |
+| `b636caa` | This checklist |
+| `5284381` | Visual gallery tool |
+| `c48dea5` | Prose suite + textbook fixture in the benchmark |
+| `84e74b6` | Prose mode (`src/prose.rs`) |
+| `526a97d` | Strict prose grading, font cases run, refreshed baseline |
+| `9fcf054` | Textbook-problem cards in the gallery |
 
 `git show <hash> --stat` shows each one's footprint.
 
@@ -183,6 +215,7 @@ Resolve these over time; tick when closed.
 - [ ] **Phase 2** — spike: one `egui` window from full-screen frozen overlay to small popup (**check in after it**)
 - [ ] **Phase 3** — popup app: drag-select overlay, editable result, copy button, wrap selector, low-confidence highlighting, background model load with progress bar
 - [ ] **Phase 4** — packaging: shortcut docs per OS, macOS `.app`, release builds from CI
+- [ ] **Next candidate** — split images into text lines and read each (fixes 3+ line paragraphs and very long lines); decide how to handle `v` vs `\nu`
 - [ ] **Later** — train or fine-tune your own model (the data can be generated with `pdflatex`); minimal ONNX Runtime build for a much smaller binary; row-splitting for multi-line formulas; splitting very wide equations
 
 ---
