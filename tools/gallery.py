@@ -42,10 +42,19 @@ CASES = [
          src=" + ".join(f"a_{{{i}}} x_{{{i}}}" for i in range(1, 21)), pre=WIDE),
     dict(title="Two aligned lines", note="Known weak spot: line breaks are lost, and the model is confident about it.",
          src=r"\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\ (a-b)^2 &= a^2 - 2ab + b^2 \end{aligned}"),
+    dict(title="Textbook problem (your screenshot)", prose=True,
+         note="A real screenshot: a sentence with inline math, wrapped over two lines. texcopy flattens it into one paragraph and marks the math with $...$.",
+         image=os.path.join(bench.ROOT, "tools/fixtures/textbook-5.4.png"), src=bench.PROSE[0]),
+    dict(title="Another problem statement", prose=True,
+         note="Inline math is found by rules: lone letters, intervals and expressions are math; words are not.",
+         src=bench.PROSE[4], width=16),
+    dict(title="Three-line paragraph: the current limit", prose=True,
+         note="The model reads a tall block at once and loses the spaces between words. texcopy warns instead of hiding it.",
+         src=r"5.7 Let $G$ be a connected graph with $n$ vertices and let $v$ be a vertex of $G$. Prove that $G - v$ has at most $\deg(v)$ components, and that equality holds if $v$ is a cut-vertex of a tree.", width=10),
     dict(title="Not a formula: a table", note="Out of scope, but it gets surprisingly close.", raw=True,
          src=r"\begin{tabular}{|c|c|c|}\hline Name & Age & City \\ \hline Ann & 31 & Oslo \\ Bob & 28 & Rome \\ \hline\end{tabular}"),
-    dict(title="Not a formula: a sentence", note="Out of scope: it reads the start and then stops.", raw=True,
-         src=r"The quick brown fox jumps over the lazy dog. Euler showed that $e^{i\pi}+1=0$, which many consider beautiful."),
+    dict(title="A longer sentence", prose=True, note="Reads the first line and then stops: one tall image with two lines of different widths is not reliable yet.",
+         src=r"The quick brown fox jumps over the lazy dog. Euler showed that $e^{i\pi}+1=0$, which many consider beautiful.", width=16),
 ]
 
 CSS = """
@@ -92,20 +101,33 @@ def token_strip(tokens):
 def run_case(b, case):
     src, pre = case["src"], case.get("pre", "")
     raw = case.get("raw", False)
-    ref = b.render(src, pre=pre, raw=raw)
-    image = b.degrade(ref, case["degrade"]) if case.get("degrade") else ref
+    prose = case.get("prose", False)
+    if prose and case.get("image"):
+        ref = image = case["image"]
+    elif prose:
+        body = r"\begin{minipage}{%dcm}%s\end{minipage}" % (case.get("width", 16), src)
+        ref = image = b.render(body, early=bench.PROSE_EARLY, dpi=200, raw=True, opts="[12pt]", strict=False)
+    else:
+        ref = b.render(src, pre=pre, raw=raw)
+        image = b.degrade(ref, case["degrade"]) if case.get("degrade") else ref
     t0 = time.time()
     out, meta = b.texcopy(image)
     ms = (time.time() - t0) * 1000
     refused = meta.get("stop") == "looped"
-    out_png = None if refused or not out else b.render(out, pre=pre)
-    if raw:
+    if prose:
+        out_png = None if refused or not out else b.render(out, early=bench.PROSE_EARLY, dpi=200, raw=True, opts="[12pt]", strict=False)
+        grade, _ = bench.grade_text(src, out)
+    else:
+        out_png = None if refused or not out else b.render(out, pre=pre)
+    if prose:
+        pass
+    elif raw:
         grade = "info"
     elif refused:
         grade = "refused"
     else:
         grade, _ = b.grade(ref, src, out, pre)
-    label = {"EXACT": "exact match", "close": "close", "differs": "different formula", "FAIL": "doesn't compile",
+    label = {"EXACT": "exact match", "close": "close", "differs": "different text" if prose else "different formula", "FAIL": "doesn't compile",
              "refused": "refused", "info": "out of scope"}[grade]
 
     toks = meta.get("tokens", [])
