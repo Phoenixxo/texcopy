@@ -74,6 +74,7 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 ## Limitations
 
 - **Proofread the output.** texcopy warns about tokens the model was under 50% sure of, and refuses to copy output where the model got stuck repeating itself, but a confident answer can still be wrong. It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
+- The cleaned-up output uses `\text`, `\binom` and `pmatrix`-style environments, so the document you paste into needs `amsmath` (use `--raw` to see exactly what the model produced).
 - One formula per selection. Paragraphs, tables and multi-line alignments are out of scope.
 - Interactive drag-select is macOS-only for now. Only macOS has been run so far; the Windows and Linux code paths (including the Linux clipboard helper) are written but not yet exercised.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
