@@ -78,6 +78,21 @@ STRESS = {
     "array diagram": (r"\begin{array}{ccc} A & \to & B \\ \downarrow & & \downarrow \\ C & \to & D \end{array}", ""),
     "triple integral": (r"\iiint_{V} \left( \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2} + \frac{\partial^2 u}{\partial z^2} \right) dV = \oint_{\partial V} \nabla u \cdot \mathbf{n} \, dS", ""),
 }
+# Sentences with inline math, as in a textbook problem set. Rendered in a Times-like font at two
+# line widths (one long line vs a two-line block) and two resolutions.
+PROSE = [
+    r"5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.",
+    r"Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+    r"Prove that for every integer $n \geq 1$, the sum $1 + 2 + \cdots + n$ equals $n(n+1)/2$.",
+    r"Find all real numbers $x$ such that $x^2 - 5x + 6 = 0$.",
+    r"If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
+]
+PROSE_EARLY = r"\usepackage{mathptmx}"  # must load before amsmath/amssymb
+# A real screenshot from a textbook (kept as a fixture) and the text it contains.
+PROSE_FIXTURES = {
+    "fixtures/textbook-5.4.png": PROSE[0],
+}
+
 # Not expected to work: reported for information, never graded.
 INFO_ONLY = {
     "table": r"\begin{tabular}{|c|c|c|}\hline Name & Age & City \\ \hline Ann & 31 & Oslo \\ Bob & 28 & Rome \\ \hline\end{tabular}",
@@ -95,16 +110,19 @@ class Bench:
         self.env = dict(os.environ)
         self.env.setdefault("TEXCOPY_MODEL_DIR", os.path.join(ROOT, "models"))
 
-    def render(self, body, pre="", dpi=200, raw=False):
+    def render(self, body, pre="", dpi=200, raw=False, opts="", early="", strict=True):
         self.n += 1
         name = f"r{self.n}"
         wrapped = body if raw else r"\[ " + body + r" \]"
-        tex = (r"\documentclass{article}\usepackage{amsmath,amssymb,array}" + pre +
+        tex = (r"\documentclass" + opts + r"{article}" + early + r"\usepackage{amsmath,amssymb,array}" + pre +
                r"\pagestyle{empty}\begin{document}\noindent " + wrapped + "\n" + r"\end{document}" + "\n")
         open(os.path.join(self.work, name + ".tex"), "w").write(tex)
-        r = subprocess.run(["pdflatex", "-interaction=batchmode", "-halt-on-error", name + ".tex"],
+        # strict: any LaTeX error is a failure (used for the model's output). Relaxed: a PDF is
+        # enough, which tolerates harmless font warnings in our own reference sources.
+        flags = ["-halt-on-error"] if strict else []
+        r = subprocess.run(["pdflatex", "-interaction=batchmode", *flags, name + ".tex"],
                            cwd=self.work, capture_output=True, timeout=120)
-        if r.returncode:
+        if r.returncode if strict else not os.path.exists(os.path.join(self.work, name + ".pdf")):
             return None
         png = os.path.join(self.work, name + ".png")
         run("pdftoppm", "-r", str(dpi), "-png", "-singlefile", os.path.join(self.work, name + ".pdf"), png[:-4])
@@ -138,6 +156,17 @@ class Bench:
         return ("close" if sim >= 0.9 else "differs"), sim
 
 
+def grade_text(true_src, output):
+    """Prose is graded on the text itself (whitespace ignored), including the $...$ marks."""
+    norm = lambda t: re.sub(r"\s+", "", t)
+    if not output:
+        return "FAIL", 0.0
+    if norm(true_src) == norm(output):
+        return "EXACT", 1.0
+    sim = difflib.SequenceMatcher(None, norm(true_src), norm(output)).ratio()
+    return ("close" if sim >= 0.9 else "differs"), sim
+
+
 def collect(b, suites):
     rows = []
 
@@ -165,6 +194,27 @@ def collect(b, suites):
                 img = b.render(s, pre=pre)
                 if img:
                     add("degraded", f"{s[:20]} font-{nm}", ref, s, img)
+                else:
+                    print(f"  SKIPPED  degraded         {s[:20]} font-{nm}: LaTeX package not installed?", file=sys.stderr)
+    if "prose" in suites:
+        def add_prose(case, true_src, image):
+            out, meta = b.texcopy(image)
+            g, sim = grade_text(true_src, out)
+            rows.append({"suite": "prose", "case": case, "grade": g, "sim": round(sim, 3), "output": out,
+                         "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
+            print(f"  {g:8} {'prose':16} {case}", file=sys.stderr)
+
+        for rel, true_src in PROSE_FIXTURES.items():
+            add_prose("real screenshot " + os.path.basename(rel), true_src, os.path.join(os.path.dirname(os.path.abspath(__file__)), rel))
+        for n, sent in enumerate(PROSE, 1):
+            for width in (16, 9):
+                for dpi in (110, 200):
+                    body = r"\begin{minipage}{%dcm}%s\end{minipage}" % (width, sent)
+                    img = b.render(body, early=PROSE_EARLY, dpi=dpi, raw=True, opts="[12pt]", strict=False)
+                    if img:
+                        add_prose(f"s{n} {width}cm {dpi}dpi", sent, img)
+                    else:
+                        print(f"  SKIPPED  prose            s{n} {width}cm {dpi}dpi: render failed", file=sys.stderr)
     if "stress" in suites:
         for name, (s, pre) in STRESS.items():
             ref = b.render(s, pre=pre)
@@ -224,7 +274,7 @@ def compare(rows, path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bin", default=os.path.join(ROOT, "target/release/texcopy"))
-    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress"])
+    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose"])
     ap.add_argument("--tool-args", default="", help="extra flags for texcopy, e.g. '--fit pad'")
     ap.add_argument("--save", help="write results JSON here")
     ap.add_argument("--baseline", help="compare against a saved results JSON")
@@ -234,7 +284,7 @@ def main():
     missing = [t for t in ("pdflatex", "pdftoppm", "magick") if not shutil.which(t)]
     if missing or not os.path.exists(a.bin):
         sys.exit(f"missing: {', '.join(missing) or a.bin} (build with `cargo build --release`)")
-    suites = {"basic", "degraded", "stress"} if a.suite == "all" else {a.suite}
+    suites = {"basic", "degraded", "stress", "prose"} if a.suite == "all" else {a.suite}
     with tempfile.TemporaryDirectory() as work:
         rows = collect(Bench(a.bin, shlex.split(a.tool_args), work), suites)
     summarize(rows)
