@@ -40,7 +40,7 @@ Run from the repo root. Tick each when it behaves as stated.
 - [ ] `cargo clippy --locked --all-targets -- -D warnings` → no warnings
 - [ ] `cargo fmt --check` → no output
 - [ ] `cargo build --release && ls -l target/release/texcopy` → about **22.9 MB** on Apple Silicon
-- [ ] `python3 tools/bench.py --baseline tools/baseline.json` → totals **67 exact / 9 close / 3 differs / 3 FAIL** (82 cases), and "**0 improved, 0 regressed**" (takes about a minute; needs the LaTeX tools)
+- [ ] `python3 tools/bench.py --baseline tools/baseline.json` → totals **71 exact / 9 close / 3 differs / 1 FAIL** (84 cases), and "**0 improved, 0 regressed**" (takes about a minute; needs the LaTeX tools)
 - [ ] `./target/release/texcopy some-formula.png --no-copy` prints LaTeX
 - [ ] `./target/release/texcopy some-formula.png --json` shows `latex`, `kind`, `raw`, `stop`, `min_prob`, `tokens[]`
 - [ ] `./target/release/texcopy tools/fixtures/textbook-5.4.png --no-copy` prints exactly `5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.`
@@ -145,7 +145,7 @@ Resolve these over time; tick when closed.
 - [ ] Words without explicit spaces in `\mathrm{…}` stay `\mathrm` (can't tell operator from prose).
 - [ ] Prose: three or more lines lose the spaces between words (warned, not fixed). Fix would be splitting the image into lines and reading each; also would help wide single lines.
 - [ ] Prose: italic `v` is sometimes read as `\nu` (4 of the 21 prose cases); the CLI notes it but can't resolve it. `a`/`A`/`I` are always treated as words.
-- [ ] Math fonts: Palatino (`mathpazo`) formulas come out as garbage (2 FAIL in the degraded suite). Times is fine. Other fonts untested.
+- [ ] Math fonts: only Times, txfonts and Latin Modern could be tested (all exact). Palatino, Utopia, Charter etc. render blank on this machine's TeX install, so they are untested, not failing.
 - [ ] `tools/fixtures/textbook-5.4.png` is a screenshot from a textbook. Decide whether to keep it in the repo before publishing it.
 - [ ] `\vspace` and glued-`\textup` unit tests use reconstructed model output, not verbatim captures.
 
@@ -174,6 +174,7 @@ Resolve these over time; tick when closed.
 - [ ] First four commits had bodies and a co-author trailer; rewritten with identical contents.
 - [ ] One test of mine expected `^{n}` where the code correctly produced `^n` (test fixed, code was right).
 - [ ] The benchmark's **font cases never ran** for most of the project: `-halt-on-error` treated a harmless missing-font warning as failure and the harness skipped them silently. Now they run, reference renders use a tolerant mode, and skips are printed. Result: Times passes, Palatino fails.
+- [ ] **I then reported a false weakness.** After the font cases ran, Palatino "failed" for every model, and I wrote it up as a real limit of the model. The reference image was actually 25x25 pixels and blank (missing font metrics dropped every glyph). The harness now rejects blank references, and the claim is removed from the README and this checklist.
 - [ ] Prose grading first ignored all whitespace, which hid lost spaces (a glued 3-line paragraph graded "close"). Now spacing outside `$...$` counts.
 - [ ] Prose mode first dropped the braces in `e^{i\pi}` inside a text group (found by looking at the gallery, not by a test). Fixed and tested.
 

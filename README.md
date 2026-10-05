@@ -113,7 +113,7 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 - **Proofread the output.** texcopy warns about tokens the model was under 50% sure of, and refuses to copy output where the model got stuck repeating itself, but a confident answer can still be wrong. It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
 - The cleaned-up output uses `\text`, `\binom` and `pmatrix`-style environments, so the document you paste into needs `amsmath` (use `--raw` to see exactly what the model produced).
 - One formula or one or two lines of text per selection. Longer paragraphs, tables and multi-line alignments are out of scope. Tables sometimes come out nearly right, but don't rely on it.
-- **Math fonts matter.** Times-style math is read well. In the benchmark, formulas typeset in Palatino (`mathpazo`) came out as garbage, so unusual math fonts are a known weakness.
+- **Fonts:** Times, txfonts and Latin Modern math all read exactly in the benchmark. Other math fonts (Palatino, Utopia, Charter...) are untested, because the TeX installation the benchmark runs on doesn't ship them.
 - Interactive drag-select is macOS-only for now. Only macOS has actually been run: the Windows and Linux clipboard and capture code type-checks against those targets but has not been exercised on a real machine.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
 
