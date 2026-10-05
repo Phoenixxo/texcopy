@@ -286,8 +286,8 @@
   "sim": 1.0,
   "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
   "stop": "eos",
-  "min_prob": 0.9971451,
-  "mean_logprob": -0.00020679345
+  "min_prob": 0.9980027,
+  "mean_logprob": -0.00014075253
  },
  {
   "suite": "degraded",
@@ -298,6 +298,26 @@
   "stop": "eos",
   "min_prob": 0.9971,
   "mean_logprob": -0.00019944852
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq font-palatino",
+  "grade": "FAIL",
+  "sim": 0.238,
+  "output": "\\fbox{\\displaystyle\\partial_{\\phi}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm",
+  "stop": "looped",
+  "min_prob": 0.13562185,
+  "mean_logprob": -0.34250697
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq font-times",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.99977976,
+  "mean_logprob": -1.17474765e-05
  },
  {
   "suite": "degraded",
@@ -406,8 +426,8 @@
   "sim": 1.0,
   "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
   "stop": "eos",
-  "min_prob": 0.93552524,
-  "mean_logprob": -0.0026867643
+  "min_prob": 0.95275646,
+  "mean_logprob": -0.0019782223
  },
  {
   "suite": "degraded",
@@ -418,6 +438,236 @@
   "stop": "eos",
   "min_prob": 0.51712674,
   "mean_logprob": -0.015347337
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ font-palatino",
+  "grade": "FAIL",
+  "sim": 0.288,
+  "output": "\\fbox{\\displaystyle\\partial_{\\phi}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm",
+  "stop": "looped",
+  "min_prob": 0.13562185,
+  "mean_logprob": -0.34250697
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ font-times",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.938474,
+  "mean_logprob": -0.0019133765
+ },
+ {
+  "suite": "prose",
+  "case": "real screenshot textbook-5.4.png",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "stop": "eos",
+  "min_prob": 0.6711317,
+  "mean_logprob": -0.024285683
+ },
+ {
+  "suite": "prose",
+  "case": "s1 16cm 110dpi",
+  "grade": "close",
+  "sim": 0.966,
+  "output": "5.4 Prove that if $\\nu$ is a cut-vertex of a graph $G$, then $\\nu$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "stop": "eos",
+  "min_prob": 0.4624792,
+  "mean_logprob": -0.046398226
+ },
+ {
+  "suite": "prose",
+  "case": "s1 16cm 200dpi",
+  "grade": "close",
+  "sim": 0.978,
+  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$.",
+  "stop": "eos",
+  "min_prob": 0.43168855,
+  "mean_logprob": -0.022063443
+ },
+ {
+  "suite": "prose",
+  "case": "s1 9cm 110dpi",
+  "grade": "close",
+  "sim": 0.962,
+  "output": "5.4 Prove that if $\\nu$ is a cut--vertex of a graph $G$, then $\\nu$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "stop": "eos",
+  "min_prob": 0.5728267,
+  "mean_logprob": -0.033038564
+ },
+ {
+  "suite": "prose",
+  "case": "s1 9cm 200dpi",
+  "grade": "close",
+  "sim": 0.962,
+  "output": "5.4 Prove that if $\\nu$ is a cut--vertex of a graph $G$, then $\\nu$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "stop": "eos",
+  "min_prob": 0.40856478,
+  "mean_logprob": -0.033518396
+ },
+ {
+  "suite": "prose",
+  "case": "s2 16cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "stop": "eos",
+  "min_prob": 0.6638284,
+  "mean_logprob": -0.030290494
+ },
+ {
+  "suite": "prose",
+  "case": "s2 16cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "stop": "eos",
+  "min_prob": 0.42902288,
+  "mean_logprob": -0.030233216
+ },
+ {
+  "suite": "prose",
+  "case": "s2 9cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "stop": "eos",
+  "min_prob": 0.31837025,
+  "mean_logprob": -0.049653146
+ },
+ {
+  "suite": "prose",
+  "case": "s2 9cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "stop": "eos",
+  "min_prob": 0.4069352,
+  "mean_logprob": -0.02611546
+ },
+ {
+  "suite": "prose",
+  "case": "s3 16cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "stop": "eos",
+  "min_prob": 0.51732635,
+  "mean_logprob": -0.025778558
+ },
+ {
+  "suite": "prose",
+  "case": "s3 16cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "stop": "eos",
+  "min_prob": 0.55974424,
+  "mean_logprob": -0.017845565
+ },
+ {
+  "suite": "prose",
+  "case": "s3 9cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "stop": "eos",
+  "min_prob": 0.7595162,
+  "mean_logprob": -0.008797852
+ },
+ {
+  "suite": "prose",
+  "case": "s3 9cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "stop": "eos",
+  "min_prob": 0.27570528,
+  "mean_logprob": -0.088590935
+ },
+ {
+  "suite": "prose",
+  "case": "s4 16cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "stop": "eos",
+  "min_prob": 0.5435731,
+  "mean_logprob": -0.016049266
+ },
+ {
+  "suite": "prose",
+  "case": "s4 16cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "stop": "eos",
+  "min_prob": 0.8328234,
+  "mean_logprob": -0.017529022
+ },
+ {
+  "suite": "prose",
+  "case": "s4 9cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "stop": "eos",
+  "min_prob": 0.5435731,
+  "mean_logprob": -0.016049266
+ },
+ {
+  "suite": "prose",
+  "case": "s4 9cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "stop": "eos",
+  "min_prob": 0.8328234,
+  "mean_logprob": -0.017529022
+ },
+ {
+  "suite": "prose",
+  "case": "s5 16cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
+  "stop": "eos",
+  "min_prob": 0.8314632,
+  "mean_logprob": -0.011706814
+ },
+ {
+  "suite": "prose",
+  "case": "s5 16cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
+  "stop": "eos",
+  "min_prob": 0.6435017,
+  "mean_logprob": -0.008228693
+ },
+ {
+  "suite": "prose",
+  "case": "s5 9cm 110dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
+  "stop": "eos",
+  "min_prob": 0.4917007,
+  "mean_logprob": -0.024884615
+ },
+ {
+  "suite": "prose",
+  "case": "s5 9cm 200dpi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
+  "stop": "eos",
+  "min_prob": 0.43743217,
+  "mean_logprob": -0.020644268
  },
  {
   "suite": "stress",
@@ -581,6 +831,6 @@
   "case": "paragraph",
   "grade": "info",
   "sim": 0,
-  "output": "\\mathrm{The~quick~brown~fox~jumps~over~the~lazy~dog.~Euler~showed~that~e^{i\\pi}+1=0~,}"
+  "output": "The quick brown fox jumps over the lazy dog. Euler showed that $e^{i\\pi}+1=0$,"
  }
 ]

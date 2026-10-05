@@ -66,7 +66,9 @@ DEGRADE_OPS = {  # name -> ImageMagick args
     "yellow-bg": ["-fuzz", "10%", "-fill", "#fff3b0", "-opaque", "white"],
     "noise": ["+noise", "Gaussian", "-attenuate", "0.3"],
 }
-FONT_PRE = {"palatino": r"\usepackage{mathpazo}", "times": r"\usepackage{newtxtext,newtxmath}"}
+# Loaded before amsmath (their documented order); the references use the tolerant renderer because
+# these fonts emit harmless missing-metric warnings on this machine.
+FONT_EARLY = {"palatino": r"\usepackage{mathpazo}", "times": r"\usepackage{mathptmx}"}
 
 STRESS = {
     **{f"wide {k} terms": (" + ".join(f"a_{{{i}}} x_{{{i}}}" for i in range(1, k + 1)), WIDE_PAGE) for k in (3, 6, 10, 14, 20, 28)},
@@ -157,13 +159,17 @@ class Bench:
 
 
 def grade_text(true_src, output):
-    """Prose is graded on the text itself (whitespace ignored), including the $...$ marks."""
-    norm = lambda t: re.sub(r"\s+", "", t)
+    """Prose is graded as text: spacing between words matters (lost spaces make output unusable),
+    but spacing inside $...$ does not."""
+    def norm(t):
+        parts = t.split("$")
+        return "$".join(re.sub(r"\s+", "", p) if i % 2 else re.sub(r"\s+", " ", p).strip() for i, p in enumerate(parts))
     if not output:
         return "FAIL", 0.0
-    if norm(true_src) == norm(output):
+    a, b = norm(true_src), norm(output)
+    if a == b:
         return "EXACT", 1.0
-    sim = difflib.SequenceMatcher(None, norm(true_src), norm(output)).ratio()
+    sim = difflib.SequenceMatcher(None, a, b).ratio()
     return ("close" if sim >= 0.9 else "differs"), sim
 
 
@@ -190,8 +196,8 @@ def collect(b, suites):
             for nm, args in DEGRADE_OPS.items():
                 add("degraded", f"{s[:20]} {nm}", ref, s, b.degrade(ref, args))
             add("degraded", f"{s[:20]} jpeg-q20", ref, s, b.degrade(ref, ["-quality", "20"], "jpg"))
-            for nm, pre in FONT_PRE.items():
-                img = b.render(s, pre=pre)
+            for nm, early in FONT_EARLY.items():
+                img = b.render(s, early=early, strict=False)
                 if img:
                     add("degraded", f"{s[:20]} font-{nm}", ref, s, img)
                 else:
