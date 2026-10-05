@@ -383,15 +383,13 @@ fn binom_parts(after: &str) -> Option<(String, String, &str)> {
         if t.starts_with("\\left") {
             nest += 1;
             i += 5;
-        } else if t.starts_with("\\right") {
+        } else if let Some(after_right) = t.strip_prefix("\\right") {
             if nest == 0 {
-                if !t["\\right".len()..].starts_with(')') {
-                    return None;
-                }
+                let tail = after_right.strip_prefix(')')?;
                 let inner = &after[..i];
                 let at = atop?;
                 let (a, b) = (inner[..at].trim(), inner[at + "\\atop".len()..].trim());
-                return Some((a.into(), b.into(), &t["\\right)".len()..]));
+                return Some((a.into(), b.into(), tail));
             }
             nest -= 1;
             i += 6;
@@ -429,7 +427,7 @@ fn mathrm_to_text(s: &str) -> String {
             let spaced = inner.contains('~') || inner.contains("\\ ");
             let plain = inner.replace("\\ ", " ").replace('~', " ");
             let plain_ok = plain.chars().all(|c| c.is_ascii_alphanumeric() || " .,:;'()-".contains(c));
-            (spaced && plain_ok).then(|| (plain, end))
+            (spaced && plain_ok).then_some((plain, end))
         });
         match converted {
             Some((text, end)) => {
