@@ -1,0 +1,54 @@
+# texcopy
+
+Drag-select anything on screen that was rendered with LaTeX and get its LaTeX source on your clipboard.
+
+```
+$ texcopy                      # crosshair appears; drag over a formula
+\sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6}
+Copied to clipboard.
+```
+
+Everything runs locally. Nothing is uploaded.
+
+## How it works
+
+LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recovering it is OCR:
+
+1. `screencapture -i` grabs the region you select (macOS).
+2. The image is flattened onto white, inverted if it's dark mode, padded to a square and resized to 384x384.
+3. A vision transformer (the *encoder*) turns it into 578 feature vectors.
+4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
+5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning.
+
+The model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to `~/Library/Caches/texcopy` (or `$XDG_CACHE_HOME/texcopy`). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
+
+## Usage
+
+```
+texcopy                     # select a screen region (macOS)
+texcopy formula.png         # from a file
+texcopy --clipboard         # from an image on the clipboard
+texcopy -w inline           # wrap in $...$   (-w display: \[ ... \])
+texcopy --no-copy           # print only
+texcopy --raw               # skip tidy, show the model's raw tokens
+```
+
+macOS asks for Screen Recording permission for your terminal the first time you select a region.
+
+## Build
+
+```
+cargo build --release       # binary at target/release/texcopy
+cargo test
+```
+
+The first build downloads a prebuilt ONNX Runtime library.
+
+## Limitations
+
+- **Proofread the output.** It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
+- One formula per selection. Paragraphs, tables and multi-line alignments are out of scope.
+- Region capture is macOS-only for now; elsewhere use a file or `--clipboard`. The clipboard code is untested outside macOS.
+- The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
+
+If the source is a web page using KaTeX or MathJax, the exact TeX is already in the page's DOM and no OCR is needed.
