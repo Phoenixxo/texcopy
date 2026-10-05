@@ -2037,6 +2037,8 @@ dependencies = [
  "clap",
  "image",
  "ort",
+ "serde",
+ "serde_json",
  "tokenizers",
  "ureq",
 ]

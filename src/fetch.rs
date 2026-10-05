@@ -6,14 +6,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
-const BASE_URL: &str = "https://huggingface.co/breezedeus/pix2text-mfr/resolve/main";
-const FILES: [&str; 3] = ["encoder_model.onnx", "decoder_model.onnx", "tokenizer.json"];
-
-fn complete(dir: &Path) -> bool {
-    FILES.iter().all(|f| dir.join(f).is_file())
-}
+use crate::spec::ModelSpec;
 
 fn cache_dir() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").map(PathBuf::from);
@@ -27,29 +22,37 @@ fn cache_dir() -> Option<PathBuf> {
     }
 }
 
-/// Find a directory holding the model, downloading it into the cache if needed.
-/// Order: explicit override, `./models`, the per-user cache.
-pub fn ensure_model(over: Option<PathBuf>) -> Result<PathBuf> {
-    let target = match over {
-        Some(d) => d,
-        None => {
-            let local = PathBuf::from("models");
-            if complete(&local) {
-                return Ok(local);
-            }
-            cache_dir().context("cannot determine a cache directory; pass --model-dir")?
-        }
+/// Find a directory holding a complete model and its spec, downloading the default
+/// model into the cache if needed. Order: explicit override, `./models`, the per-user cache.
+pub fn locate(over: Option<PathBuf>) -> Result<(PathBuf, ModelSpec)> {
+    let cache = cache_dir();
+    let candidates: Vec<PathBuf> = match &over {
+        Some(d) => vec![d.clone()],
+        None => [Some(PathBuf::from("models")), cache.clone()].into_iter().flatten().collect(),
     };
-    if !complete(&target) {
-        fs::create_dir_all(&target)?;
-        eprintln!("First run: downloading the model (~118 MB) to {}", target.display());
-        for f in FILES {
-            if !target.join(f).is_file() {
-                download(&format!("{BASE_URL}/{f}"), &target.join(f))?;
-            }
+    for dir in candidates {
+        let spec = ModelSpec::load(&dir)?;
+        if spec.is_complete(&dir) {
+            return Ok((dir, spec));
         }
     }
-    Ok(target)
+
+    // Nothing complete on disk: fetch into the override, or else the cache.
+    let target = over
+        .or(cache)
+        .context("cannot determine a cache directory; pass --model-dir")?;
+    let spec = ModelSpec::load(&target)?;
+    let Some(base) = &spec.base_url else {
+        bail!("model files for '{}' are missing from {} and its spec.json has no base_url", spec.name, target.display());
+    };
+    fs::create_dir_all(&target)?;
+    eprintln!("First run: downloading model '{}' to {}", spec.name, target.display());
+    for f in spec.files() {
+        if !target.join(f).is_file() {
+            download(&format!("{base}/{f}"), &target.join(f))?;
+        }
+    }
+    Ok((target, spec))
 }
 
 fn download(url: &str, dest: &Path) -> Result<()> {

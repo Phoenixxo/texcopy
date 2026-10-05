@@ -1,4 +1,4 @@
-//! Image -> LaTeX recognition with the pix2text-mfr ONNX model.
+//! Image -> LaTeX recognition with an ONNX vision encoder-decoder (see `spec.rs`).
 //!
 //! The model is a vision encoder-decoder: a ViT turns the image into a grid of
 //! feature vectors, and a small transformer decoder writes LaTeX tokens one at a
@@ -14,32 +14,30 @@ use ort::{
 };
 use tokenizers::Tokenizer;
 
-/// The encoder expects a square image of this side length.
-const INPUT_SIZE: u32 = 384;
-/// `decoder_start_token_id` from generation_config.json (same id as EOS).
-const START_TOKEN: i64 = 2;
-const EOS_TOKEN: i64 = 2;
+use crate::spec::ModelSpec;
 
 pub struct Recognizer {
+    spec: ModelSpec,
     encoder: Session,
     decoder: Session,
     tokenizer: Tokenizer,
 }
 
 impl Recognizer {
-    pub fn load(dir: &Path) -> Result<Self> {
+    pub fn load(dir: &Path, spec: ModelSpec) -> Result<Self> {
         let session = |name: &str| -> Result<Session> {
             let path = dir.join(name);
             Session::builder()?
                 .commit_from_file(&path)
                 .with_context(|| format!("loading {}", path.display()))
         };
-        let tok_path = dir.join("tokenizer.json");
+        let tok_path = dir.join(&spec.tokenizer);
         Ok(Self {
-            encoder: session("encoder_model.onnx")?,
-            decoder: session("decoder_model.onnx")?,
+            encoder: session(&spec.encoder)?,
+            decoder: session(&spec.decoder)?,
             tokenizer: Tokenizer::from_file(&tok_path)
                 .map_err(|e| anyhow!("loading {}: {e}", tok_path.display()))?,
+            spec,
         })
     }
 
@@ -47,10 +45,10 @@ impl Recognizer {
     /// spaces (no `$` delimiters); see `tidy` for turning it into idiomatic LaTeX.
     pub fn recognize(&mut self, img: &DynamicImage, max_tokens: usize) -> Result<String> {
         // 1. Encode the image once.
-        let pixels = preprocess(img);
-        let n = INPUT_SIZE as usize;
+        let (w, h) = (self.spec.input_width as usize, self.spec.input_height as usize);
+        let pixels = preprocess(img, &self.spec);
         let enc_out = self.encoder.run(ort::inputs![
-            "pixel_values" => Tensor::from_array(([1usize, 3, n, n], pixels))?
+            "pixel_values" => Tensor::from_array(([1usize, 3, h, w], pixels))?
         ])?;
         let (enc_shape, enc_data) = enc_out["last_hidden_state"].try_extract_tensor::<f32>()?;
         let enc_shape: Vec<usize> = enc_shape.iter().map(|&d| d as usize).collect();
@@ -59,7 +57,7 @@ impl Recognizer {
 
         // 2. Greedy autoregressive decoding. The exported decoder has no KV cache,
         //    so every step feeds the full prefix again.
-        let mut ids = vec![START_TOKEN];
+        let mut ids = vec![self.spec.start_token];
         for _ in 0..max_tokens {
             let out = self.decoder.run(ort::inputs![
                 "input_ids" => Tensor::from_array(([1usize, ids.len()], ids.clone()))?,
@@ -74,7 +72,7 @@ impl Recognizer {
                 .max_by(|a, b| a.1.total_cmp(b.1))
                 .map(|(i, _)| i as i64)
                 .unwrap();
-            if next == EOS_TOKEN {
+            if next == self.spec.eos_token {
                 break;
             }
             ids.push(next);
@@ -91,10 +89,11 @@ impl Recognizer {
 }
 
 /// Turn an arbitrary screenshot into the CHW float tensor the encoder wants:
-/// flatten alpha onto white, flip dark-mode captures to dark-on-light, pad to a
-/// square (so wide formulas keep their aspect ratio), resize, then normalise to
-/// [-1, 1] like the model's DeiT image processor (mean = std = 0.5).
-fn preprocess(img: &DynamicImage) -> Vec<f32> {
+/// flatten alpha onto white, flip dark-mode captures to dark-on-light, pad to the
+/// model's aspect ratio (so formulas keep their proportions), resize, then
+/// normalise with the spec's per-channel mean and std.
+fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
+    let (tw, th) = (spec.input_width, spec.input_height);
     let rgba = img.to_rgba8();
     let mut rgb = RgbImage::new(rgba.width(), rgba.height());
     for (x, y, p) in rgba.enumerate_pixels() {
@@ -112,23 +111,22 @@ fn preprocess(img: &DynamicImage) -> Vec<f32> {
         image::imageops::invert(&mut rgb);
     }
 
-    // Pad to a square with the page colour (taken from the top-left corner).
-    let side = rgb.width().max(rgb.height());
-    let bg = *rgb.get_pixel(0, 0);
-    let mut square = RgbImage::from_pixel(side, side, bg);
-    image::imageops::overlay(
-        &mut square,
-        &rgb,
-        ((side - rgb.width()) / 2) as i64,
-        ((side - rgb.height()) / 2) as i64,
-    );
-    let resized = image::imageops::resize(&square, INPUT_SIZE, INPUT_SIZE, FilterType::CatmullRom);
+    // Pad with the page colour (taken from the top-left corner) up to the target aspect ratio.
+    let (w, h) = (rgb.width(), rgb.height());
+    let (cw, ch) = if w as u64 * th as u64 >= h as u64 * tw as u64 {
+        (w, (w as u64 * th as u64).div_ceil(tw as u64) as u32)
+    } else {
+        ((h as u64 * tw as u64).div_ceil(th as u64) as u32, h)
+    };
+    let mut canvas = RgbImage::from_pixel(cw, ch, *rgb.get_pixel(0, 0));
+    image::imageops::overlay(&mut canvas, &rgb, ((cw - w) / 2) as i64, ((ch - h) / 2) as i64);
+    let resized = image::imageops::resize(&canvas, tw, th, FilterType::CatmullRom);
 
-    let plane = (INPUT_SIZE * INPUT_SIZE) as usize;
+    let plane = (tw * th) as usize;
     let mut out = vec![0f32; 3 * plane];
     for (i, p) in resized.pixels().enumerate() {
         for c in 0..3 {
-            out[c * plane + i] = (p[c] as f32 / 255.0 - 0.5) / 0.5;
+            out[c * plane + i] = (p[c] as f32 / 255.0 - spec.mean[c]) / spec.std[c];
         }
     }
     out

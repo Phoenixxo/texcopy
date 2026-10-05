@@ -1,5 +1,6 @@
 mod fetch;
 mod model;
+mod spec;
 mod tidy;
 
 use std::path::PathBuf;
@@ -37,7 +38,7 @@ struct Cli {
     #[arg(long)]
     no_copy: bool,
 
-    /// Directory containing the model files (default: ./models, else the cache dir)
+    /// Directory containing the model files and optional spec.json (default: ./models, else the cache dir)
     #[arg(long, env = "TEXCOPY_MODEL_DIR")]
     model_dir: Option<PathBuf>,
 
@@ -58,8 +59,8 @@ fn main() -> Result<()> {
         return Ok(());
     };
 
-    let dir = fetch::ensure_model(cli.model_dir)?;
-    let mut rec = model::Recognizer::load(&dir)?;
+    let (dir, spec) = fetch::locate(cli.model_dir)?;
+    let mut rec = model::Recognizer::load(&dir, spec)?;
     let latex = rec.recognize(&img, cli.max_tokens)?;
     let latex = if cli.raw { latex } else { tidy::tidy(&latex) };
 
