@@ -9,7 +9,19 @@
 use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
+use clap::ValueEnum;
 use serde::Deserialize;
+
+/// How an image of any shape is turned into the encoder's fixed input size.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum Fit {
+    /// Squash to the input size, ignoring aspect ratio (what the model's own image processor does)
+    #[default]
+    Stretch,
+    /// Pad with the page colour to the input aspect ratio, then shrink
+    Pad,
+}
 
 /// Any field omitted from `spec.json` keeps its pix2text-mfr default.
 #[derive(Debug, Clone, Deserialize)]
@@ -25,6 +37,7 @@ pub struct ModelSpec {
     /// Per-channel normalisation: `(pixel / 255 - mean) / std`.
     pub mean: [f32; 3],
     pub std: [f32; 3],
+    pub fit: Fit,
     pub start_token: i64,
     pub eos_token: i64,
     /// Where to download missing files from (`{base_url}/{file}`); `None` for local-only models.
@@ -42,6 +55,7 @@ impl Default for ModelSpec {
             input_height: 384,
             mean: [0.5; 3],
             std: [0.5; 3],
+            fit: Fit::Stretch,
             start_token: 2,
             eos_token: 2,
             base_url: Some("https://huggingface.co/breezedeus/pix2text-mfr/resolve/main".into()),

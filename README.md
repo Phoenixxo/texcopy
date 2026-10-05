@@ -15,7 +15,7 @@ Everything runs locally. Nothing is uploaded.
 LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recovering it is OCR:
 
 1. The image comes from a file, the clipboard, a screenshot (`--screen`, cross-platform via `xcap`) or, on macOS, `screencapture -i` drag-select.
-2. The image is flattened onto white, inverted if it's dark mode, padded to a square and resized to 384x384.
+2. The image is flattened onto white, inverted if it's dark mode, and resized to the model's 384x384 input (stretched by default, which handles wide formulas best; `--fit pad` keeps the aspect ratio instead).
 3. A vision transformer (the *encoder*) turns it into 578 feature vectors.
 4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
 5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning.
@@ -52,6 +52,7 @@ texcopy --screen --monitor 1                # a specific monitor
 texcopy -w inline           # wrap in $...$   (-w display: \[ ... \])
 texcopy --no-copy           # print only
 texcopy --raw               # skip tidy, show the model's raw tokens
+texcopy --fit pad           # pad to the model's aspect ratio instead of stretching
 ```
 
 Targets: Windows x64, macOS on Apple Silicon, Linux x64 (X11; Wayland best-effort). Drag-to-select is built in on macOS only for now; a cross-platform selector window is planned. Until then, on Windows and Linux use `--screen --region`, a file, or `--clipboard` with your OS's snipping tool.

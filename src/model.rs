@@ -14,7 +14,7 @@ use ort::{
 };
 use tokenizers::Tokenizer;
 
-use crate::spec::ModelSpec;
+use crate::spec::{Fit, ModelSpec};
 
 pub struct Recognizer {
     spec: ModelSpec,
@@ -89,8 +89,8 @@ impl Recognizer {
 }
 
 /// Turn an arbitrary screenshot into the CHW float tensor the encoder wants:
-/// flatten alpha onto white, flip dark-mode captures to dark-on-light, pad to the
-/// model's aspect ratio (so formulas keep their proportions), resize, then
+/// flatten alpha onto white, flip dark-mode captures to dark-on-light, fit it to
+/// the model's input size (stretch, or pad to its aspect ratio first), then
 /// normalise with the spec's per-channel mean and std.
 fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
     let (tw, th) = (spec.input_width, spec.input_height);
@@ -111,16 +111,21 @@ fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
         image::imageops::invert(&mut rgb);
     }
 
-    // Pad with the page colour (taken from the top-left corner) up to the target aspect ratio.
-    let (w, h) = (rgb.width(), rgb.height());
-    let (cw, ch) = if w as u64 * th as u64 >= h as u64 * tw as u64 {
-        (w, (w as u64 * th as u64).div_ceil(tw as u64) as u32)
-    } else {
-        ((h as u64 * tw as u64).div_ceil(th as u64) as u32, h)
+    let resized = match spec.fit {
+        Fit::Stretch => image::imageops::resize(&rgb, tw, th, FilterType::CatmullRom),
+        Fit::Pad => {
+            // Pad with the page colour (taken from the top-left corner) up to the target aspect ratio.
+            let (w, h) = (rgb.width(), rgb.height());
+            let (cw, ch) = if w as u64 * th as u64 >= h as u64 * tw as u64 {
+                (w, (w as u64 * th as u64).div_ceil(tw as u64) as u32)
+            } else {
+                ((h as u64 * tw as u64).div_ceil(th as u64) as u32, h)
+            };
+            let mut canvas = RgbImage::from_pixel(cw, ch, *rgb.get_pixel(0, 0));
+            image::imageops::overlay(&mut canvas, &rgb, ((cw - w) / 2) as i64, ((ch - h) / 2) as i64);
+            image::imageops::resize(&canvas, tw, th, FilterType::CatmullRom)
+        }
     };
-    let mut canvas = RgbImage::from_pixel(cw, ch, *rgb.get_pixel(0, 0));
-    image::imageops::overlay(&mut canvas, &rgb, ((cw - w) / 2) as i64, ((ch - h) / 2) as i64);
-    let resized = image::imageops::resize(&canvas, tw, th, FilterType::CatmullRom);
 
     let plane = (tw * th) as usize;
     let mut out = vec![0f32; 3 * plane];

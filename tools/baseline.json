@@ -86,16 +86,16 @@
  {
   "suite": "T3 long/nested",
   "case": "\\sum_{k=0}^{n} \\binom{n}{k} x^{k} y^{n-k} = (x+y",
-  "grade": "close",
-  "sim": 0.916,
-  "output": "\\sum_{k=0}^n\\left(n\\atop k\\right)x^ky^{n-k}=(x+y)^n-\\sum_{j=0}^n\\frac{n!}{j!(n-j)!}x^jy^{n-j}+R_n(x,y)"
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\sum_{k=0}^n\\binom{n}{k}x^ky^{n-k}=(x+y)^n=\\sum_{j=0}^n\\frac{n!}{j!(n-j)!}x^jy^{n-j}+R_n(x,y)"
  },
  {
   "suite": "T3 long/nested",
   "case": "x = a_0 + \\cfrac{1}{a_1 + \\cfrac{1}{a_2 + \\cfrac",
   "grade": "EXACT",
-  "sim": 1.0,
-  "output": "x=a_0+\\cfrac{1}{a_1+\\cfrac{1}{a_2+\\cfrac{1}{a_3+\\cdots}}}"
+  "sim": 0.978,
+  "output": "x=a_0+\\cfrac{1}{a_1+\\cfrac{1}{a_2+\\cfrac{1}{a_3+\\dotsb}}}"
  },
  {
   "suite": "T3 long/nested",
@@ -108,15 +108,15 @@
   "suite": "T4 multi-line",
   "case": "\\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\\\ (a",
   "grade": "differs",
-  "sim": 0.819,
-  "output": "\\begin{array}{c}{(a+b)^2=a^2+2ab+b^2} \\\\ {(a-b)^2=a^2-2ab+b^2} \\end{array}"
+  "sim": 0.731,
+  "output": "(a+b)^2=a^2+2ab+b^2\\,(a-b)^2=a^2-2ab+b^2"
  },
  {
   "suite": "T4 multi-line",
   "case": "\\begin{cases} x + y = 2 \\\\ x - y = 0 \\end{cases}",
   "grade": "differs",
-  "sim": 0.722,
-  "output": "\\left\\{\\begin{aligned}{x+y} & {{}=2} \\\\ {x-y} & {{}=0} \\end{aligned}\\right."
+  "sim": 0.706,
+  "output": "\\left\\{\\begin{matrix}{x+y=2} \\\\ {x-y=0} \\end{matrix}\\right."
  },
  {
   "suite": "T4 multi-line",
@@ -128,9 +128,9 @@
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq dpi50",
-  "grade": "differs",
-  "sim": 0.862,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4\\alpha^2}}{2a}"
+  "grade": "close",
+  "sim": 0.962,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4bc}}{2a}"
  },
  {
   "suite": "degraded",
@@ -158,14 +158,14 @@
   "case": "x = \\frac{-b \\pm \\sq down50%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x={\\frac{-b\\pm{\\sqrt{b^2-4ac}}}{2a}}"
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq down25%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x={\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}}"
  },
  {
   "suite": "degraded",
@@ -212,16 +212,16 @@
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dpi50",
-  "grade": "differs",
-  "sim": 0.897,
-  "output": "f(z_b)=\\frac{1}{2\\pi i}\\oint_z\\frac{f(z)}{z-z_0}\\,dz"
+  "grade": "close",
+  "sim": 0.928,
+  "output": "f(z_b)=\\frac{1}{2\\pi\\imath}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dpi100",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)={\\frac{1}{2\\pi i}}\\oint_{\\gamma}{\\frac{f(z)}{z-z_0}}\\,dz"
  },
  {
   "suite": "degraded",
@@ -242,7 +242,7 @@
   "case": "f(z_0) = \\frac{1}{2\\ down50%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)={\\frac{1}{2\\pi i}}\\oint_{\\gamma}{\\frac{f(z)}{z-z_0}}\\,dz"
  },
  {
   "suite": "degraded",
@@ -268,9 +268,9 @@
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ margin80",
-  "grade": "close",
-  "sim": 0.989,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\int_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
  },
  {
   "suite": "degraded",
@@ -304,50 +304,50 @@
   "suite": "stress",
   "case": "wide 6 terms",
   "grade": "close",
-  "sim": 0.976,
-  "output": "a_1x_1+a_2x_2+a_3x_5+a_4x_4+a_5x_5+a_6x_6"
+  "sim": 1.0,
+  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6"
  },
  {
   "suite": "stress",
   "case": "wide 10 terms",
-  "grade": "differs",
-  "sim": 0.712,
-  "output": "\\alpha_1x_1+\\alpha_2x_3+\\alpha_3x_3+\\alpha_4x_4+\\alpha_5x_5+\\alpha_6x_6+\\alpha_7x_7+\\alpha_8x_8+\\alpha_9x_9+\\alpha_{10}x_9"
+  "grade": "close",
+  "sim": 1.0,
+  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6+a_7x_7+a_8x_8+a_9x_9+a_{10}x_{10}"
  },
  {
   "suite": "stress",
   "case": "wide 14 terms",
-  "grade": "differs",
-  "sim": 0.588,
-  "output": "a_1a_1+a_2a_3+a_3a_4+a_3a_5+a_3a_5+a_3a_5+a_4a_5+a_3a_5+a_3a_5+a_3a_5+a_3a_1a_5+a_3a_{12}+a_3a_{12}a_{12}+a_4a_3a_{12}a_{12}"
+  "grade": "close",
+  "sim": 0.982,
+  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6+a_7x_7+a_8x_8+a_9x_9+a_{10}x_{10}+a_{11}x_{11}+a_{12}x_{12}+a_{13}x_{13}+a_{14}x_{14}x_{13}"
  },
  {
   "suite": "stress",
   "case": "wide 20 terms",
   "grade": "FAIL",
-  "sim": 0.214,
-  "output": "\\sum_{m=1,m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0"
+  "sim": 0.08,
+  "output": "a_2\\alpha_1+a_2\\alpha_2+a_3\\alpha_3+a_4\\alpha_4+a_8\\alpha_5+a_6\\alpha_6+a_7\\alpha_7+a_6\\alpha_8+a_{12}\\alpha_3+a_{12}\\alpha_{10}+a_{12}\\alpha_{12}+a_{12}\\alpha_{20}+a_{23}\\alpha_{14}+a_{25}\\alpha_{15}+a_{26}\\alpha_{26}+a_{17}\\alpha_{17}\\alpha_{27}+a_{23}\\alpha_{29}+a_{23}\\alpha_{29}\\alpha_{19}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{1"
  },
  {
   "suite": "stress",
   "case": "wide 28 terms",
-  "grade": "FAIL",
-  "sim": 0.0,
-  "output": "\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_n^n\\leq0}"
+  "grade": "differs",
+  "sim": 0.011,
+  "output": "a_1a_1+a_2a_1+a_3a_1+a_4a_1+a_4a_1+a_4a_1+a_2a_1+a_2a_2+a_2a_3+a_2a_3+a_2a_2+a_3a_3+a_3a_4+a_2a_2+a_3a_3+a_2a_3+a_2a_2+a_2a_2-a_2a_3+a_2a_2+a_2a_3+a_2a_4+a_2a_2+a_2a_3+a_2a_4+a_3a_2+a_3a_3+a_4a_4a_4+a_4a_4a_4+a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4a_4+a_4a_4a_4a_4a_4"
  },
  {
   "suite": "stress",
   "case": "aligned 3 rows",
-  "grade": "differs",
-  "sim": 0.716,
-  "output": "x_1=a_1+b_1^2\\,x_2=a_2+b_2^2\\,x_3=a_3+b_3^2"
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\end{aligned}"
  },
  {
   "suite": "stress",
   "case": "aligned 4 rows",
-  "grade": "EXACT",
-  "sim": 1.0,
-  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\\\ {x_4} & {{}=a_4+b_4^2} \\end{aligned}"
+  "grade": "differs",
+  "sim": 0.754,
+  "output": "x_1=a_1+b_1^2\\,x_2=a_2+b_2^2\\,x_3=a_3+b_3^2\\,x_4=a_4+b_4^2"
  },
  {
   "suite": "stress",
@@ -366,23 +366,23 @@
  {
   "suite": "stress",
   "case": "matrix 5x5",
-  "grade": "EXACT",
-  "sim": 0.974,
-  "output": "\\left(\\begin{matrix}{1} & {2} & {3} & {4} & {5} \\\\ {6} & {7} & {8} & {9} & {1} \\\\ {2} & {3} & {4} & {5} & {6} \\\\ {7} & {8} & {9} & {1} & {2} \\\\ {3} & {4} & {5} & {6} & {7} \\end{matrix}\\right)"
+  "grade": "close",
+  "sim": 0.961,
+  "output": "\\left(\\begin{matrix}{1} & {2} & {3} & {4} & {5} \\\\ {6} & {7} & {8} & {9} & {1} \\\\ {2} & {3} & {4} & {5} & {6} \\\\ {7} & {8} & {9} & {1} & {2} \\\\ {9} & {4} & {5} & {6} & {7} \\end{matrix}\\right)"
  },
  {
   "suite": "stress",
   "case": "text in math",
   "grade": "EXACT",
-  "sim": 0.772,
-  "output": "\\mathrm{for~all~}x\\in\\mathbb{R},\\ \\ \\ f(x)\\geq0\\mathrm{~whenever~}x>0"
+  "sim": 0.828,
+  "output": "\\mathrm{for~all~}x\\in\\mathbb{R},\\quad f(x)\\geq0\\mathrm{~whenever~}x>0"
  },
  {
   "suite": "stress",
   "case": "rare symbols",
   "grade": "close",
-  "sim": 0.927,
-  "output": "\\mathrm{sl}_2\\otimes\\mathbb{C},\\ \\aleph_0<2^{\\aleph_0},\\ \\wp(z),\\ \\ell^2,\\ \\not\\!A\\,x\\in\\varnothing"
+  "sim": 0.994,
+  "output": "\\mathfrak{sl}_2\\otimes\\mathbb{C},\\ \\aleph_0<2^{\\aleph_0},\\ \\wp(z),\\ \\ell^2,\\ \\exists\\,x\\in\\varnothing"
  },
  {
   "suite": "stress",
@@ -394,22 +394,22 @@
  {
   "suite": "stress",
   "case": "triple integral",
-  "grade": "close",
-  "sim": 0.992,
-  "output": "\\iiint_V\\left(\\frac{\\partial^2u}{\\partial x^2}+\\frac{\\partial^2u}{\\partial y^2}+\\frac{\\partial^2u}{\\partial x^2}\\right)dV=\\oint_{\\partial V}\\nabla u\\cdot\\mathbf{n}\\,dS"
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\iiint_V\\left(\\frac{\\partial^2u}{\\partial x^2}+\\frac{\\partial^2u}{\\partial y^2}+\\frac{\\partial^2u}{\\partial z^2}\\right)dV=\\oint_{\\partial V}\\nabla u\\cdot\\mathbf{n}\\,dS"
  },
  {
   "suite": "info",
   "case": "table",
   "grade": "info",
   "sim": 0,
-  "output": "\\begin{array}{|c|c|c|c|}\\hline{\\mathrm{Name}} & {\\mathrm{Age}} & {\\mathrm{City}} \\\\ \\hline{\\mathrm{Amn}} & {31} & {\\mathrm{Oslo}} \\\\ \\hline{\\mathrm{Bob}} & {28} & {\\mathrm{Rome}} \\\\ \\hline{} \\end{array}"
+  "output": "\\begin{array}{|c|c|c|}\\hline{\\mathrm{Name}} & {\\mathrm{Age}} & {\\mathrm{City}} \\\\ \\hline{\\mathrm{Ann}} & {31} & {\\mathrm{Oslo}} \\\\ {\\mathrm{Bob}} & {28} & {\\mathrm{Rome}} \\end{array}"
  },
  {
   "suite": "info",
   "case": "paragraph",
   "grade": "info",
   "sim": 0,
-  "output": "\\begin{array}{l}{\\mathrm{therming~treent~pous~lume~vormo~ther~the~lumpo~then~trepo~thent~trent~po~thermo~then~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trer}} \\end{array}"
+  "output": "\\mathrm{The~quick~brown~fox~jumps~over~the~lazy~dog.~Euler~showed~that~e^{i\\pi}+1=0~,}"
  }
 ]

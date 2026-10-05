@@ -60,6 +60,10 @@ struct Cli {
     #[arg(long)]
     raw: bool,
 
+    /// Override how the image is fitted to the model's input (default: the model's own setting)
+    #[arg(long, value_enum)]
+    fit: Option<spec::Fit>,
+
     /// Upper bound on generated tokens
     #[arg(long, default_value_t = 512)]
     max_tokens: usize,
@@ -83,7 +87,10 @@ fn main() -> Result<()> {
         return Ok(());
     };
 
-    let (dir, spec) = fetch::locate(cli.model_dir)?;
+    let (dir, mut spec) = fetch::locate(cli.model_dir)?;
+    if let Some(fit) = cli.fit {
+        spec.fit = fit;
+    }
     let mut rec = model::Recognizer::load(&dir, spec)?;
     let latex = rec.recognize(&img, cli.max_tokens)?;
     let latex = if cli.raw { latex } else { tidy::tidy(&latex) };
