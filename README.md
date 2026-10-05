@@ -44,6 +44,15 @@ cargo test
 
 The first build downloads a prebuilt ONNX Runtime library.
 
+## Benchmark
+
+`tools/bench.py` renders known LaTeX with `pdflatex`, runs texcopy on the image, compiles the output and compares the two renders pixel by pixel. It needs `pdflatex`, `pdftoppm` and ImageMagick, and is a dev tool only.
+
+```
+python3 tools/bench.py                                   # all suites
+python3 tools/bench.py --baseline tools/baseline.json    # report what got better or worse
+```
+
 ## Limitations
 
 - **Proofread the output.** It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.

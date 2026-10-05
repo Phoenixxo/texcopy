@@ -1,0 +1,415 @@
+[
+ {
+  "suite": "T1 simple",
+  "case": "E = mc^2",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "E=mc^2"
+ },
+ {
+  "suite": "T1 simple",
+  "case": "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "T1 simple",
+  "case": "\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\int_{-\\infty}^{\\infty}e^{-x^2}\\,dx=\\sqrt{\\pi}"
+ },
+ {
+  "suite": "T1 simple",
+  "case": "\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "e^{i\\pi} + 1 = 0",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "e^{i\\pi}+1=0"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "f(z_0) = \\frac{1}{2\\pi i} \\oint_{\\gamma} \\frac{f",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "i\\hbar \\frac{\\partial}{\\partial t} \\Psi(\\mathbf{",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "i\\hbar\\frac{\\partial}{\\partial t}\\Psi(\\mathbf{r},t)=\\left[-\\frac{\\hbar^2}{2m}\\nabla^2+V(\\mathbf{r},t)\\right]\\Psi(\\mathbf{r},t)"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "\\binom{n}{k} = \\frac{n!}{k!(n-k)!}",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\binom{n}{k}=\\frac{n!}{k!(n-k)!}"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "\\det \\begin{vmatrix} a & b & c \\\\ d & e & f \\\\ g",
+  "grade": "EXACT",
+  "sim": 0.957,
+  "output": "\\det\\left|\\begin{matrix}{a} & {b} & {c} \\\\ {d} & {e} & {f} \\\\ {g} & {h} & {i} \\end{matrix}\\right|"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "\\Gamma(z) = \\int_0^\\infty t^{z-1} e^{-t} \\, dt",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\Gamma(z)=\\int_0^{\\infty}t^{z-1}e^{-t}\\,dt"
+ },
+ {
+  "suite": "T2 medium",
+  "case": "P(A \\mid B) = \\frac{P(B \\mid A) P(A)}{P(B)}",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "P(A\\mid B)=\\frac{P(B\\mid A)P(A)}{P(B)}"
+ },
+ {
+  "suite": "T3 long/nested",
+  "case": "e^x = 1 + x + \\frac{x^2}{2!} + \\frac{x^3}{3!} + ",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "e^x=1+x+\\frac{x^2}{2!}+\\frac{x^3}{3!}+\\frac{x^4}{4!}+\\cdots+\\frac{x^n}{n!}+\\cdots"
+ },
+ {
+  "suite": "T3 long/nested",
+  "case": "\\sum_{k=0}^{n} \\binom{n}{k} x^{k} y^{n-k} = (x+y",
+  "grade": "close",
+  "sim": 0.916,
+  "output": "\\sum_{k=0}^n\\left(n\\atop k\\right)x^ky^{n-k}=(x+y)^n-\\sum_{j=0}^n\\frac{n!}{j!(n-j)!}x^jy^{n-j}+R_n(x,y)"
+ },
+ {
+  "suite": "T3 long/nested",
+  "case": "x = a_0 + \\cfrac{1}{a_1 + \\cfrac{1}{a_2 + \\cfrac",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=a_0+\\cfrac{1}{a_1+\\cfrac{1}{a_2+\\cfrac{1}{a_3+\\cdots}}}"
+ },
+ {
+  "suite": "T3 long/nested",
+  "case": "\\sqrt{1 + \\sqrt{1 + \\sqrt{1 + \\frac{1}{1 + \\frac",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\sqrt{1+\\sqrt{1+\\sqrt{1+\\frac{1}{1+\\frac{1}{x}}}}}"
+ },
+ {
+  "suite": "T4 multi-line",
+  "case": "\\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\\\ (a",
+  "grade": "differs",
+  "sim": 0.819,
+  "output": "\\begin{array}{c}{(a+b)^2=a^2+2ab+b^2} \\\\ {(a-b)^2=a^2-2ab+b^2} \\end{array}"
+ },
+ {
+  "suite": "T4 multi-line",
+  "case": "\\begin{cases} x + y = 2 \\\\ x - y = 0 \\end{cases}",
+  "grade": "differs",
+  "sim": 0.722,
+  "output": "\\left\\{\\begin{aligned}{x+y} & {{}=2} \\\\ {x-y} & {{}=0} \\end{aligned}\\right."
+ },
+ {
+  "suite": "T4 multi-line",
+  "case": "\\begin{bmatrix} 1 & 2 & \\cdots & n \\\\ 2 & 4 & \\c",
+  "grade": "EXACT",
+  "sim": 0.979,
+  "output": "\\left[\\begin{matrix}{1} & {2} & {\\cdots} & {n} \\\\ {2} & {4} & {\\cdots} & {2n} \\\\ {\\vdots} & {\\vdots} & {\\ddots} & {\\vdots} \\\\ {n} & {2n} & {\\cdots} & {n^2} \\end{matrix}\\right]"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq dpi50",
+  "grade": "differs",
+  "sim": 0.862,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4\\alpha^2}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq dpi100",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq dpi400",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq dpi800",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq down50%",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq down25%",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq blur",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq dark",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq margin80",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq yellow-bg",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq noise",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq jpeg-q20",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ dpi50",
+  "grade": "differs",
+  "sim": 0.897,
+  "output": "f(z_b)=\\frac{1}{2\\pi i}\\oint_z\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ dpi100",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ dpi400",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ dpi800",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ down50%",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ down25%",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ blur",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ dark",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ margin80",
+  "grade": "close",
+  "sim": 0.989,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\int_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ yellow-bg",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ noise",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ jpeg-q20",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+ },
+ {
+  "suite": "stress",
+  "case": "wide 3 terms",
+  "grade": "close",
+  "sim": 1.0,
+  "output": "a_1x_1+a_2x_2+a_3x_3"
+ },
+ {
+  "suite": "stress",
+  "case": "wide 6 terms",
+  "grade": "close",
+  "sim": 0.976,
+  "output": "a_1x_1+a_2x_2+a_3x_5+a_4x_4+a_5x_5+a_6x_6"
+ },
+ {
+  "suite": "stress",
+  "case": "wide 10 terms",
+  "grade": "differs",
+  "sim": 0.712,
+  "output": "\\alpha_1x_1+\\alpha_2x_3+\\alpha_3x_3+\\alpha_4x_4+\\alpha_5x_5+\\alpha_6x_6+\\alpha_7x_7+\\alpha_8x_8+\\alpha_9x_9+\\alpha_{10}x_9"
+ },
+ {
+  "suite": "stress",
+  "case": "wide 14 terms",
+  "grade": "differs",
+  "sim": 0.588,
+  "output": "a_1a_1+a_2a_3+a_3a_4+a_3a_5+a_3a_5+a_3a_5+a_4a_5+a_3a_5+a_3a_5+a_3a_5+a_3a_1a_5+a_3a_{12}+a_3a_{12}a_{12}+a_4a_3a_{12}a_{12}"
+ },
+ {
+  "suite": "stress",
+  "case": "wide 20 terms",
+  "grade": "FAIL",
+  "sim": 0.214,
+  "output": "\\sum_{m=1,m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0+m_0"
+ },
+ {
+  "suite": "stress",
+  "case": "wide 28 terms",
+  "grade": "FAIL",
+  "sim": 0.0,
+  "output": "\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_{n=0}^{n-1}\\sum_n^n\\leq0}"
+ },
+ {
+  "suite": "stress",
+  "case": "aligned 3 rows",
+  "grade": "differs",
+  "sim": 0.716,
+  "output": "x_1=a_1+b_1^2\\,x_2=a_2+b_2^2\\,x_3=a_3+b_3^2"
+ },
+ {
+  "suite": "stress",
+  "case": "aligned 4 rows",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\\\ {x_4} & {{}=a_4+b_4^2} \\end{aligned}"
+ },
+ {
+  "suite": "stress",
+  "case": "aligned 6 rows",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\\\ {x_4} & {{}=a_4+b_4^2} \\\\ {x_5} & {{}=a_5+b_5^2} \\\\ {x_6} & {{}=a_6+b_6^2} \\end{aligned}"
+ },
+ {
+  "suite": "stress",
+  "case": "matrix 3x3",
+  "grade": "EXACT",
+  "sim": 0.953,
+  "output": "\\left(\\begin{matrix}{1} & {2} & {3} \\\\ {4} & {5} & {6} \\\\ {7} & {8} & {9} \\end{matrix}\\right)"
+ },
+ {
+  "suite": "stress",
+  "case": "matrix 5x5",
+  "grade": "EXACT",
+  "sim": 0.974,
+  "output": "\\left(\\begin{matrix}{1} & {2} & {3} & {4} & {5} \\\\ {6} & {7} & {8} & {9} & {1} \\\\ {2} & {3} & {4} & {5} & {6} \\\\ {7} & {8} & {9} & {1} & {2} \\\\ {3} & {4} & {5} & {6} & {7} \\end{matrix}\\right)"
+ },
+ {
+  "suite": "stress",
+  "case": "text in math",
+  "grade": "EXACT",
+  "sim": 0.772,
+  "output": "\\mathrm{for~all~}x\\in\\mathbb{R},\\ \\ \\ f(x)\\geq0\\mathrm{~whenever~}x>0"
+ },
+ {
+  "suite": "stress",
+  "case": "rare symbols",
+  "grade": "close",
+  "sim": 0.927,
+  "output": "\\mathrm{sl}_2\\otimes\\mathbb{C},\\ \\aleph_0<2^{\\aleph_0},\\ \\wp(z),\\ \\ell^2,\\ \\not\\!A\\,x\\in\\varnothing"
+ },
+ {
+  "suite": "stress",
+  "case": "array diagram",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{array}{ccc}{A} & {\\to} & {B} \\\\ {\\downarrow} & {} & {\\downarrow} \\\\ {C} & {\\to} & {D} \\end{array}"
+ },
+ {
+  "suite": "stress",
+  "case": "triple integral",
+  "grade": "close",
+  "sim": 0.992,
+  "output": "\\iiint_V\\left(\\frac{\\partial^2u}{\\partial x^2}+\\frac{\\partial^2u}{\\partial y^2}+\\frac{\\partial^2u}{\\partial x^2}\\right)dV=\\oint_{\\partial V}\\nabla u\\cdot\\mathbf{n}\\,dS"
+ },
+ {
+  "suite": "info",
+  "case": "table",
+  "grade": "info",
+  "sim": 0,
+  "output": "\\begin{array}{|c|c|c|c|}\\hline{\\mathrm{Name}} & {\\mathrm{Age}} & {\\mathrm{City}} \\\\ \\hline{\\mathrm{Amn}} & {31} & {\\mathrm{Oslo}} \\\\ \\hline{\\mathrm{Bob}} & {28} & {\\mathrm{Rome}} \\\\ \\hline{} \\end{array}"
+ },
+ {
+  "suite": "info",
+  "case": "paragraph",
+  "grade": "info",
+  "sim": 0,
+  "output": "\\begin{array}{l}{\\mathrm{therming~treent~pous~lume~vormo~ther~the~lumpo~then~trepo~thent~trent~po~thermo~then~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trent~trer}} \\end{array}"
+ }
+]
