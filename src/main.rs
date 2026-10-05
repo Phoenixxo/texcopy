@@ -10,6 +10,7 @@ use std::{io::Read, path::PathBuf};
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
 use image::DynamicImage;
+use serde::Serialize;
 
 #[derive(Clone, Copy, ValueEnum)]
 enum Wrap {
@@ -64,6 +65,10 @@ struct Cli {
     #[arg(long, value_enum)]
     fit: Option<spec::Fit>,
 
+    /// Print machine-readable JSON (latex, raw, stop reason, per-token confidence) and don't copy
+    #[arg(long)]
+    json: bool,
+
     /// Upper bound on generated tokens
     #[arg(long, default_value_t = 512)]
     max_tokens: usize,
@@ -92,8 +97,41 @@ fn main() -> Result<()> {
         spec.fit = fit;
     }
     let mut rec = model::Recognizer::load(&dir, spec)?;
-    let latex = rec.recognize(&img, cli.max_tokens)?;
-    let latex = if cli.raw { latex } else { tidy::tidy(&latex) };
+    let result = rec.recognize(&img, cli.max_tokens)?;
+    let latex = if cli.raw { result.text.clone() } else { tidy::tidy(&result.text) };
+
+    if cli.json {
+        let out = JsonOut {
+            latex: &latex,
+            raw: &result.text,
+            stop: result.stop,
+            min_prob: result.min_prob(),
+            mean_logprob: result.mean_logprob(),
+            tokens: &result.tokens,
+        };
+        println!("{}", serde_json::to_string(&out)?);
+        return Ok(());
+    }
+    match result.stop {
+        model::Stop::Looped => anyhow::bail!(
+            "couldn't read this: the model got stuck repeating itself. Try selecting a smaller or cleaner region."
+        ),
+        model::Stop::MaxTokens => eprintln!(
+            "warning: stopped at --max-tokens ({}); the output is probably cut off",
+            cli.max_tokens
+        ),
+        model::Stop::Eos => {}
+    }
+    let unsure = result.uncertain();
+    if !unsure.is_empty() {
+        eprintln!("warning: unsure about {} token(s), worth checking:", unsure.len());
+        for &i in unsure.iter().take(5) {
+            // Show a little context before the token, which is marked [like this].
+            let before: String = result.tokens[i.saturating_sub(4)..i].iter().map(|t| t.text.trim()).collect();
+            let t = &result.tokens[i];
+            eprintln!("  ...{before}[{}]  ({:.0}% sure)", t.text.trim(), t.prob * 100.0);
+        }
+    }
 
     let out = match cli.wrap {
         Wrap::None => latex,
@@ -106,6 +144,16 @@ fn main() -> Result<()> {
         eprintln!("Copied to clipboard.");
     }
     Ok(())
+}
+
+#[derive(Serialize)]
+struct JsonOut<'a> {
+    latex: &'a str,
+    raw: &'a str,
+    stop: model::Stop,
+    min_prob: f32,
+    mean_logprob: f32,
+    tokens: &'a [model::Token],
 }
 
 /// `None` means the user cancelled the screen selection.

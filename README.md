@@ -53,6 +53,7 @@ texcopy -w inline           # wrap in $...$   (-w display: \[ ... \])
 texcopy --no-copy           # print only
 texcopy --raw               # skip tidy, show the model's raw tokens
 texcopy --fit pad           # pad to the model's aspect ratio instead of stretching
+texcopy --json              # latex + stop reason + per-token confidence as JSON (no clipboard)
 ```
 
 Targets: Windows x64, macOS on Apple Silicon, Linux x64 (X11; Wayland best-effort). Drag-to-select is built in on macOS only for now; a cross-platform selector window is planned. Until then, on Windows and Linux use `--screen --region`, a file, or `--clipboard` with your OS's snipping tool.
@@ -72,7 +73,7 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 
 ## Limitations
 
-- **Proofread the output.** It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
+- **Proofread the output.** texcopy warns about tokens the model was under 50% sure of, and refuses to copy output where the model got stuck repeating itself, but a confident answer can still be wrong. It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
 - One formula per selection. Paragraphs, tables and multi-line alignments are out of scope.
 - Interactive drag-select is macOS-only for now. Only macOS has been run so far; the Windows and Linux code paths (including the Linux clipboard helper) are written but not yet exercised.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.

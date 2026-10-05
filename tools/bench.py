@@ -118,8 +118,13 @@ class Bench:
         return out
 
     def texcopy(self, image):
-        r = run(self.binary, image, "--no-copy", *self.tool_args, env=self.env)
-        return r.stdout.strip()
+        """Returns (latex, meta) where meta carries stop reason and confidence."""
+        r = run(self.binary, image, "--json", *self.tool_args, env=self.env)
+        try:
+            d = json.loads(r.stdout)
+        except ValueError:
+            return "", {}
+        return d["latex"], d
 
     def grade(self, ref_png, true_src, output):
         norm = lambda s: re.sub(r"\\left|\\right|\\,|\\displaystyle|\s+|[{}]", "", s)
@@ -137,9 +142,10 @@ def collect(b, suites):
     rows = []
 
     def add(suite, case, ref, src, image):
-        out = b.texcopy(image)
+        out, meta = b.texcopy(image)
         g, sim = b.grade(ref, src, out)
-        rows.append({"suite": suite, "case": case, "grade": g, "sim": round(sim, 3), "output": out})
+        rows.append({"suite": suite, "case": case, "grade": g, "sim": round(sim, 3), "output": out,
+                     "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
         print(f"  {g:8} {suite:16} {case}", file=sys.stderr)
 
     if "basic" in suites:
@@ -165,7 +171,7 @@ def collect(b, suites):
             add("stress", name, ref, s, ref)
         for name, s in INFO_ONLY.items():
             img = b.render(s, raw=True)
-            out = b.texcopy(img)
+            out, _ = b.texcopy(img)
             rows.append({"suite": "info", "case": name, "grade": "info", "sim": 0, "output": out})
     return rows
 
@@ -181,6 +187,24 @@ def summarize(rows):
         tot.update(c)
         print(f"{suite:16} {c['EXACT']:6} {c['close']:6} {c['differs']:8} {c['FAIL']:5}  {sum(c.values())}")
     print(f"{'TOTAL':16} {tot['EXACT']:6} {tot['close']:6} {tot['differs']:8} {tot['FAIL']:5}  {sum(tot.values())}")
+
+
+def confidence_report(rows):
+    """Does low model confidence predict a wrong answer? Helps choose a warning threshold."""
+    graded = [r for r in rows if r["grade"] != "info" and r.get("min_prob") is not None]
+    if not graded:
+        return
+    exact = [r for r in graded if r["grade"] == "EXACT"]
+    close = [r for r in graded if r["grade"] == "close"]
+    wrong = [r for r in graded if r["grade"] in ("differs", "FAIL")]
+    print(f"\nconfidence (min token probability): {len(exact)} exact, {len(close)} close, {len(wrong)} wrong")
+    print(f"{'warn if min_prob <':20} {'exact flagged':>14} {'close flagged':>14} {'wrong flagged':>14}")
+    for t in (0.5, 0.7, 0.8, 0.9, 0.95, 0.99):
+        f = lambda grp: f"{sum(r['min_prob'] < t for r in grp)}/{len(grp)}"
+        print(f"{t:<20} {f(exact):>14} {f(close):>14} {f(wrong):>14}")
+    loops = sum(r.get("stop") == "looped" for r in graded)
+    cut = sum(r.get("stop") == "max_tokens" for r in graded)
+    print(f"stop reasons: {loops} looped, {cut} hit the token limit")
 
 
 def compare(rows, path):
@@ -214,6 +238,7 @@ def main():
     with tempfile.TemporaryDirectory() as work:
         rows = collect(Bench(a.bin, shlex.split(a.tool_args), work), suites)
     summarize(rows)
+    confidence_report(rows)
     if a.verbose:
         for r in rows:
             if r["grade"] not in ("EXACT",):
