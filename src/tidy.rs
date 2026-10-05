@@ -61,17 +61,63 @@ const OPERATORS: &[&str] = &[
     "dim", "gcd", "ker", "deg", "arg", "hom", "Pr",
 ];
 
+/// What kind of thing the model read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Kind {
+    /// A formula: `$...$`-style wrapping is the caller's choice.
+    Math,
+    /// A sentence with inline math, already containing its own `$...$`.
+    Prose,
+}
+
+#[cfg(test)]
 pub fn tidy(raw: &str) -> String {
+    tidy_with_kind(raw).0
+}
+
+/// Tidy the model's output, recognising sentences (see `prose.rs`) as well as formulas.
+pub fn tidy_with_kind(raw: &str) -> (String, Kind) {
     let s = compact(raw);
+    match crate::prose::convert(&s, &|m| tidy_math(m.to_string())) {
+        Some(text) => (text, Kind::Prose),
+        None => (tidy_math(s), Kind::Math),
+    }
+}
+
+/// The formula rules, applied to already-compacted text.
+fn tidy_math(s: String) -> String {
     let s = modernize_fonts(&s);
     let s = known_operators(&s);
     let s = delimited_matrices(&s);
     let s = unwrap_matrix_cells(&s);
     let s = binomials(&s);
     let s = mathrm_to_text(&s);
+    let s = collapse_double_braces(&s);
     let s = unbrace_scripts(&s);
     // A trailing row break before \end{...} is noise the model likes to add.
     s.replace("\\\\ \\end{", "\\end{")
+}
+
+/// `\overline{{G}}` -> `\overline{G}`: an outer group whose only content is one inner group.
+fn collapse_double_braces(s: &str) -> String {
+    let mut s = s.to_string();
+    let mut i = 0;
+    while i + 1 < s.len() {
+        let b = s.as_bytes();
+        if b[i] == b'{'
+            && b[i + 1] == b'{'
+            && (i == 0 || b[i - 1] != b'\\')
+            && let Some(outer_end) = matching_brace(&s, i)
+            && matching_brace(&s, i + 1) == Some(outer_end - 1)
+        {
+            s.remove(outer_end);
+            s.remove(i);
+            continue; // the inner group may itself be doubled
+        }
+        i += 1;
+    }
+    s
 }
 
 /// Drop all whitespace except the single space TeX needs between a control word
@@ -131,7 +177,7 @@ fn compact(s: &str) -> String {
 }
 
 /// Index of the `}` matching the `{` at `open`.
-fn matching_brace(s: &str, open: usize) -> Option<usize> {
+pub(crate) fn matching_brace(s: &str, open: usize) -> Option<usize> {
     let b = s.as_bytes();
     let (mut depth, mut i) = (0usize, open);
     while i < b.len() {
@@ -561,6 +607,15 @@ mod tests {
             tidy(r"\operatorname { f o o } ( x )"),
             r"\operatorname{foo}(x)"
         );
+    }
+
+    #[test]
+    fn collapses_redundant_double_braces() {
+        assert_eq!(tidy(r"\overline { { G } }"), r"\overline{G}");
+        assert_eq!(tidy(r"\frac { { a } } { b }"), r"\frac{a}{b}");
+        // Two groups side by side, or a group with more than one inner part, are left alone.
+        assert_eq!(tidy(r"{ { a } { b } }"), r"{{a}{b}}");
+        assert_eq!(tidy(r"x ^ { { \bf y } z }"), r"x^{\mathbf{y}z}");
     }
 
     #[test]

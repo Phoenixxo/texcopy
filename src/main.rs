@@ -2,6 +2,7 @@ mod capture;
 mod clipboard;
 mod fetch;
 mod model;
+mod prose;
 mod spec;
 mod tidy;
 
@@ -98,15 +99,16 @@ fn main() -> Result<()> {
     }
     let mut rec = model::Recognizer::load(&dir, spec)?;
     let result = rec.recognize(&img, cli.max_tokens)?;
-    let latex = if cli.raw {
-        result.text.clone()
+    let (latex, kind) = if cli.raw {
+        (result.text.clone(), tidy::Kind::Math)
     } else {
-        tidy::tidy(&result.text)
+        tidy::tidy_with_kind(&result.text)
     };
 
     if cli.json {
         let out = JsonOut {
             latex: &latex,
+            kind,
             raw: &result.text,
             stop: result.stop,
             min_prob: result.min_prob(),
@@ -147,10 +149,22 @@ fn main() -> Result<()> {
         }
     }
 
-    let out = match cli.wrap {
-        Wrap::None => latex,
-        Wrap::Inline => format!("${latex}$"),
-        Wrap::Display => format!("\\[ {latex} \\]"),
+    if kind == tidy::Kind::Prose && prose::has_run_together_words(&latex) {
+        eprintln!(
+            "warning: some words look run together (the model lost the spaces). Try selecting one line at a time."
+        );
+    }
+    if latex.contains("\\nu") {
+        eprintln!(
+            "note: the model read a \\nu. In an italic font, v and \u{3bd} look nearly identical, so check which one it should be."
+        );
+    }
+
+    // A sentence already carries its own $...$ marks, so --wrap only applies to formulas.
+    let out = match (cli.wrap, kind) {
+        (Wrap::None, _) | (_, tidy::Kind::Prose) => latex,
+        (Wrap::Inline, _) => format!("${latex}$"),
+        (Wrap::Display, _) => format!("\\[ {latex} \\]"),
     };
     println!("{out}");
     if !cli.no_copy {
@@ -163,6 +177,7 @@ fn main() -> Result<()> {
 #[derive(Serialize)]
 struct JsonOut<'a> {
     latex: &'a str,
+    kind: tidy::Kind,
     raw: &'a str,
     stop: model::Stop,
     min_prob: f32,
