@@ -10,16 +10,9 @@ use anyhow::{Context, Result, bail};
 
 use crate::spec::ModelSpec;
 
+/// Per-user cache directory for downloaded models (platform-appropriate on every OS).
 fn cache_dir() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME").map(PathBuf::from);
-    if cfg!(target_os = "macos") {
-        home.map(|h| h.join("Library/Caches/texcopy"))
-    } else {
-        std::env::var_os("XDG_CACHE_HOME")
-            .map(PathBuf::from)
-            .or_else(|| home.map(|h| h.join(".cache")))
-            .map(|c| c.join("texcopy"))
-    }
+    directories::ProjectDirs::from("", "", "texcopy").map(|d| d.cache_dir().to_path_buf())
 }
 
 /// Find a directory holding a complete model and its spec, downloading the default
@@ -87,4 +80,14 @@ fn download(url: &str, dest: &Path) -> Result<()> {
     eprintln!();
     fs::rename(&part, dest)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn cache_dir_is_per_user_and_named_texcopy() {
+        let dir = super::cache_dir().expect("a cache directory");
+        assert_eq!(dir.file_name().unwrap(), "texcopy", "{dir:?}");
+        assert!(dir.is_absolute(), "{dir:?}");
+    }
 }

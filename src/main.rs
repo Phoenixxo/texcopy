@@ -1,9 +1,11 @@
+mod capture;
+mod clipboard;
 mod fetch;
 mod model;
 mod spec;
 mod tidy;
 
-use std::path::PathBuf;
+use std::{io::Read, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
@@ -23,12 +25,24 @@ enum Wrap {
 #[derive(Parser)]
 #[command(version)]
 struct Cli {
-    /// Image file to read. Omit to drag-select a screen region (macOS).
+    /// Image file to read. With no input option, drag-select a screen region (macOS only for now).
     image: Option<PathBuf>,
 
     /// Read the image from the clipboard instead
-    #[arg(long, conflicts_with = "image")]
+    #[arg(long, conflicts_with_all = ["image", "screen"])]
     clipboard: bool,
+
+    /// Capture a whole monitor (the primary one unless --monitor is given)
+    #[arg(long, conflicts_with = "image")]
+    screen: bool,
+
+    /// Monitor index for --screen (0 is the first monitor the OS lists)
+    #[arg(long, requires = "screen")]
+    monitor: Option<usize>,
+
+    /// Crop --screen to x,y,w,h in screenshot pixels
+    #[arg(long, requires = "screen", value_name = "x,y,w,h")]
+    region: Option<String>,
 
     /// Delimiters to put around the result
     #[arg(short, long, value_enum, default_value_t = Wrap::None)]
@@ -49,10 +63,20 @@ struct Cli {
     /// Upper bound on generated tokens
     #[arg(long, default_value_t = 512)]
     max_tokens: usize,
+
+    /// Internal: serve stdin on the clipboard until overwritten (Linux)
+    #[arg(long, hide = true)]
+    hold_clipboard: bool,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    if cli.hold_clipboard {
+        let mut text = String::new();
+        std::io::stdin().read_to_string(&mut text)?;
+        return clipboard::hold(&text);
+    }
+
     // Grab the image first so a cancelled selection costs nothing.
     let Some(img) = load_image(&cli)? else {
         eprintln!("Cancelled.");
@@ -71,7 +95,7 @@ fn main() -> Result<()> {
     };
     println!("{out}");
     if !cli.no_copy {
-        arboard::Clipboard::new()?.set_text(out).context("writing to clipboard")?;
+        clipboard::copy_text(&out)?;
         eprintln!("Copied to clipboard.");
     }
     Ok(())
@@ -83,29 +107,14 @@ fn load_image(cli: &Cli) -> Result<Option<DynamicImage>> {
         return Ok(Some(image::open(path).with_context(|| format!("opening {}", path.display()))?));
     }
     if cli.clipboard {
-        let img = arboard::Clipboard::new()?.get_image().context("no image on the clipboard")?;
-        let buf = image::RgbaImage::from_raw(img.width as u32, img.height as u32, img.bytes.into_owned())
-            .context("malformed clipboard image")?;
-        return Ok(Some(buf.into()));
+        return clipboard::read_image().map(Some);
     }
-    capture_region()
-}
-
-#[cfg(target_os = "macos")]
-fn capture_region() -> Result<Option<DynamicImage>> {
-    use std::process::Command;
-    let path = std::env::temp_dir().join(format!("texcopy-{}.png", std::process::id()));
-    // -i: interactive crosshair selection, -x: no shutter sound. Esc cancels (no file written).
-    let status = Command::new("screencapture").args(["-i", "-x"]).arg(&path).status()?;
-    if !status.success() || !path.exists() {
-        return Ok(None);
+    if cli.screen {
+        let shot = capture::screenshot(cli.monitor)?;
+        return match &cli.region {
+            Some(r) => capture::crop(&shot, r).map(Some),
+            None => Ok(Some(shot)),
+        };
     }
-    let img = image::open(&path);
-    let _ = std::fs::remove_file(&path);
-    Ok(Some(img?))
-}
-
-#[cfg(not(target_os = "macos"))]
-fn capture_region() -> Result<Option<DynamicImage>> {
-    anyhow::bail!("screen capture is only built in on macOS; pass an image file or use --clipboard")
+    capture::interactive()
 }

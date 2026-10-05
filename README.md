@@ -14,7 +14,7 @@ Everything runs locally. Nothing is uploaded.
 
 LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recovering it is OCR:
 
-1. `screencapture -i` grabs the region you select (macOS).
+1. The image comes from a file, the clipboard, a screenshot (`--screen`, cross-platform via `xcap`) or, on macOS, `screencapture -i` drag-select.
 2. The image is flattened onto white, inverted if it's dark mode, padded to a square and resized to 384x384.
 3. A vision transformer (the *encoder*) turns it into 578 feature vectors.
 4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
@@ -44,24 +44,21 @@ then run `texcopy --model-dir path/to/folder`. The ONNX graphs must follow the H
 ## Usage
 
 ```
-texcopy                     # select a screen region (macOS)
+texcopy                     # drag-select a screen region (macOS; other OSes: see below)
 texcopy formula.png         # from a file
 texcopy --clipboard         # from an image on the clipboard
+texcopy --screen --region 100,200,600,150   # capture the primary monitor, crop to x,y,w,h (screenshot pixels)
+texcopy --screen --monitor 1                # a specific monitor
 texcopy -w inline           # wrap in $...$   (-w display: \[ ... \])
 texcopy --no-copy           # print only
 texcopy --raw               # skip tidy, show the model's raw tokens
 ```
 
-macOS asks for Screen Recording permission for your terminal the first time you select a region.
+Targets: Windows x64, macOS on Apple Silicon, Linux x64 (X11; Wayland best-effort). Drag-to-select is built in on macOS only for now; a cross-platform selector window is planned. Until then, on Windows and Linux use `--screen --region`, a file, or `--clipboard` with your OS's snipping tool.
 
-## Build
+macOS asks for Screen Recording permission for your terminal the first time you capture the screen.
 
-```
-cargo build --release       # binary at target/release/texcopy
-cargo test
-```
-
-The first build downloads a prebuilt ONNX Runtime library.
+**Linux clipboard:** X11 and Wayland serve the clipboard from the program that set it, so texcopy leaves a small background helper running that keeps the text available until you copy something else.
 
 ## Benchmark
 
@@ -76,7 +73,7 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 
 - **Proofread the output.** It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
 - One formula per selection. Paragraphs, tables and multi-line alignments are out of scope.
-- Region capture is macOS-only for now; elsewhere use a file or `--clipboard`. The clipboard code is untested outside macOS.
+- Interactive drag-select is macOS-only for now. Only macOS has been run so far; the Windows and Linux code paths (including the Linux clipboard helper) are written but not yet exercised.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
 
 If the source is a web page using KaTeX or MathJax, the exact TeX is already in the page's DOM and no OCR is needed.
