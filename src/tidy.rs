@@ -7,10 +7,41 @@
 
 /// Commands whose next `{...}` group is an argument, so its braces must stay.
 const TAKES_ARG: &[&str] = &[
-    "frac", "dfrac", "tfrac", "binom", "sqrt", "hat", "widehat", "bar", "vec", "tilde", "widetilde",
-    "dot", "ddot", "overline", "underline", "overrightarrow", "text", "textbf", "textit", "mbox",
-    "mathrm", "mathbf", "mathit", "mathcal", "mathbb", "mathsf", "mathtt", "boldsymbol",
-    "operatorname", "begin", "end", "stackrel", "overset", "underset", "xrightarrow",
+    "frac",
+    "dfrac",
+    "tfrac",
+    "binom",
+    "sqrt",
+    "hat",
+    "widehat",
+    "bar",
+    "vec",
+    "tilde",
+    "widetilde",
+    "dot",
+    "ddot",
+    "overline",
+    "underline",
+    "overrightarrow",
+    "text",
+    "textbf",
+    "textit",
+    "mbox",
+    "mathrm",
+    "mathbf",
+    "mathit",
+    "mathcal",
+    "mathbb",
+    "mathsf",
+    "mathtt",
+    "boldsymbol",
+    "operatorname",
+    "begin",
+    "end",
+    "stackrel",
+    "overset",
+    "underset",
+    "xrightarrow",
 ];
 
 /// Old-style font switches and their modern command equivalents.
@@ -127,12 +158,27 @@ fn group_is_removable(s: &str, start: usize) -> bool {
         return true;
     };
     match prev {
-        b'{' | b'(' | b'[' | b',' | b'=' | b'+' | b'-' | b'&' | b';' | b'|' | b'/' | b'<' | b'>'
-        | b' ' | b'0'..=b'9' => true,
+        b'{'
+        | b'('
+        | b'['
+        | b','
+        | b'='
+        | b'+'
+        | b'-'
+        | b'&'
+        | b';'
+        | b'|'
+        | b'/'
+        | b'<'
+        | b'>'
+        | b' '
+        | b'0'..=b'9' => true,
         b'a'..=b'z' | b'A'..=b'Z' => {
             // Either the end of a control word or a plain variable.
             let head = &s[..start];
-            let word_start = head.trim_end_matches(|c: char| c.is_ascii_alphabetic()).len();
+            let word_start = head
+                .trim_end_matches(|c: char| c.is_ascii_alphabetic())
+                .len();
             match head[..word_start].strip_suffix('\\') {
                 Some(_) => !TAKES_ARG.contains(&&head[word_start..]),
                 None => true,
@@ -151,8 +197,12 @@ fn modernize_fonts(s: &str) -> String {
             .iter()
             .filter_map(|&(old, new)| s.rfind(&format!("{{{old} ")).map(|i| (i, old, new)))
             .max_by_key(|&(i, ..)| i);
-        let Some((start, old, new)) = found else { break };
-        let Some(end) = matching_brace(&s, start) else { break };
+        let Some((start, old, new)) = found else {
+            break;
+        };
+        let Some(end) = matching_brace(&s, start) else {
+            break;
+        };
         let body = s[start + old.len() + 2..end].to_string();
         let repl = if group_is_removable(&s, start) {
             format!("{new}{{{body}}}")
@@ -219,7 +269,9 @@ fn unbrace_scripts(s: &str) -> String {
 }
 
 /// Environments whose cells the model wraps in redundant braces (`{a} & {b}`).
-const CELL_ENVS: &[&str] = &["matrix", "pmatrix", "bmatrix", "vmatrix", "Vmatrix", "Bmatrix", "cases"];
+const CELL_ENVS: &[&str] = &[
+    "matrix", "pmatrix", "bmatrix", "vmatrix", "Vmatrix", "Bmatrix", "cases",
+];
 
 /// `\left<d1>\begin{matrix}..\end{matrix}\right<d2>` -> the matching named environment.
 const MATRIX_DELIMS: &[(&str, &str, &str)] = &[
@@ -263,7 +315,9 @@ fn delimited_matrices(s: &str) -> String {
         let converted = MATRIX_DELIMS.iter().find_map(|&(l, r, env)| {
             let body_and_tail = after.strip_prefix(l)?.strip_prefix(OPEN)?;
             let end = find_env_end(body_and_tail, "matrix")?;
-            let tail = body_and_tail[end + "\\end{matrix}".len()..].strip_prefix("\\right")?.strip_prefix(r)?;
+            let tail = body_and_tail[end + "\\end{matrix}".len()..]
+                .strip_prefix("\\right")?
+                .strip_prefix(r)?;
             Some((env, &body_and_tail[..end], tail))
         });
         match converted {
@@ -307,7 +361,11 @@ fn unwrap_cells(body: &str) -> String {
             }
         }
     }
-    if rows.len() > 1 && rows.last().is_some_and(|r| r.len() == 1 && r[0].trim().is_empty()) {
+    if rows.len() > 1
+        && rows
+            .last()
+            .is_some_and(|r| r.len() == 1 && r[0].trim().is_empty())
+    {
         rows.pop();
     }
     rows.iter()
@@ -316,7 +374,9 @@ fn unwrap_cells(body: &str) -> String {
                 .map(|cell| {
                     let cell = cell.trim();
                     match matching_brace(cell, 0) {
-                        Some(end) if cell.starts_with('{') && end == cell.len() - 1 => cell[1..end].trim().to_string(),
+                        Some(end) if cell.starts_with('{') && end == cell.len() - 1 => {
+                            cell[1..end].trim().to_string()
+                        }
                         _ => cell.to_string(),
                     }
                 })
@@ -393,7 +453,9 @@ fn binom_parts(after: &str) -> Option<(String, String, &str)> {
             }
             nest -= 1;
             i += 6;
-        } else if t.starts_with("\\atop") && !t["\\atop".len()..].starts_with(|c: char| c.is_ascii_alphabetic()) {
+        } else if t.starts_with("\\atop")
+            && !t["\\atop".len()..].starts_with(|c: char| c.is_ascii_alphabetic())
+        {
             if brace == 0 && nest == 0 {
                 if atop.is_some() {
                     return None; // two \atop at the top level: not a binomial
@@ -426,7 +488,9 @@ fn mathrm_to_text(s: &str) -> String {
             let inner = &rest[open + 1..end];
             let spaced = inner.contains('~') || inner.contains("\\ ");
             let plain = inner.replace("\\ ", " ").replace('~', " ");
-            let plain_ok = plain.chars().all(|c| c.is_ascii_alphanumeric() || " .,:;'()-".contains(c));
+            let plain_ok = plain
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || " .,:;'()-".contains(c));
             (spaced && plain_ok).then_some((plain, end))
         });
         match converted {
@@ -488,10 +552,15 @@ mod tests {
     #[test]
     fn rewrites_known_operators() {
         assert_eq!(
-            tidy(r"\operatorname* { l i m } _ { x \to 0 } \frac { \operatorname { s i n } x } { x } = 1"),
+            tidy(
+                r"\operatorname* { l i m } _ { x \to 0 } \frac { \operatorname { s i n } x } { x } = 1"
+            ),
             r"\lim_{x\to0}\frac{\sin x}{x}=1"
         );
-        assert_eq!(tidy(r"\operatorname { f o o } ( x )"), r"\operatorname{foo}(x)");
+        assert_eq!(
+            tidy(r"\operatorname { f o o } ( x )"),
+            r"\operatorname{foo}(x)"
+        );
     }
 
     #[test]
@@ -505,11 +574,15 @@ mod tests {
     #[test]
     fn names_delimited_matrices() {
         assert_eq!(
-            tidy(r"A = \left( \begin{matrix} { a } & { b } \\ { c } & { d } \\ \end{matrix} \right)"),
+            tidy(
+                r"A = \left( \begin{matrix} { a } & { b } \\ { c } & { d } \\ \end{matrix} \right)"
+            ),
             r"A=\begin{pmatrix}a & b \\ c & d\end{pmatrix}"
         );
         assert_eq!(
-            tidy(r"\left[ \begin{matrix} { 1 } & { \cdots } & { n } \\ { \vdots } & { \ddots } & { n ^ { 2 } } \end{matrix} \right]"),
+            tidy(
+                r"\left[ \begin{matrix} { 1 } & { \cdots } & { n } \\ { \vdots } & { \ddots } & { n ^ { 2 } } \end{matrix} \right]"
+            ),
             r"\begin{bmatrix}1 & \cdots & n \\ \vdots & \ddots & n^2\end{bmatrix}"
         );
         assert_eq!(
@@ -517,18 +590,26 @@ mod tests {
             r"\begin{cases}x+y=2 \\ x-y=0\end{cases}"
         );
         // Delimiters that don't match a known environment are left alone.
-        assert_eq!(tidy(r"\left( \begin{matrix} a \end{matrix} \right]"), r"\left(\begin{matrix}a\end{matrix}\right]");
+        assert_eq!(
+            tidy(r"\left( \begin{matrix} a \end{matrix} \right]"),
+            r"\left(\begin{matrix}a\end{matrix}\right]"
+        );
         assert_eq!(tidy(r"\leftarrow x"), r"\leftarrow x");
     }
 
     #[test]
     fn unwraps_cells_in_cases_and_keeps_text() {
         assert_eq!(
-            tidy(r"f ( x ) = \begin{cases} { x ^ { 2 } } & { \mathrm { i f ~ } x \geq 0 } \\ { - x } & { \mathrm { o t h e r w i s e } } \\ \end{cases}"),
+            tidy(
+                r"f ( x ) = \begin{cases} { x ^ { 2 } } & { \mathrm { i f ~ } x \geq 0 } \\ { - x } & { \mathrm { o t h e r w i s e } } \\ \end{cases}"
+            ),
             r"f(x)=\begin{cases}x^2 & \text{if }x\geq0 \\ -x & \mathrm{otherwise}\end{cases}"
         );
         // Two adjacent groups in one cell are not one wrapper.
-        assert_eq!(tidy(r"\begin{matrix} { a } { b } & c \end{matrix}"), r"\begin{matrix}{a}{b} & c\end{matrix}");
+        assert_eq!(
+            tidy(r"\begin{matrix} { a } { b } & c \end{matrix}"),
+            r"\begin{matrix}{a}{b} & c\end{matrix}"
+        );
     }
 
     #[test]

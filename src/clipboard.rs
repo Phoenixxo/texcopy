@@ -9,9 +9,12 @@ use anyhow::{Context, Result};
 use image::DynamicImage;
 
 pub fn read_image() -> Result<DynamicImage> {
-    let img = arboard::Clipboard::new()?.get_image().context("no image on the clipboard")?;
-    let buf = image::RgbaImage::from_raw(img.width as u32, img.height as u32, img.bytes.into_owned())
-        .context("malformed clipboard image")?;
+    let img = arboard::Clipboard::new()?
+        .get_image()
+        .context("no image on the clipboard")?;
+    let buf =
+        image::RgbaImage::from_raw(img.width as u32, img.height as u32, img.bytes.into_owned())
+            .context("malformed clipboard image")?;
     Ok(buf.into())
 }
 
@@ -38,12 +41,19 @@ pub fn copy_text(text: &str) -> Result<()> {
         .process_group(0) // survive Ctrl-C and the terminal closing
         .spawn()
         .context("starting the clipboard helper")?;
-    child.stdin.take().context("helper stdin")?.write_all(text.as_bytes())?;
+    child
+        .stdin
+        .take()
+        .context("helper stdin")?
+        .write_all(text.as_bytes())?;
 
     // If the helper can't reach a clipboard (no display server), it exits immediately.
     std::thread::sleep(Duration::from_millis(200));
     if let Some(status) = child.try_wait()? {
-        anyhow::ensure!(status.success(), "no clipboard available (is a display server running?)");
+        anyhow::ensure!(
+            status.success(),
+            "no clipboard available (is a display server running?)"
+        );
     }
     Ok(())
 }
@@ -52,7 +62,10 @@ pub fn copy_text(text: &str) -> Result<()> {
 #[cfg(target_os = "linux")]
 pub fn hold(text: &str) -> Result<()> {
     use arboard::SetExtLinux;
-    arboard::Clipboard::new()?.set().wait().text(text.to_owned())?;
+    arboard::Clipboard::new()?
+        .set()
+        .wait()
+        .text(text.to_owned())?;
     Ok(())
 }
 

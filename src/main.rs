@@ -98,7 +98,11 @@ fn main() -> Result<()> {
     }
     let mut rec = model::Recognizer::load(&dir, spec)?;
     let result = rec.recognize(&img, cli.max_tokens)?;
-    let latex = if cli.raw { result.text.clone() } else { tidy::tidy(&result.text) };
+    let latex = if cli.raw {
+        result.text.clone()
+    } else {
+        tidy::tidy(&result.text)
+    };
 
     if cli.json {
         let out = JsonOut {
@@ -124,12 +128,22 @@ fn main() -> Result<()> {
     }
     let unsure = result.uncertain();
     if !unsure.is_empty() {
-        eprintln!("warning: unsure about {} token(s), worth checking:", unsure.len());
+        eprintln!(
+            "warning: unsure about {} token(s), worth checking:",
+            unsure.len()
+        );
         for &i in unsure.iter().take(5) {
             // Show a little context before the token, which is marked [like this].
-            let before: String = result.tokens[i.saturating_sub(4)..i].iter().map(|t| t.text.trim()).collect();
+            let before: String = result.tokens[i.saturating_sub(4)..i]
+                .iter()
+                .map(|t| t.text.trim())
+                .collect();
             let t = &result.tokens[i];
-            eprintln!("  ...{before}[{}]  ({:.0}% sure)", t.text.trim(), t.prob * 100.0);
+            eprintln!(
+                "  ...{before}[{}]  ({:.0}% sure)",
+                t.text.trim(),
+                t.prob * 100.0
+            );
         }
     }
 
@@ -159,7 +173,9 @@ struct JsonOut<'a> {
 /// `None` means the user cancelled the screen selection.
 fn load_image(cli: &Cli) -> Result<Option<DynamicImage>> {
     if let Some(path) = &cli.image {
-        return Ok(Some(image::open(path).with_context(|| format!("opening {}", path.display()))?));
+        return Ok(Some(
+            image::open(path).with_context(|| format!("opening {}", path.display()))?,
+        ));
     }
     if cli.clipboard {
         return clipboard::read_image().map(Some);

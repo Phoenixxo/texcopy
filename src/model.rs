@@ -52,7 +52,9 @@ impl Recognition {
 
     /// Indices of tokens below `LOW_CONFIDENCE`.
     pub fn uncertain(&self) -> Vec<usize> {
-        (0..self.tokens.len()).filter(|&i| self.tokens[i].prob < LOW_CONFIDENCE).collect()
+        (0..self.tokens.len())
+            .filter(|&i| self.tokens[i].prob < LOW_CONFIDENCE)
+            .collect()
     }
 
     /// Average log-probability per token (0.0 is perfectly certain, more negative is worse).
@@ -60,7 +62,11 @@ impl Recognition {
         if self.tokens.is_empty() {
             return 0.0;
         }
-        self.tokens.iter().map(|t| t.prob.max(1e-9).ln()).sum::<f32>() / self.tokens.len() as f32
+        self.tokens
+            .iter()
+            .map(|t| t.prob.max(1e-9).ln())
+            .sum::<f32>()
+            / self.tokens.len() as f32
     }
 }
 
@@ -71,7 +77,11 @@ pub const LOW_CONFIDENCE: f32 = 0.5;
 
 /// Index and softmax probability of the highest logit.
 fn argmax_prob(logits: &[f32]) -> (i64, f32) {
-    let (i, &max) = logits.iter().enumerate().max_by(|a, b| a.1.total_cmp(b.1)).unwrap();
+    let (i, &max) = logits
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.total_cmp(b.1))
+        .unwrap();
     let z: f32 = logits.iter().map(|l| (l - max).exp()).sum();
     (i as i64, 1.0 / z)
 }
@@ -115,7 +125,10 @@ impl Recognizer {
     /// Recognise a single formula image (no `$` delimiters).
     pub fn recognize(&mut self, img: &DynamicImage, max_tokens: usize) -> Result<Recognition> {
         // 1. Encode the image once.
-        let (w, h) = (self.spec.input_width as usize, self.spec.input_height as usize);
+        let (w, h) = (
+            self.spec.input_width as usize,
+            self.spec.input_height as usize,
+        );
         let pixels = preprocess(img, &self.spec);
         let enc_out = self.encoder.run(ort::inputs![
             "pixel_values" => Tensor::from_array(([1usize, 3, h, w], pixels))?
@@ -160,9 +173,18 @@ impl Recognizer {
         let tokens = ids
             .iter()
             .zip(&probs)
-            .map(|(&id, &prob)| Ok(Token { text: decode(&[id])?, prob }))
+            .map(|(&id, &prob)| {
+                Ok(Token {
+                    text: decode(&[id])?,
+                    prob,
+                })
+            })
             .collect::<Result<Vec<_>>>()?;
-        Ok(Recognition { text: decode(&ids)?, tokens, stop })
+        Ok(Recognition {
+            text: decode(&ids)?,
+            tokens,
+            stop,
+        })
     }
 }
 
@@ -200,7 +222,12 @@ fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
                 ((h as u64 * tw as u64).div_ceil(th as u64) as u32, h)
             };
             let mut canvas = RgbImage::from_pixel(cw, ch, *rgb.get_pixel(0, 0));
-            image::imageops::overlay(&mut canvas, &rgb, ((cw - w) / 2) as i64, ((ch - h) / 2) as i64);
+            image::imageops::overlay(
+                &mut canvas,
+                &rgb,
+                ((cw - w) / 2) as i64,
+                ((ch - h) / 2) as i64,
+            );
             image::imageops::resize(&canvas, tw, th, FilterType::CatmullRom)
         }
     };
@@ -244,18 +271,36 @@ mod tests {
 
     #[test]
     fn flags_only_low_confidence_tokens() {
-        let tok = |p| Token { text: "x".into(), prob: p };
-        let r = Recognition { text: String::new(), tokens: vec![tok(0.99), tok(0.49), tok(0.5), tok(0.1)], stop: Stop::Eos };
+        let tok = |p| Token {
+            text: "x".into(),
+            prob: p,
+        };
+        let r = Recognition {
+            text: String::new(),
+            tokens: vec![tok(0.99), tok(0.49), tok(0.5), tok(0.1)],
+            stop: Stop::Eos,
+        };
         assert_eq!(r.uncertain(), vec![1, 3]);
     }
 
     #[test]
     fn confidence_summaries() {
-        let tok = |p| Token { text: "x".into(), prob: p };
-        let r = Recognition { text: String::new(), tokens: vec![tok(1.0), tok(0.5)], stop: Stop::Eos };
+        let tok = |p| Token {
+            text: "x".into(),
+            prob: p,
+        };
+        let r = Recognition {
+            text: String::new(),
+            tokens: vec![tok(1.0), tok(0.5)],
+            stop: Stop::Eos,
+        };
         assert_eq!(r.min_prob(), 0.5);
         assert!((r.mean_logprob() - 0.5f32.ln() / 2.0).abs() < 1e-6);
-        let empty = Recognition { text: String::new(), tokens: vec![], stop: Stop::Eos };
+        let empty = Recognition {
+            text: String::new(),
+            tokens: vec![],
+            stop: Stop::Eos,
+        };
         assert_eq!((empty.min_prob(), empty.mean_logprob()), (1.0, 0.0));
     }
 }

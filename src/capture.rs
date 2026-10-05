@@ -12,13 +12,22 @@ use image::DynamicImage;
 pub fn screenshot(index: Option<usize>) -> Result<DynamicImage> {
     let monitors = xcap::Monitor::all().context("listing monitors")?;
     let monitor = match index {
-        Some(i) => monitors
-            .into_iter()
-            .nth(i)
-            .with_context(|| format!("no monitor {i}; use 0..{}", xcap::Monitor::all().map_or(0, |m| m.len()).saturating_sub(1)))?,
+        Some(i) => monitors.into_iter().nth(i).with_context(|| {
+            format!(
+                "no monitor {i}; use 0..{}",
+                xcap::Monitor::all()
+                    .map_or(0, |m| m.len())
+                    .saturating_sub(1)
+            )
+        })?,
         None => {
-            let primary = monitors.iter().position(|m| m.is_primary().unwrap_or(false));
-            monitors.into_iter().nth(primary.unwrap_or(0)).context("no monitors found")?
+            let primary = monitors
+                .iter()
+                .position(|m| m.is_primary().unwrap_or(false));
+            monitors
+                .into_iter()
+                .nth(primary.unwrap_or(0))
+                .context("no monitors found")?
         }
     };
     let img = monitor.capture_image().context("capturing the screen")?;
@@ -40,7 +49,12 @@ pub fn crop(img: &DynamicImage, region: &str) -> Result<DynamicImage> {
     let [x, y, w, h] = nums[..] else {
         anyhow::bail!("--region expects exactly four numbers: x,y,w,h");
     };
-    anyhow::ensure!(x < img.width() && y < img.height(), "--region starts outside the {}x{} screenshot", img.width(), img.height());
+    anyhow::ensure!(
+        x < img.width() && y < img.height(),
+        "--region starts outside the {}x{} screenshot",
+        img.width(),
+        img.height()
+    );
     let (w, h) = (w.min(img.width() - x), h.min(img.height() - y));
     anyhow::ensure!(w > 0 && h > 0, "--region has zero width or height");
     Ok(img.crop_imm(x, y, w, h))
@@ -52,7 +66,10 @@ pub fn interactive() -> Result<Option<DynamicImage>> {
     use std::process::Command;
     let path = std::env::temp_dir().join(format!("texcopy-{}.png", std::process::id()));
     // -i: interactive crosshair selection, -x: no shutter sound. Esc cancels (no file written).
-    let status = Command::new("screencapture").args(["-i", "-x"]).arg(&path).status()?;
+    let status = Command::new("screencapture")
+        .args(["-i", "-x"])
+        .arg(&path)
+        .status()?;
     if !status.success() || !path.exists() {
         return Ok(None);
     }

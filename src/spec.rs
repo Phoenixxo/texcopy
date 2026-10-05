@@ -70,7 +70,8 @@ impl ModelSpec {
         if !path.is_file() {
             return Ok(Self::default());
         }
-        let text = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+        let text =
+            fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))
     }
 
@@ -89,8 +90,13 @@ mod tests {
 
     #[test]
     fn partial_json_keeps_defaults() {
-        let s: ModelSpec = serde_json::from_str(r#"{"name":"mine","input_width":672,"input_height":192}"#).unwrap();
-        assert_eq!((s.input_width, s.input_height, s.name.as_str()), (672, 192, "mine"));
+        let s: ModelSpec =
+            serde_json::from_str(r#"{"name":"mine","input_width":672,"input_height":192}"#)
+                .unwrap();
+        assert_eq!(
+            (s.input_width, s.input_height, s.name.as_str()),
+            (672, 192, "mine")
+        );
         assert_eq!(s.encoder, "encoder_model.onnx");
         assert_eq!(s.start_token, 2);
     }

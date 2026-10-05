@@ -21,7 +21,10 @@ pub fn locate(over: Option<PathBuf>) -> Result<(PathBuf, ModelSpec)> {
     let cache = cache_dir();
     let candidates: Vec<PathBuf> = match &over {
         Some(d) => vec![d.clone()],
-        None => [Some(PathBuf::from("models")), cache.clone()].into_iter().flatten().collect(),
+        None => [Some(PathBuf::from("models")), cache.clone()]
+            .into_iter()
+            .flatten()
+            .collect(),
     };
     for dir in candidates {
         let spec = ModelSpec::load(&dir)?;
@@ -36,10 +39,18 @@ pub fn locate(over: Option<PathBuf>) -> Result<(PathBuf, ModelSpec)> {
         .context("cannot determine a cache directory; pass --model-dir")?;
     let spec = ModelSpec::load(&target)?;
     let Some(base) = &spec.base_url else {
-        bail!("model files for '{}' are missing from {} and its spec.json has no base_url", spec.name, target.display());
+        bail!(
+            "model files for '{}' are missing from {} and its spec.json has no base_url",
+            spec.name,
+            target.display()
+        );
     };
     fs::create_dir_all(&target)?;
-    eprintln!("First run: downloading model '{}' to {}", spec.name, target.display());
+    eprintln!(
+        "First run: downloading model '{}' to {}",
+        spec.name,
+        target.display()
+    );
     for f in spec.files() {
         if !target.join(f).is_file() {
             download(&format!("{base}/{f}"), &target.join(f))?;
@@ -50,7 +61,9 @@ pub fn locate(over: Option<PathBuf>) -> Result<(PathBuf, ModelSpec)> {
 
 fn download(url: &str, dest: &Path) -> Result<()> {
     let name = dest.file_name().unwrap().to_string_lossy().into_owned();
-    let resp = ureq::get(url).call().with_context(|| format!("GET {url}"))?;
+    let resp = ureq::get(url)
+        .call()
+        .with_context(|| format!("GET {url}"))?;
     let total: Option<u64> = resp
         .headers()
         .get("content-length")
