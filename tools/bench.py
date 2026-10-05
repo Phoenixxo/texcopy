@@ -126,10 +126,10 @@ class Bench:
             return "", {}
         return d["latex"], d
 
-    def grade(self, ref_png, true_src, output):
+    def grade(self, ref_png, true_src, output, pre=""):
         norm = lambda s: re.sub(r"\\left|\\right|\\,|\\displaystyle|\s+|[{}]", "", s)
         sim = difflib.SequenceMatcher(None, norm(true_src), norm(output)).ratio()
-        out_png = self.render(output) if output else None
+        out_png = self.render(output, pre=pre) if output else None
         if not out_png:
             return "FAIL", sim
         cmp = run("magick", "compare", "-metric", "AE", ref_png, out_png, "null:")
@@ -141,9 +141,9 @@ class Bench:
 def collect(b, suites):
     rows = []
 
-    def add(suite, case, ref, src, image):
+    def add(suite, case, ref, src, image, pre=""):
         out, meta = b.texcopy(image)
-        g, sim = b.grade(ref, src, out)
+        g, sim = b.grade(ref, src, out, pre)
         rows.append({"suite": suite, "case": case, "grade": g, "sim": round(sim, 3), "output": out,
                      "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
         print(f"  {g:8} {suite:16} {case}", file=sys.stderr)
@@ -168,7 +168,7 @@ def collect(b, suites):
     if "stress" in suites:
         for name, (s, pre) in STRESS.items():
             ref = b.render(s, pre=pre)
-            add("stress", name, ref, s, ref)
+            add("stress", name, ref, s, ref, pre)
         for name, s in INFO_ONLY.items():
             img = b.render(s, raw=True)
             out, _ = b.texcopy(img)

@@ -4,399 +4,570 @@
   "case": "E = mc^2",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "E=mc^2"
+  "output": "E=mc^2",
+  "stop": "eos",
+  "min_prob": 0.9999466,
+  "mean_logprob": -8.955785e-06
  },
  {
   "suite": "T1 simple",
   "case": "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.9997123,
+  "mean_logprob": -2.2926566e-05
  },
  {
   "suite": "T1 simple",
   "case": "\\int_{-\\infty}^{\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\int_{-\\infty}^{\\infty}e^{-x^2}\\,dx=\\sqrt{\\pi}"
+  "output": "\\int_{-\\infty}^{\\infty}e^{-x^2}\\,dx=\\sqrt{\\pi}",
+  "stop": "eos",
+  "min_prob": 0.9303553,
+  "mean_logprob": -0.0022004356
  },
  {
   "suite": "T1 simple",
   "case": "\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}"
+  "output": "\\sum_{n=1}^{\\infty}\\frac{1}{n^2}=\\frac{\\pi^2}{6}",
+  "stop": "eos",
+  "min_prob": 0.9925454,
+  "mean_logprob": -0.00024671003
  },
  {
   "suite": "T2 medium",
   "case": "e^{i\\pi} + 1 = 0",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "e^{i\\pi}+1=0"
+  "output": "e^{i\\pi}+1=0",
+  "stop": "eos",
+  "min_prob": 0.9998698,
+  "mean_logprob": -1.4793584e-05
  },
  {
   "suite": "T2 medium",
   "case": "f(z_0) = \\frac{1}{2\\pi i} \\oint_{\\gamma} \\frac{f",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.88159025,
+  "mean_logprob": -0.0032769018
  },
  {
   "suite": "T2 medium",
   "case": "i\\hbar \\frac{\\partial}{\\partial t} \\Psi(\\mathbf{",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "i\\hbar\\frac{\\partial}{\\partial t}\\Psi(\\mathbf{r},t)=\\left[-\\frac{\\hbar^2}{2m}\\nabla^2+V(\\mathbf{r},t)\\right]\\Psi(\\mathbf{r},t)"
+  "output": "i\\hbar\\frac{\\partial}{\\partial t}\\Psi(\\mathbf{r},t)=\\left[-\\frac{\\hbar^2}{2m}\\nabla^2+V(\\mathbf{r},t)\\right]\\Psi(\\mathbf{r},t)",
+  "stop": "eos",
+  "min_prob": 0.8543077,
+  "mean_logprob": -0.0024931852
  },
  {
   "suite": "T2 medium",
   "case": "\\binom{n}{k} = \\frac{n!}{k!(n-k)!}",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\binom{n}{k}=\\frac{n!}{k!(n-k)!}"
+  "output": "\\binom{n}{k}=\\frac{n!}{k!(n-k)!}",
+  "stop": "eos",
+  "min_prob": 0.9930067,
+  "mean_logprob": -0.00051595824
  },
  {
   "suite": "T2 medium",
   "case": "\\det \\begin{vmatrix} a & b & c \\\\ d & e & f \\\\ g",
   "grade": "EXACT",
-  "sim": 0.957,
-  "output": "\\det\\left|\\begin{matrix}{a} & {b} & {c} \\\\ {d} & {e} & {f} \\\\ {g} & {h} & {i} \\end{matrix}\\right|"
+  "sim": 1.0,
+  "output": "\\det\\begin{vmatrix}a & b & c \\\\ d & e & f \\\\ g & h & i\\end{vmatrix}",
+  "stop": "eos",
+  "min_prob": 0.99722797,
+  "mean_logprob": -9.607533e-05
  },
  {
   "suite": "T2 medium",
   "case": "\\Gamma(z) = \\int_0^\\infty t^{z-1} e^{-t} \\, dt",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\Gamma(z)=\\int_0^{\\infty}t^{z-1}e^{-t}\\,dt"
+  "output": "\\Gamma(z)=\\int_0^{\\infty}t^{z-1}e^{-t}\\,dt",
+  "stop": "eos",
+  "min_prob": 0.99996257,
+  "mean_logprob": -2.6262442e-06
  },
  {
   "suite": "T2 medium",
   "case": "P(A \\mid B) = \\frac{P(B \\mid A) P(A)}{P(B)}",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "P(A\\mid B)=\\frac{P(B\\mid A)P(A)}{P(B)}"
+  "output": "P(A\\mid B)=\\frac{P(B\\mid A)P(A)}{P(B)}",
+  "stop": "eos",
+  "min_prob": 0.9944536,
+  "mean_logprob": -0.00019373569
  },
  {
   "suite": "T3 long/nested",
   "case": "e^x = 1 + x + \\frac{x^2}{2!} + \\frac{x^3}{3!} + ",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "e^x=1+x+\\frac{x^2}{2!}+\\frac{x^3}{3!}+\\frac{x^4}{4!}+\\cdots+\\frac{x^n}{n!}+\\cdots"
+  "output": "e^x=1+x+\\frac{x^2}{2!}+\\frac{x^3}{3!}+\\frac{x^4}{4!}+\\cdots+\\frac{x^n}{n!}+\\cdots",
+  "stop": "eos",
+  "min_prob": 0.6265809,
+  "mean_logprob": -0.007101921
  },
  {
   "suite": "T3 long/nested",
   "case": "\\sum_{k=0}^{n} \\binom{n}{k} x^{k} y^{n-k} = (x+y",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\sum_{k=0}^n\\binom{n}{k}x^ky^{n-k}=(x+y)^n=\\sum_{j=0}^n\\frac{n!}{j!(n-j)!}x^jy^{n-j}+R_n(x,y)"
+  "output": "\\sum_{k=0}^n\\binom{n}{k}x^ky^{n-k}=(x+y)^n=\\sum_{j=0}^n\\frac{n!}{j!(n-j)!}x^jy^{n-j}+R_n(x,y)",
+  "stop": "eos",
+  "min_prob": 0.6682196,
+  "mean_logprob": -0.0059457505
  },
  {
   "suite": "T3 long/nested",
   "case": "x = a_0 + \\cfrac{1}{a_1 + \\cfrac{1}{a_2 + \\cfrac",
   "grade": "EXACT",
   "sim": 0.978,
-  "output": "x=a_0+\\cfrac{1}{a_1+\\cfrac{1}{a_2+\\cfrac{1}{a_3+\\dotsb}}}"
+  "output": "x=a_0+\\cfrac{1}{a_1+\\cfrac{1}{a_2+\\cfrac{1}{a_3+\\dotsb}}}",
+  "stop": "eos",
+  "min_prob": 0.633044,
+  "mean_logprob": -0.010689199
  },
  {
   "suite": "T3 long/nested",
   "case": "\\sqrt{1 + \\sqrt{1 + \\sqrt{1 + \\frac{1}{1 + \\frac",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\sqrt{1+\\sqrt{1+\\sqrt{1+\\frac{1}{1+\\frac{1}{x}}}}}"
+  "output": "\\sqrt{1+\\sqrt{1+\\sqrt{1+\\frac{1}{1+\\frac{1}{x}}}}}",
+  "stop": "eos",
+  "min_prob": 0.96345556,
+  "mean_logprob": -0.0016546624
  },
  {
   "suite": "T4 multi-line",
   "case": "\\begin{aligned} (a+b)^2 &= a^2 + 2ab + b^2 \\\\ (a",
   "grade": "differs",
   "sim": 0.731,
-  "output": "(a+b)^2=a^2+2ab+b^2\\,(a-b)^2=a^2-2ab+b^2"
+  "output": "(a+b)^2=a^2+2ab+b^2\\,(a-b)^2=a^2-2ab+b^2",
+  "stop": "eos",
+  "min_prob": 0.99017745,
+  "mean_logprob": -0.0002606695
  },
  {
   "suite": "T4 multi-line",
   "case": "\\begin{cases} x + y = 2 \\\\ x - y = 0 \\end{cases}",
-  "grade": "differs",
-  "sim": 0.706,
-  "output": "\\left\\{\\begin{matrix}{x+y=2} \\\\ {x-y=0} \\end{matrix}\\right."
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{cases}x+y=2 \\\\ x-y=0\\end{cases}",
+  "stop": "eos",
+  "min_prob": 0.68808526,
+  "mean_logprob": -0.011857335
  },
  {
   "suite": "T4 multi-line",
   "case": "\\begin{bmatrix} 1 & 2 & \\cdots & n \\\\ 2 & 4 & \\c",
   "grade": "EXACT",
-  "sim": 0.979,
-  "output": "\\left[\\begin{matrix}{1} & {2} & {\\cdots} & {n} \\\\ {2} & {4} & {\\cdots} & {2n} \\\\ {\\vdots} & {\\vdots} & {\\ddots} & {\\vdots} \\\\ {n} & {2n} & {\\cdots} & {n^2} \\end{matrix}\\right]"
+  "sim": 1.0,
+  "output": "\\begin{bmatrix}1 & 2 & \\cdots & n \\\\ 2 & 4 & \\cdots & 2n \\\\ \\vdots & \\vdots & \\ddots & \\vdots \\\\ n & 2n & \\cdots & n^2\\end{bmatrix}",
+  "stop": "eos",
+  "min_prob": 0.9991086,
+  "mean_logprob": -2.8960609e-05
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq dpi50",
   "grade": "close",
   "sim": 0.962,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4bc}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4bc}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.36918485,
+  "mean_logprob": -0.06792421
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq dpi100",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.95843333,
+  "mean_logprob": -0.0017314927
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq dpi400",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.99989593,
+  "mean_logprob": -8.336123e-06
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq dpi800",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.9999095,
+  "mean_logprob": -8.33171e-06
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq down50%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x={\\frac{-b\\pm{\\sqrt{b^2-4ac}}}{2a}}"
+  "output": "x={\\frac{-b\\pm{\\sqrt{b^2-4ac}}}{2a}}",
+  "stop": "eos",
+  "min_prob": 0.6986497,
+  "mean_logprob": -0.011944246
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq down25%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x={\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}}"
+  "output": "x={\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}}",
+  "stop": "eos",
+  "min_prob": 0.5587093,
+  "mean_logprob": -0.042089056
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq blur",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.961698,
+  "mean_logprob": -0.0018278362
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq dark",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.9997123,
+  "mean_logprob": -2.2926566e-05
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq margin80",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.994073,
+  "mean_logprob": -0.00044707363
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq yellow-bg",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.99466985,
+  "mean_logprob": -0.0003212853
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq noise",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.9971451,
+  "mean_logprob": -0.00020679345
  },
  {
   "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq jpeg-q20",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}"
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.9971,
+  "mean_logprob": -0.00019944852
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dpi50",
   "grade": "close",
   "sim": 0.928,
-  "output": "f(z_b)=\\frac{1}{2\\pi\\imath}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_b)=\\frac{1}{2\\pi\\imath}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.49666175,
+  "mean_logprob": -0.047258064
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dpi100",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)={\\frac{1}{2\\pi i}}\\oint_{\\gamma}{\\frac{f(z)}{z-z_0}}\\,dz"
+  "output": "f(z_0)={\\frac{1}{2\\pi i}}\\oint_{\\gamma}{\\frac{f(z)}{z-z_0}}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.58164805,
+  "mean_logprob": -0.01098645
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dpi400",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.9708038,
+  "mean_logprob": -0.001128536
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dpi800",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.92905307,
+  "mean_logprob": -0.0029718773
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ down50%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)={\\frac{1}{2\\pi i}}\\oint_{\\gamma}{\\frac{f(z)}{z-z_0}}\\,dz"
+  "output": "f(z_0)={\\frac{1}{2\\pi i}}\\oint_{\\gamma}{\\frac{f(z)}{z-z_0}}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.8041912,
+  "mean_logprob": -0.0044931974
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ down25%",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.93095785,
+  "mean_logprob": -0.0033863513
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ blur",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.6909106,
+  "mean_logprob": -0.0095738955
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ dark",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.88159025,
+  "mean_logprob": -0.0032769018
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ margin80",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.9327333,
+  "mean_logprob": -0.002151464
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ yellow-bg",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.6354575,
+  "mean_logprob": -0.01125905
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ noise",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.93552524,
+  "mean_logprob": -0.0026867643
  },
  {
   "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ jpeg-q20",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz"
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.51712674,
+  "mean_logprob": -0.015347337
  },
  {
   "suite": "stress",
   "case": "wide 3 terms",
-  "grade": "close",
+  "grade": "EXACT",
   "sim": 1.0,
-  "output": "a_1x_1+a_2x_2+a_3x_3"
+  "output": "a_1x_1+a_2x_2+a_3x_3",
+  "stop": "eos",
+  "min_prob": 0.99976844,
+  "mean_logprob": -8.410691e-06
  },
  {
   "suite": "stress",
   "case": "wide 6 terms",
-  "grade": "close",
+  "grade": "EXACT",
   "sim": 1.0,
-  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6"
+  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6",
+  "stop": "eos",
+  "min_prob": 0.9964557,
+  "mean_logprob": -5.8246274e-05
  },
  {
   "suite": "stress",
   "case": "wide 10 terms",
-  "grade": "close",
+  "grade": "EXACT",
   "sim": 1.0,
-  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6+a_7x_7+a_8x_8+a_9x_9+a_{10}x_{10}"
+  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6+a_7x_7+a_8x_8+a_9x_9+a_{10}x_{10}",
+  "stop": "eos",
+  "min_prob": 0.99579144,
+  "mean_logprob": -4.2416577e-05
  },
  {
   "suite": "stress",
   "case": "wide 14 terms",
   "grade": "close",
   "sim": 0.982,
-  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6+a_7x_7+a_8x_8+a_9x_9+a_{10}x_{10}+a_{11}x_{11}+a_{12}x_{12}+a_{13}x_{13}+a_{14}x_{14}x_{13}"
+  "output": "a_1x_1+a_2x_2+a_3x_3+a_4x_4+a_5x_5+a_6x_6+a_7x_7+a_8x_8+a_9x_9+a_{10}x_{10}+a_{11}x_{11}+a_{12}x_{12}+a_{13}x_{13}+a_{14}x_{14}x_{13}",
+  "stop": "eos",
+  "min_prob": 0.33465314,
+  "mean_logprob": -0.011181694
  },
  {
   "suite": "stress",
   "case": "wide 20 terms",
   "grade": "FAIL",
-  "sim": 0.08,
-  "output": "a_2\\alpha_1+a_2\\alpha_2+a_3\\alpha_3+a_4\\alpha_4+a_8\\alpha_5+a_6\\alpha_6+a_7\\alpha_7+a_6\\alpha_8+a_{12}\\alpha_3+a_{12}\\alpha_{10}+a_{12}\\alpha_{12}+a_{12}\\alpha_{20}+a_{23}\\alpha_{14}+a_{25}\\alpha_{15}+a_{26}\\alpha_{26}+a_{17}\\alpha_{17}\\alpha_{27}+a_{23}\\alpha_{29}+a_{23}\\alpha_{29}\\alpha_{19}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{19}\\alpha_{1"
+  "sim": 0.083,
+  "output": "a_2\\alpha_1+a_2\\alpha_2+a_3\\alpha_3+a_4\\alpha_4+a_8\\alpha_5+a_6\\alpha_6+a_7\\alpha_7+a_6\\alpha_8+a_{12}\\alpha_3+a_{12}\\alpha_{10}+a_{12}\\alpha_{12}+a_{12}\\alpha_{20}+a_{23}\\alpha_{14}+a_{25}\\alpha_{15}+a_{26}\\alpha_{26}+a_{17}\\alpha_{17}\\alpha_{27}+a_{23}\\alpha_{29}+a_{23}\\alpha_{29}\\alpha_{19}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{2",
+  "stop": "looped",
+  "min_prob": 0.29723647,
+  "mean_logprob": -0.11181469
  },
  {
   "suite": "stress",
   "case": "wide 28 terms",
   "grade": "differs",
   "sim": 0.011,
-  "output": "a_1a_1+a_2a_1+a_3a_1+a_4a_1+a_4a_1+a_4a_1+a_2a_1+a_2a_2+a_2a_3+a_2a_3+a_2a_2+a_3a_3+a_3a_4+a_2a_2+a_3a_3+a_2a_3+a_2a_2+a_2a_2-a_2a_3+a_2a_2+a_2a_3+a_2a_4+a_2a_2+a_2a_3+a_2a_4+a_3a_2+a_3a_3+a_4a_4a_4+a_4a_4a_4+a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4a_4+a_4a_4a_4a_4a_4"
+  "output": "a_1a_1+a_2a_1+a_3a_1+a_4a_1+a_4a_1+a_4a_1+a_2a_1+a_2a_2+a_2a_3+a_2a_3+a_2a_2+a_3a_3+a_3a_4+a_2a_2+a_3a_3+a_2a_3+a_2a_2+a_2a_2-a_2a_3+a_2a_2+a_2a_3+a_2a_4+a_2a_2+a_2a_3+a_2a_4+a_3a_2+a_3a_3+a_4a_4a_4+a_4a_4a_4+a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4+a_4a_4a_4a_4a_4+a_4a_4a_4a_4a_4",
+  "stop": "eos",
+  "min_prob": 0.2598707,
+  "mean_logprob": -0.12693527
  },
  {
   "suite": "stress",
   "case": "aligned 3 rows",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\end{aligned}"
+  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\end{aligned}",
+  "stop": "eos",
+  "min_prob": 0.86422193,
+  "mean_logprob": -0.004116766
  },
  {
   "suite": "stress",
   "case": "aligned 4 rows",
   "grade": "differs",
   "sim": 0.754,
-  "output": "x_1=a_1+b_1^2\\,x_2=a_2+b_2^2\\,x_3=a_3+b_3^2\\,x_4=a_4+b_4^2"
+  "output": "x_1=a_1+b_1^2\\,x_2=a_2+b_2^2\\,x_3=a_3+b_3^2\\,x_4=a_4+b_4^2",
+  "stop": "eos",
+  "min_prob": 0.5620743,
+  "mean_logprob": -0.006798625
  },
  {
   "suite": "stress",
   "case": "aligned 6 rows",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\\\ {x_4} & {{}=a_4+b_4^2} \\\\ {x_5} & {{}=a_5+b_5^2} \\\\ {x_6} & {{}=a_6+b_6^2} \\end{aligned}"
+  "output": "\\begin{aligned}{x_1} & {{}=a_1+b_1^2} \\\\ {x_2} & {{}=a_2+b_2^2} \\\\ {x_3} & {{}=a_3+b_3^2} \\\\ {x_4} & {{}=a_4+b_4^2} \\\\ {x_5} & {{}=a_5+b_5^2} \\\\ {x_6} & {{}=a_6+b_6^2} \\end{aligned}",
+  "stop": "eos",
+  "min_prob": 0.54470676,
+  "mean_logprob": -0.0053505036
  },
  {
   "suite": "stress",
   "case": "matrix 3x3",
   "grade": "EXACT",
-  "sim": 0.953,
-  "output": "\\left(\\begin{matrix}{1} & {2} & {3} \\\\ {4} & {5} & {6} \\\\ {7} & {8} & {9} \\end{matrix}\\right)"
+  "sim": 1.0,
+  "output": "\\begin{pmatrix}1 & 2 & 3 \\\\ 4 & 5 & 6 \\\\ 7 & 8 & 9\\end{pmatrix}",
+  "stop": "eos",
+  "min_prob": 0.99998724,
+  "mean_logprob": -6.258507e-07
  },
  {
   "suite": "stress",
   "case": "matrix 5x5",
   "grade": "close",
-  "sim": 0.961,
-  "output": "\\left(\\begin{matrix}{1} & {2} & {3} & {4} & {5} \\\\ {6} & {7} & {8} & {9} & {1} \\\\ {2} & {3} & {4} & {5} & {6} \\\\ {7} & {8} & {9} & {1} & {2} \\\\ {9} & {4} & {5} & {6} & {7} \\end{matrix}\\right)"
+  "sim": 0.987,
+  "output": "\\begin{pmatrix}1 & 2 & 3 & 4 & 5 \\\\ 6 & 7 & 8 & 9 & 1 \\\\ 2 & 3 & 4 & 5 & 6 \\\\ 7 & 8 & 9 & 1 & 2 \\\\ 9 & 4 & 5 & 6 & 7\\end{pmatrix}",
+  "stop": "eos",
+  "min_prob": 0.6158532,
+  "mean_logprob": -0.0041858368
  },
  {
   "suite": "stress",
   "case": "text in math",
   "grade": "EXACT",
-  "sim": 0.828,
-  "output": "\\mathrm{for~all~}x\\in\\mathbb{R},\\quad f(x)\\geq0\\mathrm{~whenever~}x>0"
+  "sim": 1.0,
+  "output": "\\text{for all }x\\in\\mathbb{R},\\quad f(x)\\geq0\\text{ whenever }x>0",
+  "stop": "eos",
+  "min_prob": 0.6313983,
+  "mean_logprob": -0.024309874
  },
  {
   "suite": "stress",
   "case": "rare symbols",
   "grade": "close",
   "sim": 0.994,
-  "output": "\\mathfrak{sl}_2\\otimes\\mathbb{C},\\ \\aleph_0<2^{\\aleph_0},\\ \\wp(z),\\ \\ell^2,\\ \\exists\\,x\\in\\varnothing"
+  "output": "\\mathfrak{sl}_2\\otimes\\mathbb{C},\\ \\aleph_0<2^{\\aleph_0},\\ \\wp(z),\\ \\ell^2,\\ \\exists\\,x\\in\\varnothing",
+  "stop": "eos",
+  "min_prob": 0.7577732,
+  "mean_logprob": -0.01277504
  },
  {
   "suite": "stress",
   "case": "array diagram",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\begin{array}{ccc}{A} & {\\to} & {B} \\\\ {\\downarrow} & {} & {\\downarrow} \\\\ {C} & {\\to} & {D} \\end{array}"
+  "output": "\\begin{array}{ccc}{A} & {\\to} & {B} \\\\ {\\downarrow} & {} & {\\downarrow} \\\\ {C} & {\\to} & {D} \\end{array}",
+  "stop": "eos",
+  "min_prob": 0.98805594,
+  "mean_logprob": -0.0004914759
  },
  {
   "suite": "stress",
   "case": "triple integral",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "\\iiint_V\\left(\\frac{\\partial^2u}{\\partial x^2}+\\frac{\\partial^2u}{\\partial y^2}+\\frac{\\partial^2u}{\\partial z^2}\\right)dV=\\oint_{\\partial V}\\nabla u\\cdot\\mathbf{n}\\,dS"
+  "output": "\\iiint_V\\left(\\frac{\\partial^2u}{\\partial x^2}+\\frac{\\partial^2u}{\\partial y^2}+\\frac{\\partial^2u}{\\partial z^2}\\right)dV=\\oint_{\\partial V}\\nabla u\\cdot\\mathbf{n}\\,dS",
+  "stop": "eos",
+  "min_prob": 0.8738866,
+  "mean_logprob": -0.0028598928
  },
  {
   "suite": "info",
