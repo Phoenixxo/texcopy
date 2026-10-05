@@ -66,9 +66,9 @@ DEGRADE_OPS = {  # name -> ImageMagick args
     "yellow-bg": ["-fuzz", "10%", "-fill", "#fff3b0", "-opaque", "white"],
     "noise": ["+noise", "Gaussian", "-attenuate", "0.3"],
 }
-# Loaded before amsmath (their documented order); the references use the tolerant renderer because
-# these fonts emit harmless missing-metric warnings on this machine.
-FONT_EARLY = {"palatino": r"\usepackage{mathpazo}", "times": r"\usepackage{mathptmx}"}
+# Loaded before amsmath (their documented order). Only fonts whose metrics are installed here: most
+# others (Palatino, Utopia, Charter, ...) render a blank page on this machine, which is detected and skipped.
+FONT_EARLY = {"times": r"\usepackage{mathptmx}", "txfonts": r"\usepackage{txfonts}", "lmodern": r"\usepackage{lmodern}"}
 
 STRESS = {
     **{f"wide {k} terms": (" + ".join(f"a_{{{i}}} x_{{{i}}}" for i in range(1, k + 1)), WIDE_PAGE) for k in (3, 6, 10, 14, 20, 28)},
@@ -129,6 +129,10 @@ class Bench:
         png = os.path.join(self.work, name + ".png")
         run("pdftoppm", "-r", str(dpi), "-png", "-singlefile", os.path.join(self.work, name + ".pdf"), png[:-4])
         run("magick", png, "-trim", "+repage", "-bordercolor", "white", "-border", "12", png)
+        # A reference with no ink (e.g. a font whose metrics are missing drops every glyph) would make
+        # every model "fail" for no reason, so treat it as a render failure.
+        if float(run("magick", png, "-format", "%[fx:mean]", "info:").stdout or 0) > 0.9995:
+            return None
         return png
 
     def degrade(self, src_png, args, ext="png"):
@@ -137,8 +141,9 @@ class Bench:
         run("magick", src_png, *args, out)
         return out
 
-    def texcopy(self, image):
-        """Returns (latex, meta) where meta carries stop reason and confidence."""
+    def texcopy(self, image, kind="math"):
+        """Returns (latex, meta) where meta carries stop reason and confidence.
+        `kind` ("math", "prose" or "text") is ignored here; other backends use it to pick a prompt."""
         r = run(self.binary, image, "--json", *self.tool_args, env=self.env)
         try:
             d = json.loads(r.stdout)
@@ -204,7 +209,7 @@ def collect(b, suites):
                     print(f"  SKIPPED  degraded         {s[:20]} font-{nm}: LaTeX package not installed?", file=sys.stderr)
     if "prose" in suites:
         def add_prose(case, true_src, image):
-            out, meta = b.texcopy(image)
+            out, meta = b.texcopy(image, kind="prose")
             g, sim = grade_text(true_src, out)
             rows.append({"suite": "prose", "case": case, "grade": g, "sim": round(sim, 3), "output": out,
                          "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
@@ -227,7 +232,7 @@ def collect(b, suites):
             add("stress", name, ref, s, ref, pre)
         for name, s in INFO_ONLY.items():
             img = b.render(s, raw=True)
-            out, _ = b.texcopy(img)
+            out, _ = b.texcopy(img, kind="text")
             rows.append({"suite": "info", "case": name, "grade": "info", "sim": 0, "output": out})
     return rows
 

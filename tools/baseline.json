@@ -286,8 +286,8 @@
   "sim": 1.0,
   "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
   "stop": "eos",
-  "min_prob": 0.9980027,
-  "mean_logprob": -0.00014075253
+  "min_prob": 0.99846506,
+  "mean_logprob": -0.00010462562
  },
  {
   "suite": "degraded",
@@ -301,16 +301,6 @@
  },
  {
   "suite": "degraded",
-  "case": "x = \\frac{-b \\pm \\sq font-palatino",
-  "grade": "FAIL",
-  "sim": 0.238,
-  "output": "\\fbox{\\displaystyle\\partial_{\\phi}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm",
-  "stop": "looped",
-  "min_prob": 0.13562185,
-  "mean_logprob": -0.34250697
- },
- {
-  "suite": "degraded",
   "case": "x = \\frac{-b \\pm \\sq font-times",
   "grade": "EXACT",
   "sim": 1.0,
@@ -318,6 +308,26 @@
   "stop": "eos",
   "min_prob": 0.99977976,
   "mean_logprob": -1.17474765e-05
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq font-txfonts",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.56623733,
+  "mean_logprob": -0.021179844
+ },
+ {
+  "suite": "degraded",
+  "case": "x = \\frac{-b \\pm \\sq font-lmodern",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
+  "stop": "eos",
+  "min_prob": 0.99970454,
+  "mean_logprob": -2.3416791e-05
  },
  {
   "suite": "degraded",
@@ -426,8 +436,8 @@
   "sim": 1.0,
   "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
   "stop": "eos",
-  "min_prob": 0.95275646,
-  "mean_logprob": -0.0019782223
+  "min_prob": 0.94803476,
+  "mean_logprob": -0.002057139
  },
  {
   "suite": "degraded",
@@ -441,16 +451,6 @@
  },
  {
   "suite": "degraded",
-  "case": "f(z_0) = \\frac{1}{2\\ font-palatino",
-  "grade": "FAIL",
-  "sim": 0.288,
-  "output": "\\fbox{\\displaystyle\\partial_{\\phi}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm}\\chi_{\\pm",
-  "stop": "looped",
-  "min_prob": 0.13562185,
-  "mean_logprob": -0.34250697
- },
- {
-  "suite": "degraded",
   "case": "f(z_0) = \\frac{1}{2\\ font-times",
   "grade": "EXACT",
   "sim": 1.0,
@@ -458,6 +458,26 @@
   "stop": "eos",
   "min_prob": 0.938474,
   "mean_logprob": -0.0019133765
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ font-txfonts",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.7941517,
+  "mean_logprob": -0.0059734755
+ },
+ {
+  "suite": "degraded",
+  "case": "f(z_0) = \\frac{1}{2\\ font-lmodern",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
+  "stop": "eos",
+  "min_prob": 0.8818719,
+  "mean_logprob": -0.0032708414
  },
  {
   "suite": "prose",
