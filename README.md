@@ -20,7 +20,7 @@ LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recoverin
 4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
 5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning.
 
-The model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to `~/Library/Caches/texcopy` (or `$XDG_CACHE_HOME/texcopy`). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
+The model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to your OS's per-user cache folder (for example `~/Library/Caches/texcopy` on macOS). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
 
 ## Using a different model
 
@@ -62,6 +62,26 @@ macOS asks for Screen Recording permission for your terminal the first time you 
 
 **Linux clipboard:** X11 and Wayland serve the clipboard from the program that set it, so texcopy leaves a small background helper running that keeps the text available until you copy something else.
 
+## Build
+
+```
+cargo build --release       # binary at target/release/texcopy
+cargo test
+cargo build --release --no-default-features   # without screen capture (fewer system dependencies)
+```
+
+The first build downloads a prebuilt ONNX Runtime library. The Rust dependencies need no extra C library or compiler setup beyond the platform's standard toolchain.
+
+Screen capture (the default `capture` feature) needs these packages on Linux:
+
+```
+apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev
+```
+
+The release binary is about 23 MB (22.9 MB on Apple Silicon), built with fat LTO, `panic = "abort"` and stripped symbols. About four fifths of its machine code is ONNX Runtime (C++), statically linked, so Rust compiler flags can only shrink the remaining fifth. Optimizing for size (`opt-level = "s"`/`"z"`) would save another 1-2 MB but made full-screen captures 13-57% slower, so it is not used. Image files in PNG, JPEG, WebP, BMP, GIF and TIFF are supported.
+
+CI (`.github/workflows/ci.yml`) builds, lints and tests on macOS (Apple Silicon), Windows and Linux.
+
 ## Benchmark
 
 `tools/bench.py` renders known LaTeX with `pdflatex`, runs texcopy on the image, compiles the output and compares the two renders pixel by pixel. It needs `pdflatex`, `pdftoppm` and ImageMagick, and is a dev tool only.
@@ -76,7 +96,7 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 - **Proofread the output.** texcopy warns about tokens the model was under 50% sure of, and refuses to copy output where the model got stuck repeating itself, but a confident answer can still be wrong. It is a small model. Typical mistakes: `\epsilon` read as `e`, `\bar` as `\vec`, `\text{...}` as `\mathrm{...}`.
 - The cleaned-up output uses `\text`, `\binom` and `pmatrix`-style environments, so the document you paste into needs `amsmath` (use `--raw` to see exactly what the model produced).
 - One formula per selection. Paragraphs, tables and multi-line alignments are out of scope.
-- Interactive drag-select is macOS-only for now. Only macOS has been run so far; the Windows and Linux code paths (including the Linux clipboard helper) are written but not yet exercised.
+- Interactive drag-select is macOS-only for now. Only macOS has actually been run: the Windows and Linux clipboard and capture code type-checks against those targets but has not been exercised on a real machine.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
 
 If the source is a web page using KaTeX or MathJax, the exact TeX is already in the page's DOM and no OCR is needed.
