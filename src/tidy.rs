@@ -34,6 +34,10 @@ pub fn tidy(raw: &str) -> String {
     let s = compact(raw);
     let s = modernize_fonts(&s);
     let s = known_operators(&s);
+    let s = delimited_matrices(&s);
+    let s = unwrap_matrix_cells(&s);
+    let s = binomials(&s);
+    let s = mathrm_to_text(&s);
     let s = unbrace_scripts(&s);
     // A trailing row break before \end{...} is noise the model likes to add.
     s.replace("\\\\ \\end{", "\\end{")
@@ -214,6 +218,234 @@ fn unbrace_scripts(s: &str) -> String {
     out
 }
 
+/// Environments whose cells the model wraps in redundant braces (`{a} & {b}`).
+const CELL_ENVS: &[&str] = &["matrix", "pmatrix", "bmatrix", "vmatrix", "Vmatrix", "Bmatrix", "cases"];
+
+/// `\left<d1>\begin{matrix}..\end{matrix}\right<d2>` -> the matching named environment.
+const MATRIX_DELIMS: &[(&str, &str, &str)] = &[
+    ("(", ")", "pmatrix"),
+    ("[", "]", "bmatrix"),
+    ("|", "|", "vmatrix"),
+    ("\\|", "\\|", "Vmatrix"),
+    ("\\{", "\\}", "Bmatrix"),
+    ("\\{", ".", "cases"),
+];
+
+/// Byte index of the `\end{env}` that closes an environment whose body starts at `s[0]`.
+fn find_env_end(s: &str, env: &str) -> Option<usize> {
+    let (begin, end) = (format!("\\begin{{{env}}}"), format!("\\end{{{env}}}"));
+    let (mut depth, mut i) = (0usize, 0);
+    while i < s.len() {
+        if s[i..].starts_with(&end) {
+            if depth == 0 {
+                return Some(i);
+            }
+            depth -= 1;
+            i += end.len();
+        } else if s[i..].starts_with(&begin) {
+            depth += 1;
+            i += begin.len();
+        } else {
+            i += s[i..].chars().next()?.len_utf8();
+        }
+    }
+    None
+}
+
+/// `\left(\begin{matrix}..\end{matrix}\right)` -> `\begin{pmatrix}..\end{pmatrix}` (and friends).
+fn delimited_matrices(s: &str) -> String {
+    const OPEN: &str = "\\begin{matrix}";
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find("\\left") {
+        out.push_str(&rest[..i]);
+        let after = &rest[i + "\\left".len()..];
+        let converted = MATRIX_DELIMS.iter().find_map(|&(l, r, env)| {
+            let body_and_tail = after.strip_prefix(l)?.strip_prefix(OPEN)?;
+            let end = find_env_end(body_and_tail, "matrix")?;
+            let tail = body_and_tail[end + "\\end{matrix}".len()..].strip_prefix("\\right")?.strip_prefix(r)?;
+            Some((env, &body_and_tail[..end], tail))
+        });
+        match converted {
+            Some((env, body, tail)) => {
+                out.push_str(&format!("\\begin{{{env}}}{body}\\end{{{env}}}"));
+                rest = tail;
+            }
+            None => {
+                out.push_str("\\left");
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Remove the `{...}` the model puts around every cell, and a trailing empty row.
+fn unwrap_cells(body: &str) -> String {
+    let mut rows: Vec<Vec<String>> = vec![vec![String::new()]];
+    let (mut depth, mut chars) = (0i32, body.chars().peekable());
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => match chars.next() {
+                Some('\\') if depth == 0 => rows.push(vec![String::new()]),
+                Some(n) => {
+                    let cell = rows.last_mut().unwrap().last_mut().unwrap();
+                    cell.push('\\');
+                    cell.push(n);
+                }
+                None => {}
+            },
+            '&' if depth == 0 => rows.last_mut().unwrap().push(String::new()),
+            _ => {
+                match c {
+                    '{' => depth += 1,
+                    '}' => depth -= 1,
+                    _ => {}
+                }
+                rows.last_mut().unwrap().last_mut().unwrap().push(c);
+            }
+        }
+    }
+    if rows.len() > 1 && rows.last().is_some_and(|r| r.len() == 1 && r[0].trim().is_empty()) {
+        rows.pop();
+    }
+    rows.iter()
+        .map(|row| {
+            row.iter()
+                .map(|cell| {
+                    let cell = cell.trim();
+                    match matching_brace(cell, 0) {
+                        Some(end) if cell.starts_with('{') && end == cell.len() - 1 => cell[1..end].trim().to_string(),
+                        _ => cell.to_string(),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" & ")
+        })
+        .collect::<Vec<_>>()
+        .join(" \\\\ ")
+}
+
+fn unwrap_matrix_cells(s: &str) -> String {
+    let mut s = s.to_string();
+    for env in CELL_ENVS {
+        let (begin, end_tag) = (format!("\\begin{{{env}}}"), format!("\\end{{{env}}}"));
+        let mut out = String::with_capacity(s.len());
+        let mut rest = s.as_str();
+        while let Some(i) = rest.find(&begin) {
+            let body_start = i + begin.len();
+            match find_env_end(&rest[body_start..], env) {
+                Some(len) => {
+                    out.push_str(&rest[..body_start]);
+                    out.push_str(&unwrap_cells(&rest[body_start..body_start + len]));
+                    rest = &rest[body_start + len..];
+                    out.push_str(&end_tag);
+                    rest = &rest[end_tag.len()..];
+                }
+                None => break,
+            }
+        }
+        out.push_str(rest);
+        s = out;
+    }
+    s
+}
+
+/// `\left(n\atop k\right)` -> `\binom{n}{k}`.
+fn binomials(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find("\\left(") {
+        out.push_str(&rest[..i]);
+        let after = &rest[i + "\\left(".len()..];
+        match binom_parts(after) {
+            Some((a, b, tail)) => {
+                out.push_str(&format!("\\binom{{{a}}}{{{b}}}"));
+                rest = tail;
+            }
+            None => {
+                out.push_str("\\left(");
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// For text just after `\left(`: if it is `A\atop B\right)`, return `(A, B, text after the \right))`.
+fn binom_parts(after: &str) -> Option<(String, String, &str)> {
+    let (mut brace, mut nest, mut i) = (0i32, 0i32, 0);
+    let mut atop = None;
+    while i < after.len() {
+        let t = &after[i..];
+        if t.starts_with("\\left") {
+            nest += 1;
+            i += 5;
+        } else if t.starts_with("\\right") {
+            if nest == 0 {
+                if !t["\\right".len()..].starts_with(')') {
+                    return None;
+                }
+                let inner = &after[..i];
+                let at = atop?;
+                let (a, b) = (inner[..at].trim(), inner[at + "\\atop".len()..].trim());
+                return Some((a.into(), b.into(), &t["\\right)".len()..]));
+            }
+            nest -= 1;
+            i += 6;
+        } else if t.starts_with("\\atop") && !t["\\atop".len()..].starts_with(|c: char| c.is_ascii_alphabetic()) {
+            if brace == 0 && nest == 0 {
+                if atop.is_some() {
+                    return None; // two \atop at the top level: not a binomial
+                }
+                atop = Some(i);
+            }
+            i += 5;
+        } else {
+            match t.as_bytes()[0] {
+                b'\\' => i += 1, // skip the escaped character below
+                b'{' => brace += 1,
+                b'}' => brace -= 1,
+                _ => {}
+            }
+            i += after[i..].chars().next()?.len_utf8();
+        }
+    }
+    None
+}
+
+/// `\mathrm{if~}` -> `\text{if }`: only when the `~` or `\ ` shows the content is real text.
+fn mathrm_to_text(s: &str) -> String {
+    const OPEN: &str = "\\mathrm{";
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find(OPEN) {
+        out.push_str(&rest[..i]);
+        let open = i + OPEN.len() - 1;
+        let converted = matching_brace(rest, open).and_then(|end| {
+            let inner = &rest[open + 1..end];
+            let spaced = inner.contains('~') || inner.contains("\\ ");
+            let plain = inner.replace("\\ ", " ").replace('~', " ");
+            let plain_ok = plain.chars().all(|c| c.is_ascii_alphanumeric() || " .,:;'()-".contains(c));
+            (spaced && plain_ok).then(|| (plain, end))
+        });
+        match converted {
+            Some((text, end)) => {
+                out.push_str(&format!("\\text{{{text}}}"));
+                rest = &rest[end + 1..];
+            }
+            None => {
+                out.push_str(OPEN);
+                rest = &rest[i + OPEN.len()..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::tidy;
@@ -236,11 +468,11 @@ mod tests {
 
     #[test]
     fn keeps_explicit_spaces() {
-        assert_eq!(
-            tidy(r"\mathrm { s u c h \ t h a t }"),
-            r"\mathrm{such\ that}"
-        );
-        assert_eq!(tidy(r"\mathrm { i f ~ } x"), r"\mathrm{if~}x");
+        assert_eq!(tidy(r"\mathrm { s u c h \ t h a t }"), r"\text{such that}");
+        assert_eq!(tidy(r"\mathrm { i f ~ } x"), r"\text{if }x");
+        // No explicit space: could be an operator name, so it stays \mathrm.
+        assert_eq!(tidy(r"\mathrm { V a r } ( X )"), r"\mathrm{Var}(X)");
+        assert_eq!(tidy(r"\mathrm { d } x"), r"\mathrm{d}x");
     }
 
     #[test]
@@ -268,7 +500,47 @@ mod tests {
     fn pads_matrix_separators_and_drops_trailing_break() {
         assert_eq!(
             tidy(r"\begin{matrix} { a } & { b } \\ { c } & { d } \\ \end{matrix}"),
-            r"\begin{matrix}{a} & {b} \\ {c} & {d} \end{matrix}"
+            r"\begin{matrix}a & b \\ c & d\end{matrix}"
         );
+    }
+
+    #[test]
+    fn names_delimited_matrices() {
+        assert_eq!(
+            tidy(r"A = \left( \begin{matrix} { a } & { b } \\ { c } & { d } \\ \end{matrix} \right)"),
+            r"A=\begin{pmatrix}a & b \\ c & d\end{pmatrix}"
+        );
+        assert_eq!(
+            tidy(r"\left[ \begin{matrix} { 1 } & { \cdots } & { n } \\ { \vdots } & { \ddots } & { n ^ { 2 } } \end{matrix} \right]"),
+            r"\begin{bmatrix}1 & \cdots & n \\ \vdots & \ddots & n^2\end{bmatrix}"
+        );
+        assert_eq!(
+            tidy(r"\left\{ \begin{matrix} { x + y = 2 } \\ { x - y = 0 } \end{matrix} \right."),
+            r"\begin{cases}x+y=2 \\ x-y=0\end{cases}"
+        );
+        // Delimiters that don't match a known environment are left alone.
+        assert_eq!(tidy(r"\left( \begin{matrix} a \end{matrix} \right]"), r"\left(\begin{matrix}a\end{matrix}\right]");
+        assert_eq!(tidy(r"\leftarrow x"), r"\leftarrow x");
+    }
+
+    #[test]
+    fn unwraps_cells_in_cases_and_keeps_text() {
+        assert_eq!(
+            tidy(r"f ( x ) = \begin{cases} { x ^ { 2 } } & { \mathrm { i f ~ } x \geq 0 } \\ { - x } & { \mathrm { o t h e r w i s e } } \\ \end{cases}"),
+            r"f(x)=\begin{cases}x^2 & \text{if }x\geq0 \\ -x & \mathrm{otherwise}\end{cases}"
+        );
+        // Two adjacent groups in one cell are not one wrapper.
+        assert_eq!(tidy(r"\begin{matrix} { a } { b } & c \end{matrix}"), r"\begin{matrix}{a}{b} & c\end{matrix}");
+    }
+
+    #[test]
+    fn turns_atop_in_delimiters_into_binom() {
+        assert_eq!(
+            tidy(r"\sum _ { k = 0 } ^ { n } \left( n \atop k \right) x ^ { k }"),
+            r"\sum_{k=0}^n\binom{n}{k}x^k"
+        );
+        // Not a binomial: no \atop, or a different closing delimiter.
+        assert_eq!(tidy(r"\left( a + b \right)"), r"\left(a+b\right)");
+        assert_eq!(tidy(r"\left( n \atop k \right]"), r"\left(n\atop k\right]");
     }
 }
