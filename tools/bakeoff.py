@@ -80,7 +80,8 @@ class Server:
         d = os.path.join(models_dir, name)
         self.cfg, self.port, self.log = CONFIGS[name], port, tempfile.NamedTemporaryFile("w+", suffix=f"-{name}.log", delete=False)
         self.cmd = ["llama-server", "-m", os.path.join(d, "model.gguf"), "--mmproj", os.path.join(d, "mmproj.gguf"),
-                    "--port", str(port), "-ngl", "99", "-c", "16384", "-np", "1"]
+                    "--port", str(port), "-ngl", "99", "-c", "16384", "-np", "1",
+                    "--cache-ram", "0"]  # no prompt cache: it grew memory from 1.4 GB to 3.3 GB over 45 images
         self.proc = None
 
     def start(self, timeout=240):
@@ -154,7 +155,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("model", choices=list(CONFIGS))
     ap.add_argument("--models", required=True, help="folder holding <name>/model.gguf and <name>/mmproj.gguf")
-    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose"])
+    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose", "real"])
     ap.add_argument("--port", type=int, default=8099)
     ap.add_argument("--mark-math", action="store_true", help="post-process prose with texcopy's math-marking word rules")
     ap.add_argument("--save", help="write per-case results JSON here")

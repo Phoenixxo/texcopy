@@ -163,6 +163,27 @@ class Bench:
         return ("close" if sim >= 0.9 else "differs"), sim
 
 
+REAL_DIR = os.path.join(ROOT, "tools", "fixtures", "private")
+
+
+def grade_real(truth, output):
+    """Real textbook exercises: same characters *and* same words. Ignores `$`, braces, spacing and the
+    LaTeX spelling of things the truth writes plainly (`\\{` for `{`, `\\text{Cen}` for `Cen`)."""
+    def strip(t):
+        t = t.replace("\u2212", "-").replace("\u2013", "-").replace("\\geq", "\\ge").replace("\\leq", "\\le")
+        t = re.sub(r"\\(text|operatorname|mathrm|textit|mathit)\{([^}]*)\}", r"\2", t)
+        t = t.replace("\\{", "{").replace("\\}", "}").replace("\\,", "").replace("\\ ", "")
+        return re.sub(r"[\s${}]", "", t)
+    words = lambda t: re.findall(r"[A-Za-z]{3,}", re.sub(r"\\(text|operatorname|mathrm)", "", t).replace("\\", " "))
+    if not output:
+        return "FAIL", 0.0
+    a, b = strip(truth), strip(output)
+    if a == b and words(truth) == words(output):
+        return "EXACT", 1.0
+    sim = difflib.SequenceMatcher(None, a, b).ratio()
+    return ("close" if sim >= 0.95 else "differs"), sim
+
+
 def grade_text(true_src, output):
     """Prose is graded as text: spacing between words matters (lost spaces make output unusable),
     but spacing inside $...$ does not."""
@@ -226,6 +247,18 @@ def collect(b, suites):
                         add_prose(f"s{n} {width}cm {dpi}dpi", sent, img)
                     else:
                         print(f"  SKIPPED  prose            s{n} {width}cm {dpi}dpi: render failed", file=sys.stderr)
+    if "real" in suites:
+        index = os.path.join(REAL_DIR, "cases.json")
+        if not os.path.exists(index):
+            print("  SKIPPED  real: no tools/fixtures/private/cases.json (make one with tools/book_cases.py)", file=sys.stderr)
+        else:
+            for c in json.load(open(index)):
+                img = os.path.join(REAL_DIR, c["name"] + ".png")
+                out, meta = b.texcopy(img, kind="prose")
+                g, sim = grade_real(c["truth"], out)
+                rows.append({"suite": "real", "case": c["name"], "grade": g, "sim": round(sim, 3), "output": out,
+                             "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
+                print(f"  {g:8} {'real':16} {c['name']}", file=sys.stderr)
     if "stress" in suites:
         for name, (s, pre) in STRESS.items():
             ref = b.render(s, pre=pre)
@@ -285,7 +318,7 @@ def compare(rows, path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bin", default=os.path.join(ROOT, "target/release/texcopy"))
-    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose"])
+    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose", "real"])
     ap.add_argument("--tool-args", default="", help="extra flags for texcopy, e.g. '--fit pad'")
     ap.add_argument("--save", help="write results JSON here")
     ap.add_argument("--baseline", help="compare against a saved results JSON")
@@ -295,7 +328,7 @@ def main():
     missing = [t for t in ("pdflatex", "pdftoppm", "magick") if not shutil.which(t)]
     if missing or not os.path.exists(a.bin):
         sys.exit(f"missing: {', '.join(missing) or a.bin} (build with `cargo build --release`)")
-    suites = {"basic", "degraded", "stress", "prose"} if a.suite == "all" else {a.suite}
+    suites = {"basic", "degraded", "stress", "prose"} | ({"real"} if os.path.exists(os.path.join(REAL_DIR, "cases.json")) else set()) if a.suite == "all" else {a.suite}
     with tempfile.TemporaryDirectory() as work:
         rows = collect(Bench(a.bin, shlex.split(a.tool_args), work), suites)
     summarize(rows)
