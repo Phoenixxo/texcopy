@@ -21,6 +21,9 @@ image source ──► preprocess ──► ENCODER ──► 578 feature vector
 | `src/spec.rs` | `ModelSpec`: everything model-specific, optional `spec.json` | ~100 |
 | `src/fetch.rs` | find the model folder, first-run download, cache dir | ~105 |
 | `src/capture.rs` | screenshots (`xcap`), `--region` crop, macOS selector | ~115 |
+| `src/vlm.rs` | vision engine: setup flow, `llama-server` process, request, Markdown -> prose/formula (7 tests) | ~480 |
+| `src/helper.rs` | pinned llama.cpp release + SHA-256s, install and unpack (2 tests) | ~270 |
+| `src/ui.rs` | yes/no prompt, download progress bar (3 tests) | ~170 |
 | `src/clipboard.rs` | read image / write text; Linux helper process | ~75 |
 | `src/tidy.rs` | raw tokens → idiomatic LaTeX (10 unit tests) | ~650 |
 | `src/prose.rs` | sentence with inline math → text with `$...$` (13 unit tests) | ~600 |
@@ -38,7 +41,7 @@ image source ──► preprocess ──► ENCODER ──► 578 feature vector
 
 Run from the repo root. Tick each when it behaves as stated.
 
-- [ ] `cargo test --release` → **31 passed** (prose 13, tidy 10, model 4, capture 2, fetch 1, spec 1)
+- [ ] `cargo test --release` → **47 passed** (prose 14, tidy 10, vlm 7, fetch 6, model 3, ui 3, helper 2, capture 2, spec 1)
 - [ ] `cargo clippy --locked --all-targets -- -D warnings` → no warnings
 - [ ] `cargo fmt --check` → no output
 - [ ] `cargo build --release && ls -l target/release/texcopy` → about **22.9 MB** on Apple Silicon
@@ -106,6 +109,16 @@ Runs *before* the math rules: `tidy_with_kind` compacts the text, tries `prose::
 - [ ] `has_run_together_words`: any 20+ letter run in running text means the model lost the spaces; the CLI warns.
 - [ ] Real outputs are in the tests; two are reconstructed, not captured: the `\vspace` case and the glued `\textup` case (they are marked in comments).
 
+### D3. Vision engine and setup (`src/vlm.rs`, `src/helper.rs`, `src/ui.rs`, `src/fetch.rs`)
+- [ ] **Routing** (`main.rs::read`): vision first; real text -> prose (with `prose::mark_math`); a bare formula -> small model, with the vision formula only as a fallback if the small model loops; `--engine vlm` returns the vision result as is.
+- [ ] **`interpret`**: prose if there is any real word next to math, or 3+ real words with no math. A one-line exercise like `Is $C_6$ bi-graceful?` must stay prose (an earlier version dropped its words; see the test `one_line_exercises_keep_their_words`).
+- [ ] **Setup flow** (`vlm::ensure`): lists each item with size, source, licence and destination, asks once, then does `[1/2]`, `[2/2]` with progress. `--yes` proceeds; no terminal and no `--yes` is an error, never a silent yes.
+- [ ] **Pinned and verified**: `helper::RELEASES` (llama.cpp `b11146`) and `vlm::MODEL_FILES` carry sizes and SHA-256s; `fetch::download_verified` deletes a file that fails (tests with a local HTTP server cover success, bad checksum, resume, a server that ignores `Range`, and an already-intact file).
+- [ ] **Helper lookup** (`vlm::find_server`): `--llama-server`, else the copy texcopy installed, else PATH.
+- [ ] **Process hygiene**: `Server` is killed on drop; no `llama-server` or `texcopy-llama-*.log` left behind after a run.
+- [ ] **Memory**: started with `--cache-ram 0` (the default prompt cache grows from 1.4 GB past 3 GB).
+- [ ] Try it yourself: `texcopy --setup`, answer `n` (nothing is created), then again with `y`.
+
 ### E. The command line (`src/main.rs`)
 - [ ] Input options are mutually exclusive: file, `--clipboard`, `--screen` (with `--monitor`, `--region`), or none (macOS selector). Try the invalid combos and confirm the errors.
 - [ ] Output options (`-w` is ignored for sentences): `-w none|inline|display`, `--no-copy`, `--raw`, `--json`, `--fit stretch|pad`, `--max-tokens`, `--model-dir` (also `TEXCOPY_MODEL_DIR`).
@@ -137,6 +150,8 @@ Runs *before* the math rules: `tidy_with_kind` compacts the text, tries `prose::
 
 Resolve these over time; tick when closed.
 
+- [ ] Windows/Linux: the llama.cpp helper install (zip / tar.gz unpack, CPU build speed) and the vision engine were only run on Apple Silicon.
+- [ ] macOS: the first run after installing the helper took 19 s (system vetting of a new program); later runs 1 s. Confirm this on your Mac.
 - [ ] Windows: run the tool on a real Windows machine (clipboard, `--screen`, cache folder location).
 - [ ] Linux: run on X11 *and* Wayland; confirm the clipboard helper keeps text after the CLI exits; confirm `xcap` works.
 - [ ] Push to GitHub and get all three CI jobs green (or fix them).
@@ -218,7 +233,7 @@ Resolve these over time; tick when closed.
 - [ ] **Phase 2** — spike: one `egui` window from full-screen frozen overlay to small popup (**check in after it**)
 - [ ] **Phase 3** — popup app: drag-select overlay, editable result, copy button, wrap selector, low-confidence highlighting, background model load with progress bar
 - [ ] **Phase 4** — packaging: shortcut docs per OS, macOS `.app`, release builds from CI
-- [ ] **Decision pending:** vision-language backend (OvisOCR2 / MinerU2.5-Pro / PaddleOCR-VL). On 45 real textbook exercises: texcopy's small model 22 exact / 14 close / 9 wrong; all three vision models 44 exact / 1 close / 0 wrong, ~0.3-0.45 s each, ~1.35-1.5 GB RAM while loaded (with `--cache-ram 0`), 1.0-1.8 GB on disk.
+- [x] **Decided:** vision-language backend OvisOCR2 via a `llama-server` helper (the Rust-native `oar-ocr-vl`/Candle route was spiked and rejected: 4.7 s on CPU, 72-78 s on Metal, 3.7-4.9 GB, vs 0.3 s and 1.4 GB). Context: (OvisOCR2 / MinerU2.5-Pro / PaddleOCR-VL). On 45 real textbook exercises: texcopy's small model 22 exact / 14 close / 9 wrong; all three vision models 44 exact / 1 close / 0 wrong, ~0.3-0.45 s each, ~1.35-1.5 GB RAM while loaded (with `--cache-ram 0`), 1.0-1.8 GB on disk.
 - [ ] **Next candidate** — split images into text lines and read each (fixes 3+ line paragraphs and very long lines); decide how to handle `v` vs `\nu`
 - [ ] **Later** — train or fine-tune your own model (the data can be generated with `pdflatex`); minimal ONNX Runtime build for a much smaller binary; row-splitting for multi-line formulas; splitting very wide equations
 

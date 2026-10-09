@@ -20,7 +20,9 @@ LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recoverin
 4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
 5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning. If the image turns out to be a sentence rather than a formula, `prose.rs` takes over (see below).
 
-The model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to your OS's per-user cache folder (for example `~/Library/Caches/texcopy` on macOS). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
+**Two engines.** The *small* engine is described below. The *vision* engine (OvisOCR2, a 0.8B vision-language model) reads whole paragraphs and very long equations, which the small one cannot; see "Vision engine". `--engine auto` (the default) uses the vision engine when it is set up, and for a bare formula still prefers the small model.
+
+The small model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to your OS's per-user cache folder (for example `~/Library/Caches/texcopy` on macOS). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
 
 ## Sentences with inline math
 
@@ -38,6 +40,27 @@ Limits, measured on `tools/bench.py --suite prose` (21 cases, 17 exact):
 - **One or two lines work; three or more are unreliable.** The model reads the whole image at once and on a tall block it can lose the spaces between words (`beaconnectedgraphwith`). texcopy warns when it sees that. Select one line at a time.
 - **It can't see italics**, so it cannot tell the variable `a` from the article "a" (both stay words), and it sometimes reads an italic `v` as `\nu`. texcopy prints a note whenever it outputs `\nu`.
 - Wording errors by the model (`Euler` read as `Enler`) are flagged by the low-confidence warning when it was unsure.
+
+## Vision engine (recommended for text)
+
+On 45 real exercises from a graph-theory textbook the small model gets 22 exactly right; the vision engine gets 44 (one more differs only by a dropped full stop). It also reads 3-6 line paragraphs and equations with 20+ terms that the small model garbles.
+
+```
+texcopy --setup             # one-time: asks first, then downloads, with progress
+texcopy problem.png         # --engine auto uses it from now on
+texcopy --engine vlm x.png  # force it (sets itself up if needed)
+```
+
+`--setup` explains what it will fetch and asks once (`--yes` answers for you; without a terminal it refuses rather than assume):
+
+1. **llama.cpp `llama-server`** (MIT licence), release `b11146`, 11-19 MB, from github.com/ggml-org/llama.cpp. The release and the SHA-256 of each platform's file are pinned in `src/helper.rs`; a download that doesn't match is deleted. macOS Apple Silicon gets the Metal (GPU) build; Windows and Linux get the CPU build. For a GPU build there, install one yourself and pass `--llama-server`. An existing `llama-server` on your PATH is used if texcopy has not installed its own.
+2. **OvisOCR2** (Apache-2.0), 1.02 GB (an 8-bit model file and its vision part) from huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF, checksum-verified.
+
+Both go in texcopy's cache folder (`TEXCOPY_CACHE_DIR` overrides it). Downloads show a progress bar with speed and time left, and an interrupted one resumes where it stopped.
+
+How it runs: each texcopy run starts `llama-server` on a free local port, reads the image, and stops it again, so nothing stays in memory between runs. On an Apple M4 Pro that is about 1 second end to end, with about 1.4 GB of RAM while it is running. The first run after installing can take longer while macOS checks the new helper. Everything stays on your machine.
+
+Details: the vision engine does not report per-token confidence, so the "unsure about" warnings only exist for the small model. Its text gets the same math-marking rules as prose mode (lone letters like `v` become `$v$`).
 
 ## Using a different model
 
@@ -70,7 +93,10 @@ texcopy -w inline           # wrap in $...$   (-w display: \[ ... \])
 texcopy --no-copy           # print only
 texcopy --raw               # skip tidy, show the model's raw tokens
 texcopy --fit pad           # pad to the model's aspect ratio instead of stretching
-texcopy --json              # latex + stop reason + per-token confidence as JSON (no clipboard)
+texcopy --json              # latex + engine + stop reason (+ per-token confidence for the small model) as JSON, no clipboard
+texcopy --setup             # set up the vision engine (asks first), then exit
+texcopy --engine small|vlm|auto   # which engine reads the image (default auto)
+texcopy --yes               # answer yes to setup questions
 ```
 
 Targets: Windows x64, macOS on Apple Silicon, Linux x64 (X11; Wayland best-effort). Drag-to-select is built in on macOS only for now; a cross-platform selector window is planned. Until then, on Windows and Linux use `--screen --region`, a file, or `--clipboard` with your OS's snipping tool.
@@ -116,6 +142,7 @@ python3 tools/bench.py --baseline tools/baseline.json    # report what got bette
 - The cleaned-up output uses `\text`, `\binom` and `pmatrix`-style environments, so the document you paste into needs `amsmath` (use `--raw` to see exactly what the model produced).
 - One formula or one or two lines of text per selection. Longer paragraphs, tables and multi-line alignments are out of scope. Tables sometimes come out nearly right, but don't rely on it.
 - **Fonts:** Times, txfonts and Latin Modern math all read exactly in the benchmark. Other math fonts (Palatino, Utopia, Charter...) are untested, because the TeX installation the benchmark runs on doesn't ship them.
+- The vision engine's helper install and its CPU speed on Windows and Linux are untested (everything was run on one Apple Silicon Mac). The pinned downloads exist for Windows x64/arm64, Linux x64/arm64 and macOS.
 - Interactive drag-select is macOS-only for now. Only macOS has actually been run: the Windows and Linux clipboard and capture code type-checks against those targets but has not been exercised on a real machine.
 - The model's vocabulary is only 1,200 tokens, so custom macros and rarely used symbols can't be represented.
 
