@@ -9,10 +9,12 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::ValueEnum;
 use image::DynamicImage;
+use serde::{Deserialize, Serialize};
 
 use crate::{fetch, model, spec::Fit, tidy, ui, vlm};
 
-#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Engine {
     /// The vision engine when it is set up, otherwise the small model
     Auto,
@@ -22,17 +24,29 @@ pub enum Engine {
     Vlm,
 }
 
-impl Engine {
-    pub fn name(self) -> &'static str {
-        match self {
-            Engine::Auto => "auto",
-            Engine::Small => "small",
-            Engine::Vlm => "vlm",
-        }
+/// Delimiters to put around a formula.
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Wrap {
+    /// Raw LaTeX, no delimiters
+    None,
+    /// $...$
+    Inline,
+    /// \[ ... \]
+    Display,
+}
+
+/// A sentence already carries its own $...$ marks, so wrapping only applies to formulas.
+pub fn wrapped(wrap: Wrap, kind: tidy::Kind, latex: &str) -> String {
+    match (wrap, kind) {
+        (Wrap::None, _) | (_, tidy::Kind::Prose) => latex.to_string(),
+        (Wrap::Inline, _) => format!("${latex}$"),
+        (Wrap::Display, _) => format!("\\[ {latex} \\]"),
     }
 }
 
 /// Everything that decides how an image is read.
+#[derive(Clone)]
 pub struct Options {
     pub engine: Engine,
     /// Skip cleanup and keep the model's output as-is
@@ -83,6 +97,7 @@ pub struct Warm {
     recognizer: Option<model::Recognizer>,
 }
 
+#[cfg_attr(not(feature = "gui"), allow(dead_code))] // only the window keeps engines warm
 impl Warm {
     /// Stop the helper and unload the models, freeing their memory.
     pub fn cool_down(&mut self) {
@@ -225,4 +240,21 @@ fn read_small(
         stop: result.stop,
         tokens: result.tokens,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wrapping_applies_to_formulas_but_never_to_sentences() {
+        assert_eq!(wrapped(Wrap::None, tidy::Kind::Math, "x^2"), "x^2");
+        assert_eq!(wrapped(Wrap::Inline, tidy::Kind::Math, "x^2"), "$x^2$");
+        assert_eq!(
+            wrapped(Wrap::Display, tidy::Kind::Math, "x^2"),
+            "\\[ x^2 \\]"
+        );
+        let sentence = "Prove that $v$ is a cut-vertex.";
+        assert_eq!(wrapped(Wrap::Inline, tidy::Kind::Prose, sentence), sentence);
+    }
 }

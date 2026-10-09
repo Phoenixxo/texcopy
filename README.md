@@ -3,12 +3,22 @@
 Drag-select anything on screen that was rendered with LaTeX and get its LaTeX source on your clipboard.
 
 ```
-$ texcopy                      # crosshair appears; drag over a formula
+$ texcopy                      # opens the window: click Capture, drag over a formula
 \sum_{n=1}^{\infty}\frac{1}{n^2}=\frac{\pi^2}{6}
 Copied to clipboard.
 ```
 
 Everything runs locally. Nothing is uploaded.
+
+## The window
+
+`texcopy` with no arguments opens a small window: a **Capture** button (or press `C`), the options, and the output text. Click Capture, drag over something, and the LaTeX appears and is copied to your clipboard. Changing `wrap` or `engine` updates it; Esc closes the window.
+
+- **On macOS the selection is the system crosshair** (`screencapture -i`), so tiling window managers and multiple monitors cannot get in the way. Windows and Linux do not have a selector in the window yet; use `texcopy --clipboard` after a Snipping Tool or Flameshot capture.
+- **First run:** if the vision engine is not set up, the window offers to download it (size shown, checksum-verified, with a progress bar). "Not now" is remembered.
+- **It stays fast:** the window keeps the vision engine loaded between captures (the second read takes about 0.3 s instead of 1-2 s) and unloads it after 2.5 minutes idle, freeing about 1.4 GB.
+- Settings (`wrap`, `engine`) are remembered in `settings.json` in the per-user config folder.
+- Notes appear in small grey text under the output only when something deserves a second look (low-confidence symbols, a possible cut-off, run-together words).
 
 ## How it works
 
@@ -84,7 +94,8 @@ then run `texcopy --model-dir path/to/folder`. The ONNX graphs must follow the H
 ## Usage
 
 ```
-texcopy                     # drag-select a screen region (macOS; other OSes: see below)
+texcopy                     # open the window (Capture button, options, output text)
+texcopy --select            # no window: drag-select a screen region in the terminal (macOS; other OSes: see below)
 texcopy formula.png         # from a file
 texcopy --clipboard         # from an image on the clipboard
 texcopy --screen --region 100,200,600,150   # capture the primary monitor, crop to x,y,w,h (screenshot pixels)
@@ -110,7 +121,8 @@ macOS asks for Screen Recording permission for your terminal the first time you 
 ```
 cargo build --release       # binary at target/release/texcopy
 cargo test
-cargo build --release --no-default-features   # without screen capture (fewer system dependencies)
+cargo build --release --no-default-features   # command line only: no window, no screen capture (fewer system dependencies)
+cargo build --release --no-default-features --features capture   # command line + screen capture, no window
 ```
 
 The first build downloads a prebuilt ONNX Runtime library. The Rust dependencies need no extra C library or compiler setup beyond the platform's standard toolchain.
@@ -121,7 +133,7 @@ Screen capture (the default `capture` feature) needs these packages on Linux:
 apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev
 ```
 
-The release binary is about 23 MB (22.9 MB on Apple Silicon), built with fat LTO, `panic = "abort"` and stripped symbols. About four fifths of its machine code is ONNX Runtime (C++), statically linked, so Rust compiler flags can only shrink the remaining fifth. Optimizing for size (`opt-level = "s"`/`"z"`) would save another 1-2 MB but made full-screen captures 13-57% slower, so it is not used. Image files in PNG, JPEG, WebP, BMP, GIF and TIFF are supported.
+The release binary is about 31 MB with the window (30.8 MB on Apple Silicon; about 23 MB without it), built with fat LTO, `panic = "abort"` and stripped symbols. About four fifths of its machine code is ONNX Runtime (C++), statically linked, so Rust compiler flags can only shrink the remaining fifth. Optimizing for size (`opt-level = "s"`/`"z"`) would save another 1-2 MB but made full-screen captures 13-57% slower, so it is not used. Image files in PNG, JPEG, WebP, BMP, GIF and TIFF are supported.
 
 CI (`.github/workflows/ci.yml`) builds, lints and tests on macOS (Apple Silicon), Windows and Linux.
 

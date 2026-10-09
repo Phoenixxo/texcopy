@@ -2,6 +2,8 @@ mod capture;
 mod clipboard;
 mod engine;
 mod fetch;
+#[cfg(feature = "gui")]
+mod gui;
 mod helper;
 mod model;
 mod prose;
@@ -13,27 +15,25 @@ mod vlm;
 use std::{io::Read, path::PathBuf};
 
 use anyhow::{Context, Result};
-use clap::{Parser, ValueEnum};
-use engine::Engine;
+use clap::Parser;
+use engine::{Engine, Wrap};
 use image::DynamicImage;
 use serde::Serialize;
-
-#[derive(Clone, Copy, ValueEnum)]
-enum Wrap {
-    /// Raw LaTeX, no delimiters
-    None,
-    /// $...$
-    Inline,
-    /// \[ ... \]
-    Display,
-}
 
 /// Select something LaTeX-rendered on screen and get its LaTeX source on your clipboard.
 #[derive(Parser)]
 #[command(version)]
 struct Cli {
-    /// Image file to read. With no input option, drag-select a screen region (macOS only for now).
+    /// Image file to read. With no input option, the window opens.
     image: Option<PathBuf>,
+
+    /// Drag-select a screen region in the terminal instead of opening the window (macOS only for now)
+    #[arg(long, conflicts_with_all = ["image", "clipboard", "screen"])]
+    select: bool,
+
+    /// Internal: open the window, "capture" this picture, check the result, exit
+    #[arg(long, hide = true, value_name = "PNG")]
+    gui_selftest: Option<PathBuf>,
 
     /// Read the image from the clipboard instead
     #[arg(long, conflicts_with_all = ["image", "screen"])]
@@ -119,6 +119,22 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    #[cfg(feature = "gui")]
+    if cli.image.is_none() && !cli.clipboard && !cli.screen && !cli.select {
+        let opts = engine::Options {
+            engine: cli.engine,
+            raw: cli.raw,
+            fit: cli.fit,
+            model_dir: cli.model_dir.clone(),
+            max_tokens: cli.max_tokens,
+            llama_server: cli.llama_server.clone(),
+            vlm_dir: cli.vlm_dir.clone(),
+            yes: false,
+            quiet: true,
+        };
+        return gui::run(opts, cli.gui_selftest.clone());
+    }
+
     // Grab the image first so a cancelled selection costs nothing.
     let Some(img) = load_image(&cli)? else {
         eprintln!("Cancelled.");
@@ -199,12 +215,7 @@ fn main() -> Result<()> {
         );
     }
 
-    // A sentence already carries its own $...$ marks, so --wrap only applies to formulas.
-    let out = match (cli.wrap, kind) {
-        (Wrap::None, _) | (_, tidy::Kind::Prose) => latex,
-        (Wrap::Inline, _) => format!("${latex}$"),
-        (Wrap::Display, _) => format!("\\[ {latex} \\]"),
-    };
+    let out = engine::wrapped(cli.wrap, kind, &latex);
     println!("{out}");
     if !cli.no_copy {
         clipboard::copy_text(&out)?;
