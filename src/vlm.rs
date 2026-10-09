@@ -422,28 +422,37 @@ pub enum Reading {
 
 struct Segment {
     math: bool,
+    /// `$$..$$` or `\[..\]`: the model drew it on a line of its own
+    display: bool,
     body: String,
 }
 
 /// Split Markdown into text and math pieces: `$$..$$`, `\[..\]`, `\(..\)` and `$..$`.
 fn segments(t: &str) -> Vec<Segment> {
-    const PAIRS: [(&str, &str); 4] = [("$$", "$$"), ("\\[", "\\]"), ("\\(", "\\)"), ("$", "$")];
+    const PAIRS: [(&str, &str, bool); 4] = [
+        ("$$", "$$", true),
+        ("\\[", "\\]", true),
+        ("\\(", "\\)", false),
+        ("$", "$", false),
+    ];
     let mut out = Vec::new();
     let (mut text, mut i) = (String::new(), 0);
     'scan: while i < t.len() {
         let rest = &t[i..];
-        for (open, close) in PAIRS {
+        for (open, close, display) in PAIRS {
             if let Some(after) = rest.strip_prefix(open)
                 && let Some(end) = after.find(close)
             {
                 if !text.is_empty() {
                     out.push(Segment {
                         math: false,
+                        display: false,
                         body: std::mem::take(&mut text),
                     });
                 }
                 out.push(Segment {
                     math: true,
+                    display,
                     body: after[..end].trim().to_string(),
                 });
                 i += open.len() + end + close.len();
@@ -457,10 +466,105 @@ fn segments(t: &str) -> Vec<Segment> {
     if !text.is_empty() {
         out.push(Segment {
             math: false,
+            display: false,
             body: text,
         });
     }
     out
+}
+
+/// `(1)`, `(2.3)` or `(4a)` at the start of `text` (after spaces): an equation number. Returns the
+/// number and how many bytes it took.
+fn leading_equation_number(text: &str) -> Option<(String, usize)> {
+    let trimmed = text.trim_start();
+    let inner = trimmed.strip_prefix('(')?;
+    let end = inner.find(')')?;
+    let number = &inner[..end];
+    let valid = !number.is_empty()
+        && number.len() <= 8
+        && number.starts_with(|c: char| c.is_ascii_digit())
+        && number
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.');
+    valid.then(|| (number.to_string(), text.len() - trimmed.len() + end + 2))
+}
+
+/// Remove a `\tag{..}` from display math (the number was written inside the equation).
+fn strip_tag(body: &str) -> (String, bool) {
+    if let Some(start) = body.find("\\tag{")
+        && let Some(len) = body[start..].find('}')
+    {
+        let cleaned = format!("{}{}", &body[..start], &body[start + len + 1..]);
+        return (cleaned.trim().to_string(), true);
+    }
+    (body.to_string(), false)
+}
+
+/// One line of the result: running text (spaces tidied, plain variables marked, logos restored)
+/// or finished LaTeX that must be kept exactly as built.
+enum Line {
+    Text(String),
+    Code(String),
+}
+
+/// The sentence's text and inline math as lines. A display equation that really is one (it has an
+/// equation number, or the sentence before it ends in a colon) gets lines of its own; any other
+/// `$$..$$` is a tall inline formula the model drew on its own line, and stays inline.
+fn build_lines(mut segs: Vec<Segment>) -> Vec<Line> {
+    let (mut lines, mut text) = (Vec::<Line>::new(), String::new());
+    let mut ended_with_display = false;
+    for i in 0..segs.len() {
+        let seg = &segs[i];
+        if !seg.math {
+            text.push_str(&seg.body);
+            continue;
+        }
+        if !seg.display {
+            text.push_str(&format!("${}$", seg.body));
+            continue;
+        }
+        let (body, tagged) = strip_tag(&seg.body);
+        let number = segs
+            .get(i + 1)
+            .filter(|next| !next.math)
+            .and_then(|next| leading_equation_number(&next.body));
+        let introduced = text.trim_end().ends_with(':');
+        if !(tagged || number.is_some() || introduced) {
+            text.push_str(&format!("${body}$"));
+            continue;
+        }
+        let numbered = tagged || number.is_some();
+        if let Some((_, used)) = number {
+            segs[i + 1].body.drain(..used);
+        }
+        lines.push(Line::Text(std::mem::take(&mut text)));
+        let (open, close) = if numbered {
+            ("\\begin{equation}", "\\end{equation}")
+        } else {
+            ("\\[", "\\]")
+        };
+        lines.extend([open.to_string(), body, close.to_string()].map(Line::Code));
+        ended_with_display = true;
+    }
+    lines.push(Line::Text(text));
+    let mut lines: Vec<Line> = lines
+        .into_iter()
+        .filter_map(|l| match l {
+            Line::Text(t) => {
+                let t = t.split_whitespace().collect::<Vec<_>>().join(" ");
+                (!t.is_empty()).then_some(Line::Text(t))
+            }
+            code => Some(code),
+        })
+        .collect();
+    // A bare number left at the end after a display is the page number from the footer.
+    if ended_with_display
+        && lines.len() >= 2
+        && matches!(lines.last(), Some(Line::Text(t)) if t.len() <= 4 && t.chars().all(|c| c.is_ascii_digit()))
+    {
+        lines.pop();
+    }
+    lines
 }
 
 fn strip_fences(t: &str) -> &str {
@@ -494,19 +598,16 @@ pub fn interpret(raw: &str) -> Reading {
     let has_math = segs.iter().any(|s| s.math);
     let words = real_words(&outside);
     if (has_math && words >= 1) || words >= 3 {
-        // One line of text; every piece of math becomes an inline $...$.
-        let joined: String = segs
-            .iter()
-            .map(|s| {
-                if s.math {
-                    format!("${}$", s.body)
-                } else {
-                    s.body.clone()
-                }
+        let lines = build_lines(segs);
+        let text = lines
+            .into_iter()
+            .map(|l| match l {
+                Line::Text(t) => prose::replace_logos(&prose::mark_math(&t)),
+                Line::Code(c) => c,
             })
-            .collect();
-        let line = joined.split_whitespace().collect::<Vec<_>>().join(" ");
-        return Reading::Prose(prose::mark_math(&line));
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Reading::Prose(text);
     }
     let formula = segs
         .iter()
@@ -538,6 +639,65 @@ mod tests {
         assert!(plan.is_ready());
         assert!(plan.items().is_empty());
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// What the model really returned for the NYU sample document (page with a numbered equation).
+    const NYU_RAW: &str = "Hello World! Today I am learning LATEX. LATEX is a great program for writing math. I can write in line math such as  $a^2 + b^2 = c^2$.\n\nI can also give equations their own space:\n\n$$ \\gamma^{2}+\\theta^{2}=\\omega^{2} $$\n\n(1)\n\n1";
+
+    #[test]
+    fn a_numbered_display_equation_becomes_an_equation_environment() {
+        assert_eq!(
+            interpret(NYU_RAW),
+            Reading::Prose(
+                "Hello World! Today I am learning \\LaTeX{}. \\LaTeX{} is a great program for writing math. I can write in line math such as $a^2 + b^2 = c^2$. I can also give equations their own space:\n\\begin{equation}\n\\gamma^{2}+\\theta^{2}=\\omega^{2}\n\\end{equation}"
+                    .into()
+            )
+        );
+    }
+
+    #[test]
+    fn text_after_an_equation_starts_on_its_own_line() {
+        assert_eq!(
+            interpret("We know that\n\n$$E = mc^2$$\n\n(2.1)\n\nwhere $m$ is the mass."),
+            Reading::Prose(
+                "We know that\n\\begin{equation}\nE = mc^2\n\\end{equation}\nwhere $m$ is the mass."
+                    .into()
+            )
+        );
+        // the number written inside the maths with \tag
+        assert_eq!(
+            interpret("We know that\n\n$$E = mc^2 \\tag{3}$$\n\nholds."),
+            Reading::Prose(
+                "We know that\n\\begin{equation}\nE = mc^2\n\\end{equation}\nholds.".into()
+            )
+        );
+    }
+
+    #[test]
+    fn a_display_after_a_colon_gets_brackets_but_one_mid_sentence_stays_inline() {
+        assert_eq!(
+            interpret(
+                "Recall the identity:\n\n$$\\sum_{k=1}^n k = \\frac{n(n+1)}{2}$$\n\nIt is easy."
+            ),
+            Reading::Prose(
+                "Recall the identity:\n\\[\n\\sum_{k=1}^n k = \\frac{n(n+1)}{2}\n\\]\nIt is easy."
+                    .into()
+            )
+        );
+        // (display_math_inside_prose_becomes_inline covers the mid-sentence case)
+    }
+
+    #[test]
+    fn a_page_number_is_only_dropped_after_a_display_equation() {
+        // no display: a trailing number is content
+        assert_eq!(
+            interpret("Compute the sum of the first $n$ terms.\n\n42"),
+            Reading::Prose("Compute the sum of the first $n$ terms. 42".into())
+        );
+        // an equation reference in running text is not an equation number
+        assert!(
+            matches!(interpret("See the equation (1) above for $x$."), Reading::Prose(p) if p.contains("(1)"))
+        );
     }
 
     use super::{Reading, interpret, segments, strip_fences};

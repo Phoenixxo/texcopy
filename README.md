@@ -43,6 +43,21 @@ $ texcopy problem.png
 5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.
 ```
 
+With the vision engine, a page of text works too, including display equations and the LaTeX logo:
+
+```
+$ texcopy page.png
+Today I am learning \LaTeX{}. I can write in line math such as $a^2 + b^2 = c^2$. I can also give equations their own space:
+\begin{equation}
+\gamma^{2}+\theta^{2}=\omega^{2}
+\end{equation}
+```
+
+- **Numbered display equations** (a `(1)` beside it) become `\begin{equation}...\end{equation}`; the number is dropped because LaTeX writes it. A page number left at the very end after one is dropped too.
+- **A display equation after a colon** ("...their own space:") becomes `\[ ... \]`. Any other `$$...$$` the model draws on its own line stays inline, because on real textbook problems that is almost always a tall inline formula, not a display.
+- **The logos** `LATEX`/`LaTeX` and `TEX`/`TeX` outside math become `\LaTeX{}` and `\TeX{}` (the logo is drawn, so the model can only read it as capitals).
+- Text after a display equation starts on its own line. Everything else is still joined into one line.
+
 The model is trained on formulas, so it writes sentences as `\mathrm{W o r d s ~ l i k e ~ t h i s}`, wraps visual lines in an `array`, and doesn't say which letters were italic. Prose mode (`src/prose.rs`) flattens the lines into one paragraph, glues words broken at a line end (`cut-` + `vertex`), re-joins a formula cut by a line break, and wraps the math in `$...$` using rules: a lone letter other than `a`, `A`, `I` is math; so are intervals like `[a,b]`, expressions with `= < > + ^ _`, and digit-letter mixes like `n-1` (but not `3-regular`). It only activates when there are at least four real words and no more math-like tokens than word-like ones, so formulas with a bit of `\text{if }` are untouched. `--wrap` is ignored for sentences, and `--json` reports `"kind": "prose"` or `"math"`.
 
 Limits, measured on `tools/bench.py --suite prose` (21 cases, 17 exact):

@@ -330,6 +330,41 @@ pub fn mark_math(text: &str) -> String {
     out
 }
 
+/// The LaTeX and TeX logos are drawn, not typed, so the model reads them as plain capitals
+/// (`LATEX`). Outside math, turn them back into the macros: `LATEX` or `LaTeX` becomes `\LaTeX{}`,
+/// `TEX` or `TeX` becomes `\TeX{}`. (The `{}` keeps the space after the macro.)
+pub fn replace_logos(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 8);
+    for (i, part) in text.split('$').enumerate() {
+        if i > 0 {
+            out.push('$');
+        }
+        if i % 2 == 1 {
+            out.push_str(part); // math: leave alone
+            continue;
+        }
+        let mut word = String::new();
+        let flush = |word: &mut String, out: &mut String| {
+            out.push_str(match word.as_str() {
+                "LATEX" | "LaTeX" | "LATeX" => "\\LaTeX{}",
+                "TEX" | "TeX" => "\\TeX{}",
+                other => other,
+            });
+            word.clear();
+        };
+        for ch in part.chars() {
+            if ch.is_ascii_alphanumeric() {
+                word.push(ch);
+            } else {
+                flush(&mut word, &mut out);
+                out.push(ch);
+            }
+        }
+        flush(&mut word, &mut out);
+    }
+    out
+}
+
 /// Did the model lose the spaces between words? True if running text (outside `$...$`) has a
 /// word of 20 or more letters in a row, which no ordinary English word reaches.
 pub fn has_run_together_words(prose: &str) -> bool {
@@ -535,6 +570,22 @@ fn render(words: &[Word], math: &dyn Fn(&str) -> String) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_logos_become_macros_outside_math_only() {
+        use super::replace_logos;
+        assert_eq!(
+            replace_logos("I am learning LATEX. LATEX is great."),
+            "I am learning \\LaTeX{}. \\LaTeX{} is great."
+        );
+        assert_eq!(
+            replace_logos("plain TeX and LaTeX"),
+            "plain \\TeX{} and \\LaTeX{}"
+        );
+        // inside math, and inside longer words, nothing changes
+        assert_eq!(replace_logos("let $TEX$ be"), "let $TEX$ be");
+        assert_eq!(replace_logos("TEXT and LATEXED"), "TEXT and LATEXED");
+    }
+
     use crate::tidy::Kind;
     use crate::tidy::tidy_with_kind;
 
