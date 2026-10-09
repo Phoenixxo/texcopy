@@ -22,7 +22,8 @@ use image::{DynamicImage, ImageFormat, imageops::FilterType};
 
 use crate::{
     fetch::{self, Download},
-    helper, prose, ui,
+    helper, prose,
+    ui::{self, Event, Reporter},
 };
 
 const BASE_URL: &str = "https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF/resolve/main";
@@ -81,16 +82,19 @@ pub fn files_in(dir: &Path) -> Option<Files> {
 }
 
 /// Download whatever is missing from `dir`, checksum-verified, with progress.
-fn download_model(dir: &Path) -> Result<Files> {
+fn download_model(dir: &Path, report: Reporter) -> Result<Files> {
     fs::create_dir_all(dir)?;
     for f in &MODEL_FILES {
-        fetch::download_verified(&Download {
-            url: &format!("{BASE_URL}/{}", f.remote),
-            dest: &dir.join(f.local),
-            label: f.label,
-            size: Some(f.size),
-            sha256: Some(f.sha256),
-        })?;
+        fetch::download_verified(
+            &Download {
+                url: &format!("{BASE_URL}/{}", f.remote),
+                dest: &dir.join(f.local),
+                label: f.label,
+                size: Some(f.size),
+                sha256: Some(f.sha256),
+            },
+            report,
+        )?;
     }
     files_in(dir).context("download finished but the files are missing")
 }
@@ -128,63 +132,132 @@ pub fn ready(server_over: Option<&Path>, dir_over: Option<PathBuf>) -> Option<Se
     Some(Setup { server, files })
 }
 
-/// Set the vision engine up: explain exactly what will be downloaded, ask once, then do it with
-/// progress. With `assume_yes` (--yes) it explains and proceeds without asking.
-pub fn ensure(
-    server_over: Option<&Path>,
-    dir_over: Option<PathBuf>,
-    assume_yes: bool,
-) -> Result<Setup> {
+/// What setting the vision engine up would involve, worked out without touching the network.
+/// The terminal prints it and asks `[y/N]`; the window shows it with an Install button.
+pub struct Plan {
+    server: Option<PathBuf>,
+    files: Option<Files>,
+    dir: PathBuf,
+    release: Option<&'static helper::Release>,
+}
+
+/// One thing to download.
+pub struct PlanItem {
+    pub what: String,
+    pub size: u64,
+    pub from: &'static str,
+    pub to: String,
+}
+
+impl Plan {
+    /// Nothing left to download: the engine can start.
+    pub fn is_ready(&self) -> bool {
+        self.release.is_none() && self.files.is_some()
+    }
+
+    pub fn total_bytes(&self) -> u64 {
+        self.items().iter().map(|i| i.size).sum()
+    }
+
+    pub fn items(&self) -> Vec<PlanItem> {
+        let mut items = Vec::new();
+        if let Some(r) = self.release {
+            items.push(PlanItem {
+                what: format!("llama.cpp {} helper: {}", helper::TAG, r.describe),
+                size: r.size,
+                from: "github.com/ggml-org/llama.cpp (MIT licence), checksum-verified",
+                to: helper::install_dir().map_or(String::new(), |d| d.display().to_string()),
+            });
+        }
+        if self.files.is_none() {
+            items.push(PlanItem {
+                what: "OvisOCR2 model (reads text and long equations)".into(),
+                size: model_download_bytes(),
+                from: "huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF (Apache-2.0), checksum-verified",
+                to: self.dir.display().to_string(),
+            });
+        }
+        items
+    }
+
+    /// Download and install whatever is missing, reporting progress. Returns the ready engine.
+    pub fn install(self, report: Reporter) -> Result<Setup> {
+        let n_steps = usize::from(self.release.is_some()) + usize::from(self.files.is_none());
+        let mut k = 0;
+        let server = match (self.server, self.release) {
+            (Some(s), _) => s,
+            (None, Some(r)) => {
+                k += 1;
+                report(Event::Step {
+                    k,
+                    of: n_steps,
+                    what: "Installing the llama.cpp helper",
+                });
+                helper::install(r, report)?
+            }
+            (None, None) => unreachable!("a missing server always has a release to install"),
+        };
+        let files = match self.files {
+            Some(f) => f,
+            None => {
+                k += 1;
+                report(Event::Step {
+                    k,
+                    of: n_steps,
+                    what: "Downloading the OvisOCR2 model",
+                });
+                download_model(&self.dir, report)?
+            }
+        };
+        Ok(Setup { server, files })
+    }
+}
+
+/// Work out what the vision engine still needs. Errors when there is nowhere to put it, or no
+/// helper build exists for this machine.
+pub fn plan(server_over: Option<&Path>, dir_over: Option<PathBuf>) -> Result<Plan> {
     if let Some(p) = server_over
         && !p.is_file()
     {
         bail!("--llama-server {} does not exist", p.display());
     }
     let dir = model_dir(dir_over).context("cannot determine a cache directory; pass --vlm-dir")?;
-    let (server, files) = (find_server(server_over), files_in(&dir));
-    if let (Some(server), Some(files)) = (server.clone(), files.as_ref()) {
-        return Ok(Setup {
-            server,
-            files: Files {
-                model: files.model.clone(),
-                mmproj: files.mmproj.clone(),
-            },
-        });
-    }
-
-    // What is missing, and what it would cost.
+    let server = find_server(server_over);
     let release = if server.is_none() {
         Some(helper::require_release()?)
     } else {
         None
     };
-    let mut total = 0;
+    Ok(Plan {
+        server,
+        files: files_in(&dir),
+        dir,
+        release,
+    })
+}
+
+/// Set the vision engine up from the terminal: explain exactly what will be downloaded, ask once,
+/// then do it with progress. With `assume_yes` (--yes) it explains and proceeds without asking.
+pub fn ensure(
+    server_over: Option<&Path>,
+    dir_over: Option<PathBuf>,
+    assume_yes: bool,
+) -> Result<Setup> {
+    let plan = plan(server_over, dir_over)?;
+    if plan.is_ready() {
+        return plan.install(&mut ui::silent);
+    }
     eprintln!("The vision engine (OvisOCR2) needs a one-time setup.");
     eprintln!("Everything runs on your computer; nothing is uploaded.\n");
-    let mut step = 1;
-    if let Some(r) = release {
-        total += r.size;
-        eprintln!("  {step}. llama.cpp {} helper: {}", helper::TAG, r.describe);
-        eprintln!(
-            "     {:>9}  from github.com/ggml-org/llama.cpp (MIT licence), checksum-verified",
-            ui::human_bytes(r.size)
-        );
-        eprintln!(
-            "     installs to {}",
-            helper::install_dir().map_or(String::new(), |d| d.display().to_string())
-        );
-        step += 1;
+    for (i, item) in plan.items().iter().enumerate() {
+        eprintln!("  {}. {}", i + 1, item.what);
+        eprintln!("     {:>9}  from {}", ui::human_bytes(item.size), item.from);
+        eprintln!("     saves to {}", item.to);
     }
-    if files.is_none() {
-        total += model_download_bytes();
-        eprintln!("  {step}. OvisOCR2 model (reads text and long equations)");
-        eprintln!(
-            "     {:>9}  from huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF (Apache-2.0), checksum-verified",
-            ui::human_bytes(model_download_bytes())
-        );
-        eprintln!("     saves to {}", dir.display());
-    }
-    eprintln!("\n  Total download: {}\n", ui::human_bytes(total));
+    eprintln!(
+        "\n  Total download: {}\n",
+        ui::human_bytes(plan.total_bytes())
+    );
     if assume_yes {
         eprintln!("(--yes given: continuing without asking)\n");
     } else if !ui::confirm("Download and install now?", false)? {
@@ -192,32 +265,15 @@ pub fn ensure(
             "setup cancelled. Nothing was downloaded. (`texcopy --engine small` skips the vision engine.)"
         );
     }
-
-    let n_steps = usize::from(release.is_some()) + usize::from(files.is_none());
-    let mut k = 0;
-    let server = match (server, release) {
-        (Some(s), _) => s,
-        (None, Some(r)) => {
-            k += 1;
-            eprintln!("[{k}/{n_steps}] Installing the llama.cpp helper");
-            helper::install(r)?
-        }
-        (None, None) => unreachable!("a missing server always has a release to install"),
-    };
-    let files = match files {
-        Some(f) => f,
-        None => {
-            k += 1;
-            eprintln!("[{k}/{n_steps}] Downloading the OvisOCR2 model");
-            download_model(&dir)?
-        }
-    };
+    let installed_helper = plan.release.is_some();
+    let mut term = ui::Terminal::default();
+    let setup = plan.install(&mut |e| term.event(e))?;
     eprintln!("\nSetup complete.");
-    if cfg!(target_os = "macos") && release.is_some() {
+    if cfg!(target_os = "macos") && installed_helper {
         eprintln!("(The first run can take a little longer while macOS checks the new helper.)");
     }
     eprintln!();
-    Ok(Setup { server, files })
+    Ok(setup)
 }
 
 /// A running `llama-server`. Stopped when dropped.
@@ -461,6 +517,29 @@ pub fn interpret(raw: &str) -> Reading {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_plan_is_ready_only_when_both_the_helper_and_the_model_are_there() {
+        let dir = std::env::temp_dir().join(format!("texcopy-plan-test-{}", std::process::id()));
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let fake_server = dir.join("llama-server");
+        std::fs::write(&fake_server, b"x").unwrap();
+
+        // helper present, model missing: not ready, and the model is the only item to download
+        let plan = super::plan(Some(&fake_server), Some(dir.clone())).unwrap();
+        assert!(!plan.is_ready());
+        assert_eq!(plan.items().len(), 1);
+        assert_eq!(plan.total_bytes(), super::model_download_bytes());
+
+        // both there: ready, nothing to download
+        std::fs::write(dir.join("model.gguf"), b"x").unwrap();
+        std::fs::write(dir.join("mmproj.gguf"), b"x").unwrap();
+        let plan = super::plan(Some(&fake_server), Some(dir.clone())).unwrap();
+        assert!(plan.is_ready());
+        assert!(plan.items().is_empty());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
     use super::{Reading, interpret, segments, strip_fences};
 
     #[test]

@@ -89,6 +89,78 @@ pub fn bar_line(label: &str, done: u64, total: Option<u64>, bytes_per_sec: f64) 
     }
 }
 
+/// Something a long setup step tells whoever is watching: the terminal draws it as text and a bar,
+/// the window draws it as its own progress display.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Event<'a> {
+    /// "Step 2 of 3: downloading the model"
+    Step {
+        k: usize,
+        of: usize,
+        what: &'a str,
+    },
+    /// A download continues from `at` bytes instead of starting over
+    Resuming {
+        label: &'a str,
+        at: u64,
+    },
+    /// `done` of `total` bytes of `label` are on disk (`total` is None when the server didn't say)
+    Bytes {
+        label: &'a str,
+        done: u64,
+        total: Option<u64>,
+    },
+    /// The file is whole; its checksum is being compared
+    Verifying {
+        label: &'a str,
+    },
+    /// The download finished with `done` bytes
+    Finished {
+        label: &'a str,
+        done: u64,
+    },
+    Unpacking,
+}
+
+/// Where setup events go. A closure, so both the terminal and the window can listen.
+pub type Reporter<'a> = &'a mut dyn FnMut(Event<'_>);
+
+/// A reporter that ignores everything (tests, quiet runs).
+pub fn silent(_: Event<'_>) {}
+
+/// Draws events on the terminal (stderr): a live bar, or a line per 10% in a log.
+#[derive(Default)]
+pub struct Terminal {
+    progress: Option<Progress>,
+    resume_at: u64,
+}
+
+impl Terminal {
+    pub fn event(&mut self, e: Event<'_>) {
+        match e {
+            Event::Step { k, of, what } => eprintln!("[{k}/{of}] {what}"),
+            Event::Resuming { label, at } => {
+                self.resume_at = at;
+                eprintln!("  resuming {label} at {}", human_bytes(at));
+            }
+            Event::Bytes { label, done, total } => {
+                let base = self.resume_at;
+                self.progress
+                    .get_or_insert_with(|| Progress::new(label, total, base))
+                    .update(done);
+            }
+            Event::Finished { done, .. } => {
+                if let Some(mut p) = self.progress.take() {
+                    p.finish(done);
+                }
+                self.resume_at = 0;
+            }
+            Event::Verifying { label } => eprintln!("  verifying {label} ..."),
+            Event::Unpacking => eprintln!("  unpacking ..."),
+        }
+    }
+}
+
 /// Download progress: a live bar on a terminal, a line per 10% in a log.
 pub struct Progress {
     label: String,

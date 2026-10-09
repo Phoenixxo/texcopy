@@ -1,5 +1,6 @@
 mod capture;
 mod clipboard;
+mod engine;
 mod fetch;
 mod helper;
 mod model;
@@ -13,6 +14,7 @@ use std::{io::Read, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
+use engine::Engine;
 use image::DynamicImage;
 use serde::Serialize;
 
@@ -24,16 +26,6 @@ enum Wrap {
     Inline,
     /// \[ ... \]
     Display,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
-enum Engine {
-    /// The vision engine when it is set up, otherwise the small model
-    Auto,
-    /// Only the small formula model (fast, 118 MB)
-    Small,
-    /// Only the vision engine (OvisOCR2 via llama.cpp, about 1 GB)
-    Vlm,
 }
 
 /// Select something LaTeX-rendered on screen and get its LaTeX source on your clipboard.
@@ -133,7 +125,21 @@ fn main() -> Result<()> {
         return Ok(());
     };
 
-    let outcome = read(&cli, &img)?;
+    let opts = engine::Options {
+        engine: cli.engine,
+        raw: cli.raw,
+        fit: cli.fit,
+        model_dir: cli.model_dir.clone(),
+        max_tokens: cli.max_tokens,
+        llama_server: cli.llama_server.clone(),
+        vlm_dir: cli.vlm_dir.clone(),
+        yes: cli.yes,
+        quiet: cli.json,
+    };
+    let mut term = ui::Terminal::default();
+    let outcome = engine::read(&opts, &img, &mut engine::Warm::default(), &mut |e| {
+        term.event(e)
+    })?;
 
     if cli.json {
         let out = JsonOut {
@@ -205,120 +211,6 @@ fn main() -> Result<()> {
         eprintln!("Copied to clipboard.");
     }
     Ok(())
-}
-
-/// What an engine read, in one shape.
-struct Outcome {
-    latex: String,
-    kind: tidy::Kind,
-    raw: String,
-    engine: &'static str,
-    stop: model::Stop,
-    min_prob: Option<f32>,
-    mean_logprob: Option<f32>,
-    tokens: Vec<model::Token>,
-}
-
-/// Choose and run the engines. The vision engine goes first: if it finds text, that is the answer.
-/// If it finds only a formula, the small model is preferred (it is better on isolated formulas),
-/// with the vision engine's formula as the fallback.
-fn read(cli: &Cli, img: &DynamicImage) -> Result<Outcome> {
-    let vision = match cli.engine {
-        Engine::Small => None,
-        Engine::Vlm => run_vlm(cli, img, true)?,
-        Engine::Auto => match run_vlm(cli, img, false) {
-            Ok(None) => {
-                if !cli.json {
-                    eprintln!(
-                        "tip: run `texcopy --setup` once to enable the vision engine, which reads whole paragraphs and long equations far better (a one-time download, it asks first)"
-                    );
-                }
-                None
-            }
-            Ok(some) => some,
-            Err(e) => {
-                eprintln!("warning: the vision engine failed ({e:#}); using the small model");
-                None
-            }
-        },
-    };
-    let Some((raw, truncated)) = vision else {
-        return read_small(cli, img);
-    };
-    let stop = if truncated {
-        model::Stop::MaxTokens
-    } else {
-        model::Stop::Eos
-    };
-    let from_vision = |latex: String, kind| Outcome {
-        latex: if cli.raw { raw.clone() } else { latex },
-        kind,
-        raw: raw.clone(),
-        engine: "vlm",
-        stop,
-        min_prob: None,
-        mean_logprob: None,
-        tokens: Vec::new(),
-    };
-    match vlm::interpret(&raw) {
-        vlm::Reading::Prose(text) => Ok(from_vision(text, tidy::Kind::Prose)),
-        vlm::Reading::Formula(f) if cli.engine == Engine::Vlm => {
-            Ok(from_vision(f, tidy::Kind::Math))
-        }
-        vlm::Reading::Formula(f) => {
-            let small = read_small(cli, img)?;
-            // The small model giving up is the one case where the vision engine's formula is better.
-            Ok(if small.stop == model::Stop::Looped {
-                from_vision(f, tidy::Kind::Math)
-            } else {
-                small
-            })
-        }
-    }
-}
-
-/// Run the vision engine. `Ok(None)` means it isn't set up, which is only allowed when `required` is
-/// false; when it is required, a missing piece is set up first (asking the user).
-fn run_vlm(cli: &Cli, img: &DynamicImage, required: bool) -> Result<Option<(String, bool)>> {
-    let setup = if required {
-        Some(vlm::ensure(
-            cli.llama_server.as_deref(),
-            cli.vlm_dir.clone(),
-            cli.yes,
-        )?)
-    } else {
-        vlm::ready(cli.llama_server.as_deref(), cli.vlm_dir.clone())
-    };
-    let Some(setup) = setup else {
-        return Ok(None);
-    };
-    let server = vlm::Server::start(&setup.server, &setup.files)?;
-    server.read(img).map(Some)
-}
-
-/// The small formula model, with tidy and prose mode.
-fn read_small(cli: &Cli, img: &DynamicImage) -> Result<Outcome> {
-    let (dir, mut spec) = fetch::locate(cli.model_dir.clone())?;
-    if let Some(fit) = cli.fit {
-        spec.fit = fit;
-    }
-    let mut rec = model::Recognizer::load(&dir, spec)?;
-    let result = rec.recognize(img, cli.max_tokens)?;
-    let (latex, kind) = if cli.raw {
-        (result.text.clone(), tidy::Kind::Math)
-    } else {
-        tidy::tidy_with_kind(&result.text)
-    };
-    Ok(Outcome {
-        latex,
-        kind,
-        min_prob: Some(result.min_prob()),
-        mean_logprob: Some(result.mean_logprob()),
-        raw: result.text,
-        engine: "small",
-        stop: result.stop,
-        tokens: result.tokens,
-    })
 }
 
 #[derive(Serialize)]

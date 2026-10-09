@@ -11,7 +11,10 @@ use std::{
 
 use anyhow::{Context, Result};
 
-use crate::fetch::{self, Download};
+use crate::{
+    fetch::{self, Download},
+    ui::{Event, Reporter},
+};
 
 pub const TAG: &str = "b11146";
 const DOWNLOAD_BASE: &str = "https://github.com/ggml-org/llama.cpp/releases/download";
@@ -142,7 +145,7 @@ pub fn installed() -> Option<PathBuf> {
 }
 
 /// Download, verify and unpack the helper. Returns the path of `llama-server`.
-pub fn install(release: &Release) -> Result<PathBuf> {
+pub fn install(release: &Release, report: Reporter) -> Result<PathBuf> {
     let dir = install_dir().context("cannot determine a cache directory")?;
     if let Some(bin) = find_binary(&dir) {
         return Ok(bin);
@@ -150,19 +153,22 @@ pub fn install(release: &Release) -> Result<PathBuf> {
     let parent = dir.parent().context("bad install directory")?;
     fs::create_dir_all(parent)?;
     let archive = parent.join(release.name);
-    fetch::download_verified(&Download {
-        url: &release.url(),
-        dest: &archive,
-        label: &format!("llama.cpp {TAG}"),
-        size: Some(release.size),
-        sha256: Some(release.sha256),
-    })?;
+    fetch::download_verified(
+        &Download {
+            url: &release.url(),
+            dest: &archive,
+            label: &format!("llama.cpp {TAG}"),
+            size: Some(release.size),
+            sha256: Some(release.sha256),
+        },
+        report,
+    )?;
 
     // Unpack beside the final folder, then move it into place, so a crash never leaves half an install.
     let staging = parent.join(format!("{TAG}.unpacking"));
     fs::remove_dir_all(&staging).ok();
     fs::create_dir_all(&staging)?;
-    eprintln!("  unpacking ...");
+    report(Event::Unpacking);
     match release.archive {
         Archive::TarGz => unpack_tar_gz(&archive, &staging)?,
         Archive::Zip => unpack_zip(&archive, &staging)?,

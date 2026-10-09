@@ -9,7 +9,10 @@ use std::{
 use anyhow::{Context, Result, bail};
 use sha2::{Digest, Sha256};
 
-use crate::{spec::ModelSpec, ui};
+use crate::{
+    spec::ModelSpec,
+    ui::{self, Event, Reporter},
+};
 
 /// Per-user cache directory for downloaded files (platform-appropriate on every OS).
 /// `TEXCOPY_CACHE_DIR` overrides it, which is handy for tests and portable installs.
@@ -22,7 +25,7 @@ pub(crate) fn cache_dir() -> Option<PathBuf> {
 
 /// Find a directory holding a complete model and its spec, downloading the default
 /// model into the cache if needed. Order: explicit override, `./models`, the per-user cache.
-pub fn locate(over: Option<PathBuf>) -> Result<(PathBuf, ModelSpec)> {
+pub fn locate(over: Option<PathBuf>, report: Reporter) -> Result<(PathBuf, ModelSpec)> {
     let cache = cache_dir();
     let candidates: Vec<PathBuf> = match &over {
         Some(d) => vec![d.clone()],
@@ -51,15 +54,22 @@ pub fn locate(over: Option<PathBuf>) -> Result<(PathBuf, ModelSpec)> {
         );
     };
     fs::create_dir_all(&target)?;
-    eprintln!(
-        "First run: downloading model '{}' to {}",
-        spec.name,
-        target.display()
-    );
-    for f in spec.files() {
-        if !target.join(f).is_file() {
-            download(&format!("{base}/{f}"), &target.join(f))?;
-        }
+    let missing: Vec<&str> = spec
+        .files()
+        .into_iter()
+        .filter(|f| !target.join(f).is_file())
+        .collect();
+    for (i, f) in missing.iter().enumerate() {
+        report(Event::Step {
+            k: i + 1,
+            of: missing.len(),
+            what: &format!(
+                "First run: downloading '{}' file {f} to {}",
+                spec.name,
+                target.display()
+            ),
+        });
+        download(&format!("{base}/{f}"), &target.join(f), report)?;
     }
     Ok((target, spec))
 }
@@ -74,17 +84,20 @@ pub(crate) struct Download<'a> {
 }
 
 /// Download without checks (used for the small default model).
-pub(crate) fn download(url: &str, dest: &Path) -> Result<()> {
+pub(crate) fn download(url: &str, dest: &Path, report: Reporter) -> Result<()> {
     let label = dest
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    download_verified(&Download {
-        url,
-        dest,
-        label: &label,
-        size: None,
-        sha256: None,
-    })
+    download_verified(
+        &Download {
+            url,
+            dest,
+            label: &label,
+            size: None,
+            sha256: None,
+        },
+        report,
+    )
 }
 
 pub(crate) fn sha256_file(path: &Path) -> Result<String> {
@@ -106,7 +119,7 @@ pub(crate) fn sha256_file(path: &Path) -> Result<String> {
 
 /// Download with a progress display, resuming an interrupted `.part` file, and verifying the size
 /// and SHA-256 when they are known. A file that fails verification is deleted, never kept.
-pub(crate) fn download_verified(d: &Download) -> Result<()> {
+pub(crate) fn download_verified(d: &Download, report: Reporter) -> Result<()> {
     if d.dest.is_file()
         && d.sha256
             .is_none_or(|h| sha256_file(d.dest).is_ok_and(|got| got == h))
@@ -148,10 +161,12 @@ pub(crate) fn download_verified(d: &Download) -> Result<()> {
             .truncate(!resumed)
             .open(&part)?;
         if resumed {
-            eprintln!("  resuming {} at {}", d.label, ui::human_bytes(have));
+            report(Event::Resuming {
+                label: d.label,
+                at: have,
+            });
         }
         let mut reader = resp.into_body().into_reader();
-        let mut progress = ui::Progress::new(d.label, total, have);
         let (mut buf, mut done) = (vec![0u8; 1 << 16], have);
         loop {
             let n = reader.read(&mut buf)?;
@@ -160,10 +175,17 @@ pub(crate) fn download_verified(d: &Download) -> Result<()> {
             }
             out.write_all(&buf[..n])?;
             done += n as u64;
-            progress.update(done);
+            report(Event::Bytes {
+                label: d.label,
+                done,
+                total,
+            });
         }
         out.flush()?;
-        progress.finish(done);
+        report(Event::Finished {
+            label: d.label,
+            done,
+        });
     }
 
     let got = fs::metadata(&part)?.len();
@@ -176,7 +198,7 @@ pub(crate) fn download_verified(d: &Download) -> Result<()> {
         );
     }
     if let Some(want) = d.sha256 {
-        eprintln!("  verifying {} ...", d.label);
+        report(Event::Verifying { label: d.label });
         let digest = sha256_file(&part)?;
         if digest != want {
             fs::remove_file(&part).ok();
@@ -193,6 +215,7 @@ pub(crate) fn download_verified(d: &Download) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{Download, download_verified, sha256_file};
+    use crate::ui::silent;
     use sha2::{Digest, Sha256};
     use std::{
         fs,
@@ -263,13 +286,16 @@ mod tests {
     }
 
     fn fetch(url: &str, dir: &std::path::Path, size: u64, sha: &str) -> anyhow::Result<()> {
-        download_verified(&Download {
-            url,
-            dest: &dir.join("file.bin"),
-            label: "test file",
-            size: Some(size),
-            sha256: Some(sha),
-        })
+        download_verified(
+            &Download {
+                url,
+                dest: &dir.join("file.bin"),
+                label: "test file",
+                size: Some(size),
+                sha256: Some(sha),
+            },
+            &mut silent,
+        )
     }
 
     #[test]
