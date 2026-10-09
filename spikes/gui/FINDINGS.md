@@ -1,0 +1,30 @@
+# Phase 2 spike: findings
+
+Question: can one egui app go from a frozen full-screen overlay (drag to select) to a small popup, reliably?
+Tested on an Apple M4 Pro, 1512x982 pt Retina display (3024x1964 px), eframe/egui 0.36, with AeroSpace (a tiling window manager) running.
+
+## Verdict
+Yes, with these constraints. The self-test (`cargo run --release -- --selftest`, synthetic test pattern, no real capture) passed 3 of 3 runs, 5 checks each.
+
+| Check | Result |
+|---|---|
+| Overlay covers the monitor exactly, no offset | pass, `inner_rect` (0,0)-(1512,982) |
+| Retina crop: drag of (200,150)-(720,340) pt | pass, pixels x=400 y=300 1040x380, first pixel matches |
+| Popup keeps its requested size and position | pass, 520x230 centred, unchanged after 1.5 s |
+| Launch to overlay visible | 120-160 ms |
+| Selection to popup visible | about 40 ms (the engine then takes about 1 s) |
+| No process left running | pass |
+
+## What went wrong first (and the rules that came out of it)
+1. **Do not turn the overlay into the popup.** Toggling a borderless window to decorated made macOS re-apply its own frame a few frames later (sizes like 744x905 or 1466x905, a different one each run).
+2. **The cause of the "random" frames was AeroSpace**, a tiling window manager that was running: every new, normal-looking window was tiled (744x905 at (760,38) is its right-half tile). Any user with a tiling manager will see this.
+3. **Popup: no minimize/zoom buttons.** AeroSpace treats a window without them as a dialog and floats it (resizable can stay on). Verified: with both buttons present it was tiled; with either off it stayed put.
+4. **Overlay: make it the root (first) window.** As a second window it was pushed down 64 pt (`covers_monitor=false`) and the crop was off by 64 pt; as the first window it gets exactly the frame asked for.
+5. After the selection, the root window is shrunk to 1x1 and made transparent (it stays borderless), and the popup is a second window created fresh.
+6. Capture the screen **before** creating any window, so the overlay never appears in its own screenshot.
+7. A selftest that synthesises the selection from the wrong window computed the wrong origin (it used the root's `inner_rect`). Selection and origin must come from the same window.
+
+## Not verified here
+- Real screen capture and real mouse dragging (the self-test uses a synthetic pattern and a synthetic selection). Needs Screen Recording permission for the terminal.
+- Windows and Linux, multi-monitor, and a Mac without a tiling manager.
+- The menu bar: the overlay reports covering y=0, but whether the menu bar still draws above it was not checked visually.
