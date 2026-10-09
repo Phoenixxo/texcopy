@@ -290,6 +290,46 @@ fn scan(s: &str, in_text: bool, out: &mut Vec<Piece>) {
     flush(&mut run, out);
 }
 
+/// Wrap the words of running text that are math (lone letters, intervals, expressions) in `$...$`,
+/// leaving anything already inside `$...$` alone. Whitespace is preserved. This is for text that
+/// was read by a model which writes plain letters for variables, using the same word rules as
+/// prose mode.
+pub fn mark_math(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 16);
+    for (i, part) in text.split('$').enumerate() {
+        if i > 0 {
+            out.push('$');
+        }
+        if i % 2 == 1 {
+            out.push_str(part); // already math
+            continue;
+        }
+        let mut word = String::new();
+        let flush = |word: &mut String, out: &mut String| {
+            if word.is_empty() {
+                return;
+            }
+            let (lead, core, trail) = split_punct(word);
+            if !core.is_empty() && looks_math(core) {
+                out.push_str(&format!("{lead}${core}${trail}"));
+            } else {
+                out.push_str(word);
+            }
+            word.clear();
+        };
+        for ch in part.chars() {
+            if ch.is_whitespace() {
+                flush(&mut word, &mut out);
+                out.push(ch);
+            } else {
+                word.push(ch);
+            }
+        }
+        flush(&mut word, &mut out);
+    }
+    out
+}
+
 /// Did the model lose the spaces between words? True if running text (outside `$...$`) has a
 /// word of 20 or more letters in a row, which no ordinary English word reaches.
 pub fn has_run_together_words(prose: &str) -> bool {
@@ -564,6 +604,26 @@ mod tests {
         assert_eq!(
             prose(r"\mathrm { T h e ~ x - a x i s ~ h a s ~ t w o ~ p o i n t s ~ } x ."),
             "The x-axis has two points $x$."
+        );
+    }
+
+    #[test]
+    fn mark_math_wraps_plain_variables_and_keeps_existing_math() {
+        use super::mark_math;
+        assert_eq!(
+            mark_math(
+                r"5.4 Prove that if v is a cut-vertex of a graph G, then v is not a cut-vertex of the complement $\overline{G}$ of G."
+            ),
+            r"5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$."
+        );
+        assert_eq!(
+            mark_math("If f is continuous on [a,b], then f attains a maximum value."),
+            "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value."
+        );
+        // Words, the article "a" and numbers are left alone; layout is preserved.
+        assert_eq!(
+            mark_math("Show that  a 3-regular graph has order 4."),
+            "Show that  a 3-regular graph has order 4."
         );
     }
 

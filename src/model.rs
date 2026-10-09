@@ -50,13 +50,6 @@ impl Recognition {
         self.tokens.iter().map(|t| t.prob).fold(1.0, f32::min)
     }
 
-    /// Indices of tokens below `LOW_CONFIDENCE`.
-    pub fn uncertain(&self) -> Vec<usize> {
-        (0..self.tokens.len())
-            .filter(|&i| self.tokens[i].prob < LOW_CONFIDENCE)
-            .collect()
-    }
-
     /// Average log-probability per token (0.0 is perfectly certain, more negative is worse).
     pub fn mean_logprob(&self) -> f32 {
         if self.tokens.is_empty() {
@@ -267,20 +260,6 @@ mod tests {
         let terms: Vec<i64> = (1..=20).flat_map(|k| [10, 11, 100 + k, 12]).collect();
         assert!(!looped(&terms));
         assert!(!looped(&[]));
-    }
-
-    #[test]
-    fn flags_only_low_confidence_tokens() {
-        let tok = |p| Token {
-            text: "x".into(),
-            prob: p,
-        };
-        let r = Recognition {
-            text: String::new(),
-            tokens: vec![tok(0.99), tok(0.49), tok(0.5), tok(0.1)],
-            stop: Stop::Eos,
-        };
-        assert_eq!(r.uncertain(), vec![1, 3]);
     }
 
     #[test]
