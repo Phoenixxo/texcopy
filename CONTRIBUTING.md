@@ -42,6 +42,8 @@ git stash && cargo build --release && python3 tools/bench.py --save before.json
 git stash pop && cargo build --release && python3 tools/bench.py --baseline before.json
 ```
 
+For a bigger check there's a generated suite, `python3 tools/bench.py --suite generated --seed 7 --count 200`. It needs `cargo` (the generator is Rust, in `tools/gen`), `xelatex`, and for the web-style cases Node and Chrome. The same seed always makes the same cases.
+
 The diff lists every case that got better or worse, by name. Totals can hide a regression that a better case pays for. The diff can't. A bug fix should come with a test, and a new kind of input should come with a benchmark case.
 
 ## Where the code is

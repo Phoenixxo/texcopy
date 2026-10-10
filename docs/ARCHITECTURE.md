@@ -34,6 +34,7 @@ This is a map of texcopy for anyone who wants to change it. For what it does, se
 | `src/convert.rs` | the vision model's Markdown into LaTeX: headings, lists, display equations, paragraphs, escapes |
 | `src/table.rs` | HTML (or plain-line) tables into `tabular` |
 | `tools/` | the benchmark (`bench.py`), the real-textbook case maker, the model comparison, the license-notice generator |
+| `tools/gen/` | the Rust program that makes generated benchmark cases (random formulas, documents, web-style pictures, real arXiv LaTeX). Its own crate, not part of the shipped program |
 | `packaging/` | the scripts that build the macOS `.app`, the Windows zip and the Linux tarball |
 | `.github/workflows/` | `ci.yml` (format, lint, build, package, minimum Rust), `tests.yml`, `release.yml` |
 
@@ -78,6 +79,7 @@ Everything fetched at runtime is pinned in the source. The `llama.cpp` release a
 
 - `cargo test` runs the unit tests that sit next to the code. They include a local HTTP server for the download logic, fake programs for the Linux selector chain, and real model outputs for the text conversion.
 - `tools/bench.py` renders known LaTeX, runs texcopy, re-renders the answer and compares (see [BENCHMARKS.md](BENCHMARKS.md)). Compare against the previous build, not just the totals.
+- `tools/gen` makes benchmark cases from a seed (random formulas and documents, KaTeX pages, real CC-BY arXiv LaTeX), so the benchmark isn't only things I thought to write by hand. `texcopy --batch list.txt` reads many pictures with one set of loaded models, which keeps a 200-case run to a few minutes.
 - The window can test itself without a mouse. `texcopy --gui-selftest picture.png` "captures" a picture, reads it twice, and checks that the window kept running while hidden and that the second read reused the warm engine. `TEXCOPY_GUI_SCREENSHOT=out.png` saves a picture of the window, and `TEXCOPY_OVERLAY_AUTO=x0,y0,x1,y1` scripts a drag in the overlay.
 
 ## Releasing

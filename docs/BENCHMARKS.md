@@ -44,6 +44,67 @@ python3 tools/bench.py --baseline now.json   # a case-by-case diff against the s
 
 `tools/baseline.json` has my results for every suite except the private `real` one. A case or two can differ on other hardware. **Always compare against the previous build before you trust a change.** Run the suites with the old binary (`--bin path/to/old/texcopy --save old.json`), run them with the new one, and diff. Totals hide regressions. The diff tells you which case got worse.
 
+## Generated cases
+
+The suites above are cases I wrote by hand, and hand-written cases can overfit to the problems I'd just seen. So there's also a generator that makes cases with real tools. It's a small Rust program in `tools/gen`, and every case is a picture of some LaTeX plus the exact source it came from.
+
+- **Random formulas** from a small grammar (fractions, sums, integrals, matrices, `cases`, `aligned`), drawn with `pdflatex` and `xelatex` in a few fonts (Computer Modern, Latin Modern, STIX Two).
+- **Sentences and small documents.** Paragraphs with inline math, display equations, lists, tables and headings.
+- **Web style.** KaTeX in headless Chrome, light and dark, with a few fonts, like a page on screen.
+- **Real LaTeX.** Equations, lists and tables cut out of CC-BY arXiv papers, compiled with each paper's own macros. `fetch-arxiv` only keeps papers whose arXiv page shows CC-BY, CC-BY-SA or CC0.
+- **Degradation.** About a quarter get smaller, blurrier, noisier or JPEG-squashed, like a real screenshot.
+
+The same seed always makes the same cases, so a failure can be recreated and reported. Nothing generated gets committed. The generator is the recipe and the pictures are build output (they go in `tools/fixtures/generated/`, which git ignores).
+
+```
+cargo run --release --manifest-path tools/gen/Cargo.toml -- fetch-arxiv --count 12      # once, for the real-paper cases
+python3 tools/bench.py --suite generated --seed 7 --count 200                           # makes the cases if needed, then grades
+python3 tools/bench.py --suite generated --seed 7 --count 60 --kinds corpus             # just the real-paper cases
+python3 tools/bench.py --suite generated --seed 7 --count 200 --worst 20                # show the 20 worst misses
+```
+
+It grades by re-rendering both the truth and texcopy's answer with `pdflatex` and comparing, so it doesn't matter which renderer made the picture texcopy saw. All the pictures are read through one `texcopy --batch` run, so the model only loads once. The report breaks results down by category, renderer and degradation, with a 95% confidence interval on each rate. With a few cases in a group the interval is wide, and that's the honest answer.
+
+You need `pdflatex`, `xelatex` and `pdftoppm`. The web-style cases also need Node and Chrome (KaTeX installs itself into `tools/.cache`). The generator leaves Times math (`mathptmx`) out on purpose, because on a BasicTeX install `\leq`, `\neq` and `\in` need the `rsfs` font, which isn't there. STIX Two covers the Times-like look instead.
+
+### Latest generated results
+
+200 cases from seed 7 (Apple M4 Pro, vision engine on):
+
+| Category | Cases | Exact | Exact or close | Notes |
+|---|---:|---:|---:|---|
+| formula, simple | 30 | 28 | 28 | |
+| formula, medium | 43 | 37 | 39 | |
+| formula, hard | 33 | 31 | 33 | |
+| matrix | 16 | 16 | 16 | |
+| `cases` | 8 | 6 | 7 | |
+| `aligned` (multi-line) | 7 | 2 | 3 | the weak spot, see below |
+| sentences | 15 | 14 | 15 | |
+| documents (text, equations, lists, tables) | 29 | 9 | 24 | most misses are equivalent LaTeX that moves a line break |
+| web style (KaTeX), formulas | 13 | 8 | 8 | |
+| web style (KaTeX), sentences | 6 | 5 | 5 | |
+| **All** | **200** | **156 (78%)** | **178 (89%)** | 95% interval for exact: 72-83% |
+
+By how the picture was damaged: untouched 80% exact (116 of 145), JPEG 88%, shrunk 75%, blurred 64%, noisy 58%. The small groups have wide intervals, so don't read much into the order. Noise and blur do hurt, though.
+
+"Close" for a document means the content is the same once harmless differences are ignored (`\left(10\right)` versus `(10)`, a table inside `center`) but the picture differs, usually because a line broke somewhere else. It's graded this way because those differences can't be seen in the picture, so there's nothing to fix.
+
+What the misses have in common, found by this suite:
+
+- **`\binom` comes back as a two-row matrix.** The model draws it as `\left(\begin{matrix}n\\k\end{matrix}\right)`, which prints as a bigger `pmatrix`.
+- **Multi-line equations lose their alignment.** They come back as a one-column `array`, so the `=` signs don't line up. One came back with broken braces.
+- **The index of a root gets lost.** `\sqrt[n]{a}` comes back as `\sqrt{a}` or as a stray `\, 3 \! \! \! \sqrt{a}`.
+- **A formula on a web page is read as a heading.** The model writes `## w ⊂ Q`, and raw Unicode like `⊂` doesn't compile.
+- **Plain misreads.** `n` as `m`, an italic `v` as `\upsilon`, `\text{ even}` dropped.
+
+### Real arXiv papers
+
+37 cases from 8 CC-BY papers: 31 equations, 5 tables and 1 list (`--kinds corpus`, seed 7). Only 9 are exact (24%, with a 95% interval of 13-40%), and this is the hardest set. Real papers use custom macros, `align*`, `split` and `\toprule`, and they use bold in tables. It's a small sample, so take the exact number loosely. The patterns are the useful part:
+
+- **How the equation number comes back decides the result.** When the model writes it as `\tag*{(1)}` (12 equations), 8 are exact or close, because that renders just like a real `equation`. When it writes `\qquad\qquad(1)` (6) or puts `(1)` on its own line (3), none match: the number sits next to the formula and not in the margin. Turning those into a real `equation` is the clearest fix this found.
+- **Tables from real papers are 0 of 5.** The cells are usually right, but `\toprule`, bold headers and `p{4cm}` columns don't survive, and one came back unbalanced.
+- **Multi-line `align*`, `gathered` and `split`** come back as `aligned` or a one-column `array`, so the alignment shifts.
+
 ## Limitations
 
 - **Proofread the output.** texcopy warns about tokens the small model was under 50% sure of, and it refuses to copy output where the model got stuck repeating itself. A confident answer can still be wrong though. Typical small-model mistakes are `\epsilon` read as `e`, `\bar` as `\vec`, and `\text{...}` as `\mathrm{...}`. The vision engine doesn't report confidence, so it can't warn.
