@@ -16,7 +16,10 @@ mod tidy;
 mod ui;
 mod vlm;
 
-use std::{io::Read, path::PathBuf};
+use std::{
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -34,6 +37,12 @@ struct Cli {
     /// Drag-select a screen region in the terminal instead of opening the window (macOS only for now)
     #[arg(long, conflicts_with_all = ["image", "clipboard", "screen"])]
     select: bool,
+
+    /// Read every image listed in this file (one path per line) and print one JSON line each, keeping
+    /// the engines loaded between images. Used by the benchmark, where starting the vision model for
+    /// every image would take most of the time.
+    #[arg(long, hide = true, value_name = "LIST")]
+    batch: Option<PathBuf>,
 
     /// Internal: run the built-in region selector and write the cropped PNG here (see overlay.rs)
     #[arg(long, hide = true, value_name = "PNG")]
@@ -131,6 +140,10 @@ pub fn run() -> Result<()> {
         vlm::ensure(cli.llama_server.as_deref(), cli.vlm_dir.clone(), cli.yes)?;
         eprintln!("Try it:  texcopy --engine vlm some-image.png");
         return Ok(());
+    }
+
+    if let Some(list) = cli.batch.clone() {
+        return run_batch(&cli, &list);
     }
 
     #[cfg(feature = "gui")]
@@ -252,6 +265,62 @@ struct JsonOut<'a> {
     tokens: &'a [model::Token],
 }
 
+/// One line of `--batch` output: the path, then the same fields as `--json`.
+#[derive(Serialize)]
+struct BatchOut<'a> {
+    path: &'a str,
+    #[serde(flatten)]
+    out: JsonOut<'a>,
+}
+
+/// `--batch`: read each listed image with one set of loaded engines, printing a JSON line per image.
+/// A file that can't be read or recognised prints `{"path": ..., "error": ...}` and the run goes on.
+fn run_batch(cli: &Cli, list: &std::path::Path) -> Result<()> {
+    let opts = engine::Options {
+        engine: cli.engine,
+        raw: cli.raw,
+        fit: cli.fit,
+        model_dir: cli.model_dir.clone(),
+        max_tokens: cli.max_tokens,
+        llama_server: cli.llama_server.clone(),
+        vlm_dir: cli.vlm_dir.clone(),
+        yes: cli.yes,
+        quiet: true,
+    };
+    let text =
+        std::fs::read_to_string(list).with_context(|| format!("reading {}", list.display()))?;
+    let mut warm = engine::Warm::default();
+    for path in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        let result = image::open(path)
+            .with_context(|| format!("opening {path}"))
+            .and_then(|img| engine::read(&opts, &img, &mut warm, &mut ui::silent));
+        match result {
+            Ok(o) => {
+                let line = BatchOut {
+                    path,
+                    out: JsonOut {
+                        latex: &o.latex,
+                        kind: o.kind,
+                        raw: &o.raw,
+                        engine: o.engine,
+                        stop: o.stop,
+                        min_prob: o.min_prob,
+                        mean_logprob: o.mean_logprob,
+                        tokens: &o.tokens,
+                    },
+                };
+                println!("{}", serde_json::to_string(&line)?);
+            }
+            Err(e) => println!(
+                "{}",
+                serde_json::json!({"path": path, "error": format!("{e:#}")})
+            ),
+        }
+        std::io::stdout().flush().ok();
+    }
+    Ok(())
+}
+
 /// `None` means the user cancelled the screen selection.
 fn load_image(cli: &Cli) -> Result<Option<DynamicImage>> {
     if let Some(path) = &cli.image {
@@ -270,4 +339,31 @@ fn load_image(cli: &Cli) -> Result<Option<DynamicImage>> {
         };
     }
     capture::interactive()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_batch_line_has_the_path_and_the_same_fields_as_json_output() {
+        let out = JsonOut {
+            latex: "x^2",
+            kind: tidy::Kind::Math,
+            raw: "x ^ 2",
+            engine: "small",
+            stop: model::Stop::Eos,
+            min_prob: Some(0.9),
+            mean_logprob: None,
+            tokens: &[],
+        };
+        let line = serde_json::to_value(BatchOut { path: "a.png", out }).unwrap();
+        assert_eq!(line["path"], "a.png");
+        assert_eq!(line["latex"], "x^2");
+        assert_eq!(line["engine"], "small");
+        assert!(
+            line.get("out").is_none(),
+            "the fields sit beside the path, not nested under it"
+        );
+    }
 }
