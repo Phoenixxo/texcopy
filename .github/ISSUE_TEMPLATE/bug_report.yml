@@ -1,0 +1,51 @@
+name: Bug report
+description: texcopy gave the wrong LaTeX, crashed, or did not run
+labels: [bug]
+body:
+  - type: textarea
+    id: picture
+    attributes:
+      label: The picture
+      description: Attach the screenshot you selected (crop it to the part you captured). If it is copyrighted, crop it as small as you can.
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What texcopy gave you
+      description: "Paste the output. `texcopy image.png --json` also shows the engine and the model's raw text, which helps a lot."
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: texcopy version
+      description: Output of `texcopy --version`
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS (Apple Silicon), Windows, Linux (X11), Linux (Wayland), Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engine
+      options: [auto (default), small, vlm, not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Steps to reproduce, error messages, whether it used the window or the command line.
