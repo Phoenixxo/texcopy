@@ -314,6 +314,12 @@ struct SelfTest {
     /// How long each read took, in seconds (the second one shows the warm path)
     read_secs: Vec<f32>,
     checks: Vec<(String, bool)>,
+    /// `TEXCOPY_GUI_SCREENSHOT=<png>`: save a picture of the window once the first result is showing
+    /// (used to make the README's picture; contains only the window, never the desktop)
+    screenshot: Option<PathBuf>,
+    settled_frames: u32,
+    screenshot_requested: bool,
+    screenshot_saved: bool,
 }
 
 impl App {
@@ -439,6 +445,30 @@ impl App {
         }
     }
 
+    /// Write the window picture the self-test asked for, when egui hands it back.
+    fn save_screenshot(&mut self, ctx: &egui::Context) {
+        let Some(t) = self.test.as_mut() else { return };
+        let Some(path) = t.screenshot.clone() else {
+            return;
+        };
+        let picture = ctx.input(|i| {
+            i.events.iter().find_map(|e| match e {
+                egui::Event::Screenshot { image, .. } => Some(image.clone()),
+                _ => None,
+            })
+        });
+        if let Some(img) = picture {
+            let rgba: Vec<u8> = img.pixels.iter().flat_map(|c| c.to_array()).collect();
+            match image::RgbaImage::from_raw(img.width() as u32, img.height() as u32, rgba) {
+                Some(out) if out.save(&path).is_ok() => {
+                    eprintln!("[screenshot] saved {}", path.display())
+                }
+                _ => eprintln!("[screenshot] could not save {}", path.display()),
+            }
+            t.screenshot_saved = true;
+        }
+    }
+
     fn step_selftest(&mut self, ctx: &egui::Context) {
         if self.quit {
             return;
@@ -449,6 +479,15 @@ impl App {
             t.frames_while_hidden += 1;
         }
         let (frame, hidden, reads) = (t.frame, t.frames_while_hidden, t.read_secs.len());
+        if t.screenshot.is_some() && reads == 1 && !t.screenshot_saved {
+            // let the result be drawn for a few frames, then ask for a picture of the window
+            t.settled_frames += 1;
+            if t.settled_frames == 8 && !t.screenshot_requested {
+                t.screenshot_requested = true;
+                ctx.send_viewport_cmd(ViewportCommand::Screenshot(egui::UserData::default()));
+            }
+            return;
+        }
         // two captures in a row: the first starts the helper, the second should reuse it
         if (frame == 10 || (reads == 1 && frame > 10)) && !self.busy() {
             self.start_capture(ctx);
@@ -480,6 +519,7 @@ impl eframe::App for App {
         if self.test.is_some() {
             ctx.request_repaint_after(Duration::from_millis(30)); // the self-test counts frames
         }
+        self.save_screenshot(ctx);
         self.step_selftest(ctx);
         if self.quit {
             ctx.send_viewport_cmd(ViewportCommand::Close);
@@ -737,6 +777,10 @@ pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
                     read_started: None,
                     read_secs: Vec::new(),
                     checks: Vec::new(),
+                    screenshot: std::env::var_os("TEXCOPY_GUI_SCREENSHOT").map(PathBuf::from),
+                    settled_frames: 0,
+                    screenshot_requested: false,
+                    screenshot_saved: false,
                 }),
             };
             app.refresh_setup();
