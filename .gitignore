@@ -5,3 +5,6 @@ tools/fixtures/private/
 dist/
 THIRD_PARTY_LICENSES.md
 notes/
+tools/fixtures/generated/
+tools/fixtures/corpus/
+tools/.cache/
