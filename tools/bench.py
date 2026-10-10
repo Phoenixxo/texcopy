@@ -17,7 +17,7 @@ Needs: pdflatex, pdftoppm (poppler) and ImageMagick (`magick`) on PATH.
   python3 tools/bench.py --baseline tools/baseline.json   # report changes
   python3 tools/bench.py --tool-args "--fit pad"  # pass flags to texcopy
 """
-import argparse, collections, difflib, json, os, re, shlex, shutil, subprocess, sys, tempfile
+import argparse, collections, difflib, json, math, os, re, shlex, shutil, subprocess, sys, tempfile, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RANK = {"EXACT": 0, "close": 1, "differs": 2, "FAIL": 3}
@@ -208,6 +208,21 @@ INFO_ONLY = {
 }
 
 
+def content_key(latex):
+    """LaTeX with the differences that don't change what it says removed: sizing commands, spacing,
+    `\\le` for `\\leq`, a `center` around a table, braces and whitespace."""
+    t = latex.replace("\\begin{center}", "").replace("\\end{center}", "")
+    t = re.sub(r"\\(left|right|displaystyle)\b|\\[,;!]", "", t)
+    for long, short in (("\\leq", "\\le"), ("\\geq", "\\ge"), ("\\neq", "\\ne"), ("\\Vert", "\\|"), ("\\vert", "|")):
+        t = t.replace(long, short)
+    return re.sub(r"\s+|[{}$]", "", re.sub(r"\\item\b", "ITEM", t))
+
+
+def same_content(truth, output):
+    """How alike two pieces of LaTeX are once the harmless differences are removed (0 to 1)."""
+    return difflib.SequenceMatcher(None, content_key(truth), content_key(output)).ratio()
+
+
 def run(*cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
 
@@ -259,10 +274,13 @@ class Bench:
             return "", {}
         return d["latex"], d
 
-    def grade_doc(self, ref_png, output):
-        """Render `output` like the reference and compare pixels. Returns (grade, 1 - differing/ink)."""
-        out_png = self.render(output, pre=DOC_PRE, raw=True, opts="[12pt]", strict=True,
-                              wrap=lambda b: r"\begin{minipage}{%dcm}%s\end{minipage}" % (DOC_WIDTH_CM, b)) if output else None
+    def grade_doc(self, ref_png, output, width_cm=DOC_WIDTH_CM, pre=DOC_PRE, true_src=None):
+        """Render `output` like the reference and compare pixels. Returns (grade, 1 - differing/ink).
+
+        With `true_src`, output that differs in pixels but says the same thing (the same content once
+        harmless differences like `\\left(` are ignored) is "close": the line breaks moved, nothing else."""
+        out_png = self.render(output, pre=pre, raw=True, opts="[12pt]", strict=True,
+                              wrap=lambda b: r"\begin{minipage}{%dcm}%s\end{minipage}" % (width_cm, b)) if output else None
         if not out_png:
             return "FAIL", 0.0
         size = lambda p: tuple(int(v) for v in run("magick", "identify", "-format", "%w %h", p).stdout.split())
@@ -276,7 +294,10 @@ class Bench:
         ae = float(run("magick", "compare", "-metric", "AE", *padded, "null:").stderr.split()[0])
         ink = float(run("magick", ref_png, "-colorspace", "Gray", "-format", "%[fx:(1-mean)*w*h]", "info:").stdout or 1)
         ratio = ae / max(ink, 1.0)
-        return ("EXACT" if ae == 0 else "close" if ratio < 0.15 else "differs"), round(max(0.0, 1 - ratio), 3)
+        grade = "EXACT" if ae == 0 else "close" if ratio < 0.15 else "differs"
+        if grade == "differs" and true_src is not None and same_content(true_src, output) >= 0.99:
+            grade = "close"
+        return grade, round(max(0.0, 1 - ratio), 3)
 
     def grade(self, ref_png, true_src, output, pre="", kind="math"):
         """A formula is graded by re-rendering. A sentence (the vision model read the picture as text
@@ -408,6 +429,8 @@ def collect(b, suites):
             rows.append({"suite": "tables", "case": name, "grade": g, "sim": sim, "output": out, "raw": meta.get("raw"),
                          "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
             print(f"  {g:8} {'tables':16} {name}", file=sys.stderr)
+    if "generated" in suites:
+        rows.extend(run_generated(b))
     if "real" in suites:
         index = os.path.join(REAL_DIR, "cases.json")
         if not os.path.exists(index):
@@ -429,6 +452,114 @@ def collect(b, suites):
             out, _ = b.texcopy(img, kind="text")
             rows.append({"suite": "info", "case": name, "grade": "info", "sim": 0, "output": out})
     return rows
+
+
+# Settings for the generated suite, filled in from the command line.
+GEN = {"seed": 1, "count": 100, "kinds": None, "dir": None, "worst": 8}
+
+
+def run_generated(b):
+    """Cases made by tools/gen (Rust): a picture plus the exact LaTeX it came from.
+
+    Every picture is read in one batch (one set of loaded models). The truth and the answer are then
+    both re-rendered here with pdflatex and compared, so it doesn't matter which renderer (a different
+    font, xelatex, KaTeX in Chrome) made the picture the model saw."""
+    kinds = set(GEN["kinds"].split(",")) if GEN["kinds"] else None
+    tag = f"seed{GEN['seed']}-n{GEN['count']}" + ("-" + "+".join(sorted(kinds)) if kinds else "")
+    folder = GEN["dir"] or os.path.join(ROOT, "tools", "fixtures", "generated", tag)
+    if not os.path.exists(os.path.join(folder, "manifest.json")):
+        print(f"  making {GEN['count']} cases (seed {GEN['seed']}) in {folder}", file=sys.stderr)
+        cmd = ["cargo", "run", "--release", "--quiet", "--manifest-path", os.path.join(ROOT, "tools", "gen", "Cargo.toml"),
+               "--", "generate", "--seed", str(GEN["seed"]), "--count", str(GEN["count"]), "--out", folder]
+        if kinds:
+            cmd += ["--kinds", ",".join(sorted(kinds))]
+        subprocess.run(cmd, check=True)
+    cases = json.load(open(os.path.join(folder, "manifest.json")))["cases"]
+
+    listing = os.path.join(b.work, "batch.txt")
+    open(listing, "w").write("\n".join(os.path.join(folder, c["image"]) for c in cases) + "\n")
+    started = time.time()
+    proc = subprocess.run([b.binary, "--batch", listing, *b.tool_args], capture_output=True, text=True, env=b.env)
+    results = {}
+    for line in proc.stdout.splitlines():
+        try:
+            j = json.loads(line)
+            results[j["path"]] = j
+        except ValueError:
+            pass
+    print(f"  read {len(results)} of {len(cases)} pictures in {time.time() - started:.0f}s", file=sys.stderr)
+
+    rows, refs = [], {}
+    minipage = lambda cm: (lambda x: r"\begin{minipage}{%dcm}%s\end{minipage}" % (cm, x))
+    for n, c in enumerate(cases, 1):
+        j = results.get(os.path.join(folder, c["image"]), {"error": "no result"})
+        out, kind = j.get("latex", ""), j.get("kind", "math")
+        key = (c["kind"], c["truth"], c.get("preamble", ""))
+        if key not in refs:
+            if c["kind"] == "formula":
+                refs[key] = b.render(c["truth"])
+            else:
+                refs[key] = b.render(c["truth"], pre=DOC_PRE + c.get("preamble", ""), raw=True, opts="[12pt]",
+                                     strict=False, wrap=minipage(c["width_cm"]))
+        ref = refs[key]
+        if not ref:
+            print(f"  SKIPPED  {c['name']}: the truth does not render here", file=sys.stderr)
+            continue
+        if c["kind"] == "formula":
+            g, sim = b.grade(ref, c["truth"], out, kind=kind) if out else ("FAIL", 0.0)
+        else:
+            shown = rf"\[ {out} \]" if kind == "math" and out else out
+            g, sim = b.grade_doc(ref, shown, c["width_cm"], DOC_PRE + c.get("preamble", ""), true_src=c["truth"])
+        rows.append({"suite": f"gen/{c['category']}", "case": c["name"], "grade": g, "sim": round(sim, 3), "output": out,
+                     "raw": j.get("raw"), "engine": j.get("engine"), "error": j.get("error"), "truth": c["truth"],
+                     "renderer": c["renderer"], "degraded": c.get("degraded"), "source": c.get("source"),
+                     "stop": j.get("stop"), "min_prob": j.get("min_prob"), "mean_logprob": j.get("mean_logprob")})
+        if n % 25 == 0:
+            print(f"  graded {n}/{len(cases)}", file=sys.stderr)
+    return rows
+
+
+def wilson(k, n, z=1.96):
+    """95% confidence interval for a rate of k out of n (the Wilson score interval)."""
+    if n == 0:
+        return 0.0, 0.0
+    p = k / n
+    d = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / d
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def generated_report(rows, worst):
+    """Where the generated cases fail: by category, renderer and degradation, then the worst few."""
+    gen = [r for r in rows if r["suite"].startswith("gen/")]
+    if not gen:
+        return
+
+    def table(title, key):
+        groups = collections.defaultdict(list)
+        for r in gen:
+            groups[key(r)].append(r)
+        print(f"\n{title:24} {'n':>4} {'exact':>6} {'close+':>7}   95% interval for exact")
+        for name, rs in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            exact = sum(r["grade"] == "EXACT" for r in rs)
+            ok = sum(r["grade"] in ("EXACT", "close") for r in rs)
+            lo, hi = wilson(exact, len(rs))
+            print(f"{name:24} {len(rs):4} {exact:6} {ok:7}   {100 * exact / len(rs):4.0f}%  ({100 * lo:.0f}-{100 * hi:.0f}%)")
+
+    table("by category", lambda r: r["suite"][4:])
+    table("by renderer", lambda r: r["renderer"])
+    table("by degradation", lambda r: r["degraded"] or "none")
+    exact = sum(r["grade"] == "EXACT" for r in gen)
+    lo, hi = wilson(exact, len(gen))
+    print(f"\nall generated: {exact}/{len(gen)} exact = {100 * exact / len(gen):.0f}%  (95% interval {100 * lo:.0f}-{100 * hi:.0f}%)")
+    bad = sorted((r for r in gen if r["grade"] != "EXACT"), key=lambda r: (-RANK[r["grade"]], r["sim"]))
+    if bad and worst:
+        print(f"\nthe {min(worst, len(bad))} worst of {len(bad)} that were not exact:")
+        for r in bad[:worst]:
+            print(f"\n  [{r['grade']}] {r['case']}  ({r['renderer']}{', ' + r['degraded'] if r['degraded'] else ''})")
+            print("    truth :", r["truth"][:200].replace("\n", " | "))
+            print("    output:", (r["output"] or r.get("error") or "")[:200].replace("\n", " | "))
 
 
 def summarize(rows):
@@ -479,12 +610,18 @@ def compare(rows, path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bin", default=os.path.join(ROOT, "target/release/texcopy"))
-    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose", "real", "documents", "tables"])
+    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose", "real", "documents", "tables", "generated"])
     ap.add_argument("--tool-args", default="", help="extra flags for texcopy, e.g. '--fit pad'")
     ap.add_argument("--save", help="write results JSON here")
     ap.add_argument("--baseline", help="compare against a saved results JSON")
     ap.add_argument("--verbose", action="store_true", help="print every non-EXACT output")
+    ap.add_argument("--seed", type=int, default=1, help="generated suite: the seed (same seed, same cases)")
+    ap.add_argument("--count", type=int, default=100, help="generated suite: how many cases")
+    ap.add_argument("--kinds", help="generated suite: only these categories (formula, matrix, sentence, document, web, corpus ...)")
+    ap.add_argument("--gen-dir", help="generated suite: use the cases in this folder instead of making them")
+    ap.add_argument("--worst", type=int, default=8, help="generated suite: show this many of the worst cases")
     a = ap.parse_args()
+    GEN.update(seed=a.seed, count=a.count, kinds=a.kinds, dir=a.gen_dir, worst=a.worst)
 
     missing = [t for t in ("pdflatex", "pdftoppm", "magick") if not shutil.which(t)]
     if missing or not os.path.exists(a.bin):
@@ -493,6 +630,7 @@ def main():
     with tempfile.TemporaryDirectory() as work:
         rows = collect(Bench(a.bin, shlex.split(a.tool_args), work), suites)
     summarize(rows)
+    generated_report(rows, a.worst)
     confidence_report(rows)
     if a.verbose:
         for r in rows:
