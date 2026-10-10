@@ -242,16 +242,23 @@ Ideas, not promises:
 
 Contributions are welcome, and bug reports with a screenshot are the most valuable of all. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it explains the setup, the benchmark (and why to compare against the previous build), and the commit style. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## 🙏 Acknowledgements
+## 🙏 Acknowledgements and licenses
 
-texcopy stands on other people's work:
+texcopy is [MIT licensed](LICENSE), and it stands on other people's work. The main pieces:
 
-- [pix2text-mfr](https://huggingface.co/breezedeus/pix2text-mfr) by breezedeus (MIT), the small formula model.
-- [OvisOCR2](https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF) (Apache-2.0), the vision model, in the GGUF conversion by bartowski.
-- [llama.cpp](https://github.com/ggml-org/llama.cpp) (MIT), which runs the vision model.
-- [ONNX Runtime](https://onnxruntime.ai) through the [`ort`](https://crates.io/crates/ort) crate, [egui / eframe](https://github.com/emilk/egui), [xcap](https://crates.io/crates/xcap) and [arboard](https://crates.io/crates/arboard).
+| Component | What it does here | License |
+|---|---|---|
+| [pix2text-mfr](https://huggingface.co/breezedeus/pix2text-mfr) by breezedeus | the small formula model (downloaded on first run) | MIT |
+| [OvisOCR2](https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF), GGUF conversion by bartowski | the vision model (optional download) | Apache-2.0 |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) | runs the vision model (a downloaded helper, `llama-server`) | MIT |
+| [ONNX Runtime](https://onnxruntime.ai), through [`ort`](https://crates.io/crates/ort) | runs the small model, linked into the program | MIT |
+| [egui / eframe](https://github.com/emilk/egui) | the window; its bundled fonts are OFL-1.1 and Ubuntu Font License | MIT or Apache-2.0 |
+| [xcap](https://crates.io/crates/xcap), [arboard](https://crates.io/crates/arboard) | screen capture, clipboard | Apache-2.0; MIT or Apache-2.0 |
+| [image](https://crates.io/crates/image), [tokenizers](https://crates.io/crates/tokenizers), [clap](https://crates.io/crates/clap), [ureq](https://crates.io/crates/ureq) and others | image decoding, tokenizing, the command line, downloads | MIT or Apache-2.0 |
 
-The full license notices for everything texcopy is built from (about 500 Rust crates, ONNX Runtime and the bundled fonts) ship with every download as `THIRD_PARTY_LICENSES.md` (inside `texcopy.app/Contents/Resources` on macOS). They are generated at build time by `tools/third_party_licenses.py`, so they always match the code. texcopy's own license is in [LICENSE](LICENSE).
+In total texcopy is built from about 500 Rust crates. All of them are under permissive licenses (MIT, Apache-2.0, BSD, ISC, Zlib and similar); none requires GPL, AGPL or LGPL terms. (A few offer one of those *as an option* next to a permissive one, and texcopy uses the permissive one. One crate, `option-ext`, is MPL-2.0 and is used unmodified.) The models and the helper are downloaded, not bundled.
+
+The license notices these licenses require ship with every download as `THIRD_PARTY_LICENSES.md` (inside `texcopy.app/Contents/Resources` on macOS), generated from `Cargo.lock` by `tools/third_party_licenses.py` so they always match the code.
 
 ## 📄 License
 
