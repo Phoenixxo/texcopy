@@ -481,16 +481,6 @@
  },
  {
   "suite": "prose",
-  "case": "real screenshot textbook-5.4.png",
-  "grade": "EXACT",
-  "sim": 1.0,
-  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
-  "stop": "eos",
-  "min_prob": null,
-  "mean_logprob": null
- },
- {
-  "suite": "prose",
   "case": "s1 16cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,

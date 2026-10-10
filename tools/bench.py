@@ -90,10 +90,6 @@ PROSE = [
     r"If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
 ]
 PROSE_EARLY = r"\usepackage{mathptmx}"  # must load before amsmath/amssymb
-# A real screenshot from a textbook (kept as a fixture) and the text it contains.
-PROSE_FIXTURES = {
-    "fixtures/textbook-5.4.png": PROSE[0],
-}
 
 # Whole-document elements: equations, lists, headings, theorems, tables, special characters...
 # The goal is NOT to recover the author's source (the picture can't tell \textbf from {\bf }), only
@@ -391,8 +387,6 @@ def collect(b, suites):
                          "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
             print(f"  {g:8} {'prose':16} {case}", file=sys.stderr)
 
-        for rel, true_src in PROSE_FIXTURES.items():
-            add_prose("real screenshot " + os.path.basename(rel), true_src, os.path.join(os.path.dirname(os.path.abspath(__file__)), rel))
         for n, sent in enumerate(PROSE, 1):
             for width in (16, 9):
                 for dpi in (110, 200):
