@@ -286,8 +286,8 @@
   "sim": 1.0,
   "output": "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",
   "stop": "eos",
-  "min_prob": 0.99846506,
-  "mean_logprob": -0.00010462562
+  "min_prob": 0.9963766,
+  "mean_logprob": -0.00018222263
  },
  {
   "suite": "degraded",
@@ -436,8 +436,8 @@
   "sim": 1.0,
   "output": "f(z_0)=\\frac{1}{2\\pi i}\\oint_{\\gamma}\\frac{f(z)}{z-z_0}\\,dz",
   "stop": "eos",
-  "min_prob": 0.94803476,
-  "mean_logprob": -0.002057139
+  "min_prob": 0.9300423,
+  "mean_logprob": -0.003091814
  },
  {
   "suite": "degraded",
@@ -486,178 +486,178 @@
   "sim": 1.0,
   "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
   "stop": "eos",
-  "min_prob": 0.6711317,
-  "mean_logprob": -0.024285683
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s1 16cm 110dpi",
-  "grade": "close",
-  "sim": 0.966,
-  "output": "5.4 Prove that if $\\nu$ is a cut-vertex of a graph $G$, then $\\nu$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
   "stop": "eos",
-  "min_prob": 0.4624792,
-  "mean_logprob": -0.046398226
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s1 16cm 200dpi",
-  "grade": "close",
-  "sim": 0.978,
-  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$.",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
   "stop": "eos",
-  "min_prob": 0.43168855,
-  "mean_logprob": -0.022063443
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s1 9cm 110dpi",
-  "grade": "close",
-  "sim": 0.962,
-  "output": "5.4 Prove that if $\\nu$ is a cut--vertex of a graph $G$, then $\\nu$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
   "stop": "eos",
-  "min_prob": 0.5728267,
-  "mean_logprob": -0.033038564
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s1 9cm 200dpi",
-  "grade": "close",
-  "sim": 0.962,
-  "output": "5.4 Prove that if $\\nu$ is a cut--vertex of a graph $G$, then $\\nu$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$ of $G$.",
   "stop": "eos",
-  "min_prob": 0.40856478,
-  "mean_logprob": -0.033518396
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s2 16cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n - 1$ edges.",
   "stop": "eos",
-  "min_prob": 0.6638284,
-  "mean_logprob": -0.030290494
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s2 16cm 200dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n - 1$ edges.",
   "stop": "eos",
-  "min_prob": 0.42902288,
-  "mean_logprob": -0.030233216
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s2 9cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n - 1$ edges.",
   "stop": "eos",
-  "min_prob": 0.31837025,
-  "mean_logprob": -0.049653146
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s2 9cm 200dpi",
-  "grade": "EXACT",
-  "sim": 1.0,
-  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
+  "grade": "close",
+  "sim": 0.975,
+  "output": "Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n$ - 1 edges.",
   "stop": "eos",
-  "min_prob": 0.4069352,
-  "mean_logprob": -0.02611546
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s3 16cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "output": "Prove that for every integer $n \\geq 1$, the sum $1 + 2 + \\cdots + n$ equals $n(n+1)/2$.",
   "stop": "eos",
-  "min_prob": 0.51732635,
-  "mean_logprob": -0.025778558
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s3 16cm 200dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "output": "Prove that for every integer $n \\geq 1$, the sum $1 + 2 + \\cdots + n$ equals $n(n+1)/2$.",
   "stop": "eos",
-  "min_prob": 0.55974424,
-  "mean_logprob": -0.017845565
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s3 9cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "output": "Prove that for every integer $n \\geq 1$, the sum $1 + 2 + \\cdots + n$ equals $n(n+1)/2$.",
   "stop": "eos",
-  "min_prob": 0.7595162,
-  "mean_logprob": -0.008797852
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s3 9cm 200dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Prove that for every integer $n\\geq1$, the sum $1+2+\\cdots+n$ equals $n(n+1)/2$.",
+  "output": "Prove that for every integer $n \\geq 1$, the sum $1 + 2 + \\cdots + n$ equals $n(n+1)/2$.",
   "stop": "eos",
-  "min_prob": 0.27570528,
-  "mean_logprob": -0.088590935
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s4 16cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "output": "Find all real numbers $x$ such that $x^2 - 5x + 6 = 0$.",
   "stop": "eos",
-  "min_prob": 0.5435731,
-  "mean_logprob": -0.016049266
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s4 16cm 200dpi",
-  "grade": "EXACT",
-  "sim": 1.0,
-  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "grade": "close",
+  "sim": 0.979,
+  "output": "Find all real numbers $x$ such that $x^{2}-5x+6=0$.",
   "stop": "eos",
-  "min_prob": 0.8328234,
-  "mean_logprob": -0.017529022
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s4 9cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "output": "Find all real numbers $x$ such that $x^2 - 5x + 6 = 0$.",
   "stop": "eos",
-  "min_prob": 0.5435731,
-  "mean_logprob": -0.016049266
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s4 9cm 200dpi",
-  "grade": "EXACT",
-  "sim": 1.0,
-  "output": "Find all real numbers $x$ such that $x^2-5x+6=0$.",
+  "grade": "close",
+  "sim": 0.979,
+  "output": "Find all real numbers $x$ such that $x^{2}-5x+6=0$.",
   "stop": "eos",
-  "min_prob": 0.8328234,
-  "mean_logprob": -0.017529022
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
   "case": "s5 16cm 110dpi",
   "grade": "EXACT",
   "sim": 1.0,
-  "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
+  "output": "If $f$ is continuous on $[a, b]$, then $f$ attains a maximum value on $[a, b]$.",
   "stop": "eos",
-  "min_prob": 0.8314632,
-  "mean_logprob": -0.011706814
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
@@ -666,8 +666,8 @@
   "sim": 1.0,
   "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
   "stop": "eos",
-  "min_prob": 0.6435017,
-  "mean_logprob": -0.008228693
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
@@ -676,8 +676,8 @@
   "sim": 1.0,
   "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
   "stop": "eos",
-  "min_prob": 0.4917007,
-  "mean_logprob": -0.024884615
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "prose",
@@ -686,8 +686,602 @@
   "sim": 1.0,
   "output": "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
   "stop": "eos",
-  "min_prob": 0.43743217,
-  "mean_logprob": -0.020644268
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "equation numbered",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Equations can be numbered:\n\\begin{equation}\na^{2}+b^{2}=c^{2}\n\\end{equation}\nas we know.",
+  "raw": "Equations can be numbered:\n\n$$ a^{2}+b^{2}=c^{2} $$\n\n(1)\n\nas we know.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "equation numbered, no colon",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "The Pythagorean theorem states\n\\begin{equation}\na^2+b^2=c^2\n\\end{equation}\nfor right triangles.",
+  "raw": "The Pythagorean theorem states\n\n$$ a^2+b^2=c^2 $$\n\n(1)\n\nfor right triangles.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "equation*",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "We have\n\\[\ne^{i\\pi}+1=0\n\\]\nwhich is Euler's identity.",
+  "raw": "We have\n\n$$ e^{i\\pi}+1=0 $$\n\nwhich is Euler's identity.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "display after colon",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Recall that:\n\\[\n\\sum_{k=1}^{n}k=\\frac{n(n+1)}{2}\n\\]\nThis is Gauss's formula.",
+  "raw": "Recall that:\n\n$$ \\sum_{k=1}^{n}k=\\frac{n(n+1)}{2} $$\n\nThis is Gauss's formula.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "display no colon",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "The sum\n\\[\n\\sum_{k=1}^{n}k=\\frac{n(n+1)}{2}\n\\]\nequals the triangular number.",
+  "raw": "The sum\n\n$$ \\sum_{k=1}^{n}k=\\frac{n(n+1)}{2} $$\n\nequals the triangular number.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "align numbered",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "We compute\n\\begin{equation}\n(a+b)^{2}=a^{2}+2ab+b^{2}\n\\end{equation}\n\\begin{equation}\n(a-b)^{2}=a^{2}-2ab+b^{2}\n\\end{equation}\nas required.",
+  "raw": "We compute\n\n$$ (a+b)^{2}=a^{2}+2ab+b^{2} $$\n\n(1)\n\n$$ (a-b)^{2}=a^{2}-2ab+b^{2} $$\n\n(2)\n\nas required.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "align*",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "We compute\n\\begin{align*}(a+b)^2&=a^2+2ab+b^2\\\\(a-b)^2&=a^2-2ab+b^2\\end{align*}\nas required.",
+  "raw": "We compute\n\n$$ \\begin{align*}(a+b)^2&=a^2+2ab+b^2\\\\(a-b)^2&=a^2-2ab+b^2\\end{align*} $$\n\nas required.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "cases",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "f(x)=\\begin{cases}x & x\\geq0 \\\\ -x & x<0\\end{cases}",
+  "raw": "f ( x ) = \\begin{cases} { x } & { x \\geq 0 } \\\\ { - x } & { x < 0 } \\\\ \\end{cases}",
+  "stop": "eos",
+  "min_prob": 0.75250405,
+  "mean_logprob": -0.011103734
+ },
+ {
+  "suite": "documents",
+  "case": "matrix display",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "A=\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}",
+  "raw": "A = \\left( \\begin{matrix} { 1 } & { 2 } \\\\ { 3 } & { 4 } \\\\ \\end{matrix} \\right)",
+  "stop": "eos",
+  "min_prob": 0.9999677,
+  "mean_logprob": -1.6969963e-06
+ },
+ {
+  "suite": "documents",
+  "case": "inline only",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Let $f(x) = x^2$ and $g(x) = \\sin x$. Then $f \\circ g(x) = \\sin^2 x$.",
+  "raw": "Let  $f(x) = x^2$ and  $g(x) = \\sin x$. Then  $f \\circ g(x) = \\sin^2 x$.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "problem with display",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Problem 3. Let $G = (V, E)$ be a graph. Show that\n\\[\n\\sum_{v\\in V}\\deg(v)=2|E|.\n\\]",
+  "raw": "Problem 3. Let  $G = (V, E)$ be a graph. Show that\n\n$$ \\sum_{v\\in V}\\deg(v)=2|E|. $$",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "bold italic emph",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "This is bold, this is italic, and this is emphasised text.",
+  "raw": "This is bold, this is italic, and this is emphasised text.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "small caps underline",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "SMALL CAPS and underlined text.",
+  "raw": "SMALL CAPS and underlined text.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "typewriter",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Use printf to print a line.",
+  "raw": "Use printf to print a line.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "quotes dashes",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "He said, ``Hello---world'' and read pages 10--20.",
+  "raw": "He said, \"Hello\u2014world\" and read pages 10\u201320.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "special characters",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Cost is \\$5 \\& 50\\% off, item \\#3, file my\\_name.",
+  "raw": "Cost is $5 & 50% off, item #3, file my_name.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "accents",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "caf\u00e9 na\u00efve fa\u00e7ade",
+  "raw": "caf\u00e9 na\u00efve fa\u00e7ade",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "two paragraphs",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "The first paragraph is right here.\n\nThe second paragraph follows, with $x$ in it.",
+  "raw": "The first paragraph is right here.\n\nThe second paragraph follows, with x in it.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "centered",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\section*{Centred text}",
+  "raw": "## Centred text",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "sections",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\section*{Introduction}\nThis document is short.\n\\section*{Background}\nSome background follows.",
+  "raw": "## Introduction\n\nThis document is short.\n\n## Background\n\nSome background follows.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "itemize",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{itemize}\n  \\item First point\n  \\item Second point with $x^{2}$\n  \\item Third point\n\\end{itemize}",
+  "raw": "- First point\n\n- Second point with $x^{2}$\n\n- Third point",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "enumerate",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{enumerate}\n  \\item Prove the claim.\n  \\item Show that $n \\geq 2$.\n  \\item Conclude.\n\\end{enumerate}",
+  "raw": "1. Prove the claim.\n\n2. Show that  $n \\geq 2$.\n\n3. Conclude.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "nested list",
+  "grade": "close",
+  "sim": 0.902,
+  "output": "\\begin{itemize}\n  \\item Outer one\n  \\begin{itemize}\n    \\item Inner a\n    \\item Inner $b$\n  \\end{itemize}\n  \\item Outer two\n\\end{itemize}",
+  "raw": "\u2022 Outer one\n\n\u2013 Inner a\n\n\u2013 Inner b\n\n\u2022 Outer two",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "description",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Alpha The first letter.\n\nBeta The second letter.",
+  "raw": "Alpha The first letter.\n\nBeta The second letter.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "theorem",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Theorem 1. Every bounded monotone sequence converges.",
+  "raw": "Theorem 1. Every bounded monotone sequence converges.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "definition",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Definition 1. A graph is connected if every two vertices are joined by a path.",
+  "raw": "Definition 1. A graph is connected if every two vertices are joined by a path.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "proof",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Proof. Suppose $x > 0$. Then $x^{2} > 0$. \\hfill $\\square$",
+  "raw": "Proof. Suppose $x > 0$. Then $x^{2} > 0$.\n\n\u25a1",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "theorem and proof",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "Lemma 1. If $n$ is even then $n^{2}$ is even.\n\nProof. Write $n = 2k$. Then $n^2 = 4k^2$.",
+  "raw": "Lemma 1. If n is even then  $n^{2}$ is even.\n\nProof. Write  $n = 2k$. Then  $n^2 = 4k^2$.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "table hlines",
+  "grade": "differs",
+  "sim": 0.012,
+  "output": "\\begin{center}\n\\begin{tabular}{lrl}\n\\hline\nName & Age & City \\\\\n\\hline\nAnn & 31 & Oslo \\\\\nBob & 28 & Rome \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Name</td><td>Age</td><td>City</td></tr><tr><td>Ann</td><td>31</td><td>Oslo</td></tr><tr><td>Bob</td><td>28</td><td>Rome</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "table vertical bars",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lrl}\n\\hline\nName & Age & City \\\\\n\\hline\nAnn & 31 & Oslo \\\\\nBob & 28 & Rome \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Name</td><td>Age</td><td>City</td></tr><tr><td>Ann</td><td>31</td><td>Oslo</td></tr><tr><td>Bob</td><td>28</td><td>Rome</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "table booktabs",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lrr}\n\\hline\nItem & Qty & Price \\\\\n\\hline\nPen & 3 & 1.50 \\\\\nBook & 12 & 20.00 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Item</td><td>Qty</td><td>Price</td></tr><tr><td>Pen</td><td>3</td><td>1.50</td></tr><tr><td>Book</td><td>12</td><td>20.00</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "table math cells",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rr}\n\\hline\n$x$ & $x^{2}$ \\\\\n\\hline\n1 & 1 \\\\\n2 & 4 \\\\\n3 & 9 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>x</td><td>$x^{2}$</td></tr><tr><td>1</td><td>1</td></tr><tr><td>2</td><td>4</td></tr><tr><td>3</td><td>9</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "table multicolumn",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lll}\n\\hline\n\\multicolumn{3}{c}{Scores} \\\\\n\\hline\nName & Math & Art \\\\\nAnn & 90 & 85 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td colspan=\"3\">Scores</td></tr><tr><td>Name</td><td>Math</td><td>Art</td></tr><tr><td>Ann</td><td>90</td><td>85</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "verbatim",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "int main() { return 0; }",
+  "raw": "int main() {\n    return 0;\n}",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "footnote",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "This sentence has a footnote. $^{a}$ The text continues.\n\n$^{a}$Here it is.",
+  "raw": "This sentence has a footnote. $^{a}$ The text continues.\n\n$^{a}$Here it is.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "documents",
+  "case": "bibliography",
+  "grade": "differs",
+  "sim": 0.0,
+  "output": "\\section*{References}\n[1] A. Author, A Book, 2020.\n\n[2] $B$. Writer, A Paper, 2021.",
+  "raw": "## References\n\n[1] A. Author, A Book, 2020.\n\n[2] B. Writer, A Paper, 2021.",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "text and numbers",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lrl}\n\\hline\nName & Age & City \\\\\n\\hline\nAnn & 31 & Oslo \\\\\nBob & 28 & Rome \\\\\nCy & 45 & Paris \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Name</td><td>Age</td><td>City</td></tr><tr><td>Ann</td><td>31</td><td>Oslo</td></tr><tr><td>Bob</td><td>28</td><td>Rome</td></tr><tr><td>Cy</td><td>45</td><td>Paris</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "execution times",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rrr}\n\\hline\n$n$ & Recursive time (ms) & DP time (ms) \\\\\n\\hline\n5 & 0.000037 & 0.000022 \\\\\n7 & 0.000164 & 0.000025 \\\\\n9 & 0.000679 & 0.000031 \\\\\n11 & 0.002809 & 0.000041 \\\\\n13 & 0.011786 & 0.000052 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>n</td><td>Recursive time (ms)</td><td>DP time (ms)</td></tr><tr><td>5</td><td>0.000037</td><td>0.000022</td></tr><tr><td>7</td><td>0.000164</td><td>0.000025</td></tr><tr><td>9</td><td>0.000679</td><td>0.000031</td></tr><tr><td>11</td><td>0.002809</td><td>0.000041</td></tr><tr><td>13</td><td>0.011786</td><td>0.000052</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "percent and ampersand",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lrr}\n\\hline\nItem & Rate & Share \\\\\n\\hline\nTea \\& Coffee & 12\\% & 3.5\\% \\\\\nMilk & 8\\% & 1\\% \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Item</td><td>Rate</td><td>Share</td></tr><tr><td>Tea &amp; Coffee</td><td>12%</td><td>3.5%</td></tr><tr><td>Milk</td><td>8%</td><td>1%</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "empty cells",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rrr}\n\\hline\nA & $B$ & $C$ \\\\\n\\hline\n1 &  & 3 \\\\\n & 5 &  \\\\\n7 & 8 & 9 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>A</td><td>B</td><td>C</td></tr><tr><td>1</td><td></td><td>3</td></tr><tr><td></td><td>5</td><td></td></tr><tr><td>7</td><td>8</td><td>9</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "negatives and units",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lrr}\n\\hline\nSample & Offset (mm) & Gain (dB) \\\\\n\\hline\n$S1$ & -0.5 & 12.4 \\\\\n$S2$ & $+1.25$ & -3.0 \\\\\n$S3$ & 0 & 7.75 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Sample</td><td>Offset (mm)</td><td>Gain (dB)</td></tr><tr><td>S1</td><td>-0.5</td><td>12.4</td></tr><tr><td>S2</td><td>+1.25</td><td>-3.0</td></tr><tr><td>S3</td><td>0</td><td>7.75</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "math cells",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rrr}\n\\hline\n$x$ & $x^{2}$ & $\\sqrt{x}$ \\\\\n\\hline\n1 & 1 & 1 \\\\\n4 & 16 & 2 \\\\\n9 & 81 & 3 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>x</td><td>$x^{2}$</td><td>$\\sqrt{x}$</td></tr><tr><td>1</td><td>1</td><td>1</td></tr><tr><td>4</td><td>16</td><td>2</td></tr><tr><td>9</td><td>81</td><td>3</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "six columns",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rllrrl}\n\\hline\nId & Name & Dept & Year & Score & Grade \\\\\n\\hline\n1 & Ann & Math & 2021 & 91 & A \\\\\n2 & Bob & Art & 2022 & 78 & C \\\\\n3 & Cy & Bio & 2020 & 85 & B \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "Id Name Dept Year Score Grade\n\n1 Ann Math 2021 91 A\n\n2 Bob Art 2022 78 C\n\n3 Cy Bio 2020 85 B",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "grouped header",
+  "grade": "differs",
+  "sim": 0.818,
+  "output": "\\begin{center}\n\\begin{tabular}{lll}\n\\hline\nName & \\multicolumn{2}{c}{Scores} \\\\\n\\hline\n & Math & Art \\\\\nAnn & 90 & 85 \\\\\nBob & 72 & 64 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td rowspan=\"2\">Name</td><td colspan=\"2\">Scores</td></tr><tr><td>Math</td><td>Art</td></tr><tr><td>Ann</td><td>90</td><td>85</td></tr><tr><td>Bob</td><td>72</td><td>64</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "yes no matrix",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{llll}\n\\hline\nFeature & Free & Pro & Team \\\\\n\\hline\nExport & yes & yes & yes \\\\\nSync & no & yes & yes \\\\\nAdmin & no & no & yes \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Feature</td><td>Free</td><td>Pro</td><td>Team</td></tr><tr><td>Export</td><td>yes</td><td>yes</td><td>yes</td></tr><tr><td>Sync</td><td>no</td><td>yes</td><td>yes</td></tr><tr><td>Admin</td><td>no</td><td>no</td><td>yes</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "twelve rows",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rr}\n\\hline\n$k$ & $2^k$ \\\\\n\\hline\n1 & 2 \\\\\n2 & 4 \\\\\n3 & 8 \\\\\n4 & 16 \\\\\n5 & 32 \\\\\n6 & 64 \\\\\n7 & 128 \\\\\n8 & 256 \\\\\n9 & 512 \\\\\n10 & 1024 \\\\\n11 & 2048 \\\\\n12 & 4096 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>k</td><td>$2^k$</td></tr><tr><td>1</td><td>2</td></tr><tr><td>2</td><td>4</td></tr><tr><td>3</td><td>8</td></tr><tr><td>4</td><td>16</td></tr><tr><td>5</td><td>32</td></tr><tr><td>6</td><td>64</td></tr><tr><td>7</td><td>128</td></tr><tr><td>8</td><td>256</td></tr><tr><td>9</td><td>512</td></tr><tr><td>10</td><td>1024</td></tr><tr><td>11</td><td>2048</td></tr><tr><td>12</td><td>4096</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "prices",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lr}\n\\hline\nItem & Price \\\\\n\\hline\nPen & \\$1.50 \\\\\nBook & \\$20.00 \\\\\nBag & \\$1,250.00 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Item</td><td>Price</td></tr><tr><td>Pen</td><td>$1.50</td></tr><tr><td>Book</td><td>$20.00</td></tr><tr><td>Bag</td><td>$1,250.00</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "wrapped text cells",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{ll}\n\\hline\nTerm & Meaning \\\\\n\\hline\nCut-vertex & A vertex whose removal increases the number of connected components \\\\\nBridge & An edge whose removal disconnects the graph \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Term</td><td>Meaning</td></tr><tr><td>Cut-vertex</td><td>A vertex whose removal increases the number of connected components</td></tr><tr><td>Bridge</td><td>An edge whose removal disconnects the graph</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "units in cells",
+  "grade": "differs",
+  "sim": 0.75,
+  "output": "\\begin{center}\n\\begin{tabular}{lll}\n\\hline\nMaterial & Density & Melting point \\\\\n\\hline\nIron & 7.87 $g/cm3$ & 1538 $^\\circ$C \\\\\nCopper & 8.96 $g/cm3$ & 1085 $^\\circ$C \\\\\nLead & 11.34 $g/cm3$ & 327 $^\\circ$C \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Material</td><td>Density</td><td>Melting point</td></tr><tr><td>Iron</td><td>7.87 g/cm3</td><td>1538 \u00b0C</td></tr><tr><td>Copper</td><td>8.96 g/cm3</td><td>1085 \u00b0C</td></tr><tr><td>Lead</td><td>11.34 g/cm3</td><td>327 \u00b0C</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "formula cells",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{ll}\n\\hline\nFunction & Derivative \\\\\n\\hline\n$\\sin x$ & $\\cos x$ \\\\\n$e^x$ & $e^x$ \\\\\n$\\ln x$ & $\\frac{1}{x}$ \\\\\n$x^n$ & $nx^{n-1}$ \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Function</td><td>Derivative</td></tr><tr><td>$\\sin x$</td><td>$\\cos x$</td></tr><tr><td>$e^x$</td><td>$e^x$</td></tr><tr><td>$\\ln x$</td><td>$\\frac{1}{x}$</td></tr><tr><td>$x^n$</td><td>$nx^{n-1}$</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "totals row",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{lrr}\n\\hline\nRegion & $Q1$ & $Q2$ \\\\\n\\hline\nNorth & 120 & 135 \\\\\nSouth & 98 & 110 \\\\\nEast & 143 & 150 \\\\\nTotal & 361 & 395 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>Region</td><td>Q1</td><td>Q2</td></tr><tr><td>North</td><td>120</td><td>135</td></tr><tr><td>South</td><td>98</td><td>110</td></tr><tr><td>East</td><td>143</td><td>150</td></tr><tr><td>Total</td><td>361</td><td>395</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "dense numbers",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "\\begin{center}\n\\begin{tabular}{rrrrrrrr}\n\\hline\n0 & 7 & 14 & 21 & 28 & 35 & 42 & 49 \\\\\n56 & 63 & 70 & 77 & 84 & 91 & 1 & 8 \\\\\n15 & 22 & 29 & 36 & 43 & 50 & 57 & 64 \\\\\n71 & 78 & 85 & 92 & 2 & 9 & 16 & 23 \\\\\n30 & 37 & 44 & 51 & 58 & 65 & 72 & 79 \\\\\n86 & 93 & 3 & 10 & 17 & 24 & 31 & 38 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "<table border=1><tr><td>0</td><td>7</td><td>14</td><td>21</td><td>28</td><td>35</td><td>42</td><td>49</td></tr><tr><td>56</td><td>63</td><td>70</td><td>77</td><td>84</td><td>91</td><td>1</td><td>8</td></tr><tr><td>15</td><td>22</td><td>29</td><td>36</td><td>43</td><td>50</td><td>57</td><td>64</td></tr><tr><td>71</td><td>78</td><td>85</td><td>92</td><td>2</td><td>9</td><td>16</td><td>23</td></tr><tr><td>30</td><td>37</td><td>44</td><td>51</td><td>58</td><td>65</td><td>72</td><td>79</td></tr><tr><td>86</td><td>93</td><td>3</td><td>10</td><td>17</td><td>24</td><td>31</td><td>38</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "two tables",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "First table:\n\\begin{center}\n\\begin{tabular}{lr}\n\\hline\nA & 1 \\\\\nB & 2 \\\\\nC & 3 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "First table:\n\nA 1\n\nB 2\n\nC 3",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
+ },
+ {
+  "suite": "tables",
+  "case": "heading above",
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "Financial summary (in thousands)\n\\begin{center}\n\\begin{tabular}{rrr}\n\\hline\nYear & Revenue & Profit \\\\\n\\hline\n2020 & 1,200 & 150 \\\\\n2021 & 1,800 & 310 \\\\\n\\hline\n\\end{tabular}\n\\end{center}",
+  "raw": "Financial summary (in thousands)\n\n<table border=1><tr><td>Year</td><td>Revenue</td><td>Profit</td></tr><tr><td>2020</td><td>1,200</td><td>150</td></tr><tr><td>2021</td><td>1,800</td><td>310</td></tr></table>",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "stress",
@@ -732,12 +1326,12 @@
  {
   "suite": "stress",
   "case": "wide 20 terms",
-  "grade": "FAIL",
-  "sim": 0.083,
-  "output": "a_2\\alpha_1+a_2\\alpha_2+a_3\\alpha_3+a_4\\alpha_4+a_8\\alpha_5+a_6\\alpha_6+a_7\\alpha_7+a_6\\alpha_8+a_{12}\\alpha_3+a_{12}\\alpha_{10}+a_{12}\\alpha_{12}+a_{12}\\alpha_{20}+a_{23}\\alpha_{14}+a_{25}\\alpha_{15}+a_{26}\\alpha_{26}+a_{17}\\alpha_{17}\\alpha_{27}+a_{23}\\alpha_{29}+a_{23}\\alpha_{29}\\alpha_{19}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{29}\\alpha_{2",
-  "stop": "looped",
-  "min_prob": 0.29723647,
-  "mean_logprob": -0.11181469
+  "grade": "EXACT",
+  "sim": 1.0,
+  "output": "a_{1}x_{1}+a_{2}x_{2}+a_{3}x_{3}+a_{4}x_{4}+a_{5}x_{5}+a_{6}x_{6}+a_{7}x_{7}+a_{8}x_{8}+a_{9}x_{9}+a_{10}x_{10}+a_{11}x_{11}+a_{12}x_{12}+a_{13}x_{13}+a_{14}x_{14}+a_{15}x_{15}+a_{16}x_{16}+a_{17}x_{17}+a_{18}x_{18}+a_{19}x_{19}+a_{20}x_{20}",
+  "stop": "eos",
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "stress",
@@ -802,12 +1396,12 @@
  {
   "suite": "stress",
   "case": "text in math",
-  "grade": "EXACT",
+  "grade": "close",
   "sim": 1.0,
-  "output": "\\text{for all }x\\in\\mathbb{R},\\quad f(x)\\geq0\\text{ whenever }x>0",
+  "output": "for all $x \\in \\mathbb{R}$, $f(x) \\geq 0$ whenever $x > 0$",
   "stop": "eos",
-  "min_prob": 0.6313983,
-  "mean_logprob": -0.024309874
+  "min_prob": null,
+  "mean_logprob": null
  },
  {
   "suite": "stress",
@@ -844,13 +1438,13 @@
   "case": "table",
   "grade": "info",
   "sim": 0,
-  "output": "\\begin{array}{|c|c|c|}\\hline{\\mathrm{Name}} & {\\mathrm{Age}} & {\\mathrm{City}} \\\\ \\hline{\\mathrm{Ann}} & {31} & {\\mathrm{Oslo}} \\\\ {\\mathrm{Bob}} & {28} & {\\mathrm{Rome}} \\end{array}"
+  "output": "\\begin{center}\n\\begin{tabular}{lrl}\n\\hline\nName & Age & City \\\\\n\\hline\nAnn & 31 & Oslo \\\\\nBob & 28 & Rome \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
  },
  {
   "suite": "info",
   "case": "paragraph",
   "grade": "info",
   "sim": 0,
-  "output": "The quick brown fox jumps over the lazy dog. Euler showed that $e^{i\\pi}+1=0$,"
+  "output": "The quick brown fox jumps over the lazy dog. Euler showed that $e^{i\\pi} + 1 = 0$, which many consider beautiful."
  }
 ]
