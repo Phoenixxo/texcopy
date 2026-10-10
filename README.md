@@ -43,20 +43,26 @@ $ texcopy problem.png
 5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.
 ```
 
-With the vision engine, a page of text works too, including display equations and the LaTeX logo:
+With the vision engine, a page of text works too. texcopy rebuilds it as LaTeX that **renders the same as the picture**; it cannot know the author's original source (the picture can't tell `\textbf{x}` from `{\bf x}`), so the result is a correct reconstruction, not a copy:
 
 ```
 $ texcopy page.png
-Today I am learning \LaTeX{}. I can write in line math such as $a^2 + b^2 = c^2$. I can also give equations their own space:
+\section*{Introduction}
+Today I am learning \LaTeX{}. I can write in line math such as $a^2 + b^2 = c^2$.
+
+I can also give equations their own space:
 \begin{equation}
 \gamma^{2}+\theta^{2}=\omega^{2}
 \end{equation}
 ```
 
-- **Numbered display equations** (a `(1)` beside it) become `\begin{equation}...\end{equation}`; the number is dropped because LaTeX writes it. A page number left at the very end after one is dropped too.
-- **A display equation after a colon** ("...their own space:") becomes `\[ ... \]`. Any other `$$...$$` the model draws on its own line stays inline, because on real textbook problems that is almost always a tall inline formula, not a display.
-- **The logos** `LATEX`/`LaTeX` and `TEX`/`TeX` outside math become `\LaTeX{}` and `\TeX{}` (the logo is drawn, so the model can only read it as capitals).
-- Text after a display equation starts on its own line. Everything else is still joined into one line.
+- **Display equations** are display equations. With a number beside them (`(1)`, or a `\tag`) they become `\begin{equation}...\end{equation}` (LaTeX writes the number itself); without one they become `\[ ... \]`; `align`-type environments are kept as they are. A page number left at the very end after one is dropped.
+- **Paragraphs** keep their blank line; lines wrapped inside a paragraph are joined.
+- **Headings** (`##`) become `\section*{...}` (`###` is `\subsection*`). The model marks centred text as a heading too, and texcopy can't tell the difference.
+- **Lists** become `itemize` / `enumerate`, nested when the bullets change. A lone "5." is a problem number, not a list.
+- **Text is made safe for LaTeX:** `& % # _` and prices (`\$5`) are escaped, `"..."` and curly quotes become ` ``...'' `, dashes become `--` and `---`, a `□` ends a proof flush right, and the drawn `LATEX`/`TEX` logos become `\LaTeX{}`/`\TeX{}`.
+- **Code** in a fenced block becomes `verbatim`; `**bold**` and `*italic*` Markdown, if the model writes any, become `\textbf` and `\emph`.
+- **Not recoverable:** the model usually returns bold, italic, small caps, underline and typewriter text as plain words, and does not report vertical table rules, so those come out plain.
 
 **Tables** (vision engine) come back as a `tabular`:
 

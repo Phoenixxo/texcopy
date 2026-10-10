@@ -1,5 +1,6 @@
 mod capture;
 mod clipboard;
+mod convert;
 mod engine;
 mod fetch;
 #[cfg(feature = "gui")]

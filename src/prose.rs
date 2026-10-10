@@ -507,6 +507,23 @@ fn looks_math(core: &str) -> bool {
         let c = core.as_bytes()[0];
         return c.is_ascii_alphabetic() && !matches!(c, b'a' | b'A' | b'I');
     }
+    // [12] is a reference label
+    if core.len() >= 3
+        && core.starts_with('[')
+        && core.ends_with(']')
+        && core[1..core.len() - 1].chars().all(|c| c.is_ascii_digit())
+    {
+        return false;
+    }
+    // my_name is a file name or identifier written in text, not a subscript
+    if let Some((a, b)) = core.split_once('_')
+        && a.len() >= 2
+        && b.len() >= 2
+        && a.chars().all(|c| c.is_ascii_alphabetic())
+        && b.chars().all(|c| c.is_ascii_alphabetic())
+    {
+        return false;
+    }
     core.contains(['=', '<', '>', '+', '^', '_', '[', ']', '\\'])
         || (core.chars().any(|c| c.is_ascii_digit())
             && core.chars().any(|c| c.is_ascii_alphabetic())

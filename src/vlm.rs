@@ -21,6 +21,7 @@ use base64::Engine as _;
 use image::{DynamicImage, ImageFormat, imageops::FilterType};
 
 use crate::{
+    convert,
     fetch::{self, Download},
     helper, prose, table,
     ui::{self, Event, Reporter},
@@ -420,15 +421,15 @@ pub enum Reading {
     Formula(String),
 }
 
-struct Segment {
-    math: bool,
+pub struct Segment {
+    pub math: bool,
     /// `$$..$$` or `\[..\]`: the model drew it on a line of its own
-    display: bool,
-    body: String,
+    pub display: bool,
+    pub body: String,
 }
 
 /// Split Markdown into text and math pieces: `$$..$$`, `\[..\]`, `\(..\)` and `$..$`.
-fn segments(t: &str) -> Vec<Segment> {
+pub fn segments(t: &str) -> Vec<Segment> {
     const PAIRS: [(&str, &str, bool); 4] = [
         ("$$", "$$", true),
         ("\\[", "\\]", true),
@@ -441,7 +442,8 @@ fn segments(t: &str) -> Vec<Segment> {
         let rest = &t[i..];
         for (open, close, display) in PAIRS {
             if let Some(after) = rest.strip_prefix(open)
-                && let Some(end) = after.find(close)
+                && let Some(end) = closing(after, close)
+                && !(open == "$" && reads_like_a_sentence(&after[..end]))
             {
                 if !text.is_empty() {
                     out.push(Segment {
@@ -473,98 +475,40 @@ fn segments(t: &str) -> Vec<Segment> {
     out
 }
 
-/// `(1)`, `(2.3)` or `(4a)` at the start of `text` (after spaces): an equation number. Returns the
-/// number and how many bytes it took.
-fn leading_equation_number(text: &str) -> Option<(String, usize)> {
-    let trimmed = text.trim_start();
-    let inner = trimmed.strip_prefix('(')?;
-    let end = inner.find(')')?;
-    let number = &inner[..end];
-    let valid = !number.is_empty()
-        && number.len() <= 8
-        && number.starts_with(|c: char| c.is_ascii_digit())
-        && number
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '.');
-    valid.then(|| (number.to_string(), text.len() - trimmed.len() + end + 2))
-}
-
-/// Remove a `\tag{..}` from display math (the number was written inside the equation).
-fn strip_tag(body: &str) -> (String, bool) {
-    if let Some(start) = body.find("\\tag{")
-        && let Some(len) = body[start..].find('}')
-    {
-        let cleaned = format!("{}{}", &body[..start], &body[start + len + 1..]);
-        return (cleaned.trim().to_string(), true);
-    }
-    (body.to_string(), false)
-}
-
-/// One line of the result: running text (spaces tidied, plain variables marked, logos restored)
-/// or finished LaTeX that must be kept exactly as built.
-enum Line {
-    Text(String),
-    Code(String),
-}
-
-/// The sentence's text and inline math as lines. A display equation that really is one (it has an
-/// equation number, or the sentence before it ends in a colon) gets lines of its own; any other
-/// `$$..$$` is a tall inline formula the model drew on its own line, and stays inline.
-fn build_lines(mut segs: Vec<Segment>) -> Vec<Line> {
-    let (mut lines, mut text) = (Vec::<Line>::new(), String::new());
-    let mut ended_with_display = false;
-    for i in 0..segs.len() {
-        let seg = &segs[i];
-        if !seg.math {
-            text.push_str(&seg.body);
-            continue;
-        }
-        if !seg.display {
-            text.push_str(&format!("${}$", seg.body));
-            continue;
-        }
-        let (body, tagged) = strip_tag(&seg.body);
-        let number = segs
-            .get(i + 1)
-            .filter(|next| !next.math)
-            .and_then(|next| leading_equation_number(&next.body));
-        let introduced = text.trim_end().ends_with(':');
-        if !(tagged || number.is_some() || introduced) {
-            text.push_str(&format!("${body}$"));
-            continue;
-        }
-        let numbered = tagged || number.is_some();
-        if let Some((_, used)) = number {
-            segs[i + 1].body.drain(..used);
-        }
-        lines.push(Line::Text(std::mem::take(&mut text)));
-        let (open, close) = if numbered {
-            ("\\begin{equation}", "\\end{equation}")
-        } else {
-            ("\\[", "\\]")
-        };
-        lines.extend([open.to_string(), body, close.to_string()].map(Line::Code));
-        ended_with_display = true;
-    }
-    lines.push(Line::Text(text));
-    let mut lines: Vec<Line> = lines
-        .into_iter()
-        .filter_map(|l| match l {
-            Line::Text(t) => {
-                let t = t.split_whitespace().collect::<Vec<_>>().join(" ");
-                (!t.is_empty()).then_some(Line::Text(t))
+/// Two or more real words at the top level of the body: that is a sentence between two prices
+/// ("$5 now and $10 later"), not math. Commands and everything inside braces never count, so
+/// `\text{for all}`, `\begin{cases}` and `\frac{abc}{def}` are all still math.
+fn reads_like_a_sentence(body: &str) -> bool {
+    let (mut plain, mut depth) = (String::new(), 0usize);
+    let mut chars = body.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                while chars.next_if(char::is_ascii_alphabetic).is_some() {}
+                plain.push(' ');
             }
-            code => Some(code),
-        })
-        .collect();
-    // A bare number left at the end after a display is the page number from the footer.
-    if ended_with_display
-        && lines.len() >= 2
-        && matches!(lines.last(), Some(Line::Text(t)) if t.len() <= 4 && t.chars().all(|c| c.is_ascii_digit()))
-    {
-        lines.pop();
+            '{' => depth += 1,
+            '}' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => plain.push(c),
+            _ => {}
+        }
     }
-    lines
+    real_words(&plain) >= 2
+}
+
+/// Where the math that opens just before `after` closes. A `$` followed by a digit is not a
+/// closer: it is the next price in "$5 and $10".
+fn closing(after: &str, close: &str) -> Option<usize> {
+    let mut from = 0;
+    while let Some(at) = after[from..].find(close) {
+        let end = from + at;
+        let next = after[end + close.len()..].chars().next();
+        if close != "$" || !next.is_some_and(|c| c.is_ascii_digit()) {
+            return Some(end);
+        }
+        from = end + close.len();
+    }
+    None
 }
 
 fn strip_fences(t: &str) -> &str {
@@ -577,8 +521,8 @@ fn strip_fences(t: &str) -> &str {
 }
 
 fn real_words(s: &str) -> usize {
-    s.split(|c: char| !c.is_ascii_alphabetic())
-        .filter(|w| w.len() >= 3)
+    s.split(|c: char| !c.is_alphabetic())
+        .filter(|w| w.chars().count() >= 3)
         .count()
 }
 
@@ -588,7 +532,7 @@ fn clean_cell(text: &str) -> String {
 }
 
 /// Output that contains an HTML table: each table becomes a `tabular`, and the text around it is
-/// read as a sentence. None when there is no usable table.
+/// read like any other text. None when there is no usable table.
 fn interpret_with_tables(raw: &str) -> Option<String> {
     let mut parts: Vec<String> = Vec::new();
     let mut rest = raw;
@@ -598,26 +542,33 @@ fn interpret_with_tables(raw: &str) -> Option<String> {
             break;
         };
         found = true;
-        parts.extend(text_lines(&rest[..start]));
+        if !rest[..start].trim().is_empty() {
+            parts.push(convert::to_latex(&rest[..start]));
+        }
         parts.push(latex);
         rest = &rest[end..];
     }
     if !found {
         return None;
     }
-    parts.extend(text_lines(rest));
+    if !rest.trim().is_empty() {
+        parts.push(convert::to_latex(rest));
+    }
     Some(parts.join("\n"))
 }
 
-/// Text around a table as finished lines (empty if it holds nothing).
-fn text_lines(text: &str) -> Vec<String> {
-    build_lines(segments(text))
-        .into_iter()
-        .map(|l| match l {
-            Line::Text(t) => prose::replace_logos(&prose::mark_math(&t)),
-            Line::Code(c) => c,
-        })
-        .collect()
+/// A Markdown heading, bullet or code fence at the start of a line: structure, so not a bare formula.
+fn has_structure(raw: &str) -> bool {
+    raw.lines().any(|l| {
+        let t = l.trim_start();
+        t.starts_with("```")
+            || t.starts_with("# ")
+            || t.starts_with("## ")
+            || t.starts_with("### ")
+            || ['-', '*', '•', '–']
+                .iter()
+                .any(|&c| t.strip_prefix(c).is_some_and(|r| r.starts_with(' ')))
+    })
 }
 
 /// Turn the model's Markdown into either prose or a bare formula.
@@ -639,17 +590,8 @@ pub fn interpret(raw: &str) -> Reading {
         .join(" ");
     let has_math = segs.iter().any(|s| s.math);
     let words = real_words(&outside);
-    if (has_math && words >= 1) || words >= 3 {
-        let lines = build_lines(segs);
-        let text = lines
-            .into_iter()
-            .map(|l| match l {
-                Line::Text(t) => prose::replace_logos(&prose::mark_math(&t)),
-                Line::Code(c) => c,
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
-        return Reading::Prose(text);
+    if (has_math && words >= 1) || words >= 3 || has_structure(raw) {
+        return Reading::Prose(convert::to_latex(raw));
     }
     let formula = segs
         .iter()
@@ -691,7 +633,7 @@ mod tests {
         assert_eq!(
             interpret(NYU_RAW),
             Reading::Prose(
-                "Hello World! Today I am learning \\LaTeX{}. \\LaTeX{} is a great program for writing math. I can write in line math such as $a^2 + b^2 = c^2$. I can also give equations their own space:\n\\begin{equation}\n\\gamma^{2}+\\theta^{2}=\\omega^{2}\n\\end{equation}"
+                "Hello World! Today I am learning \\LaTeX{}. \\LaTeX{} is a great program for writing math. I can write in line math such as $a^2 + b^2 = c^2$.\n\nI can also give equations their own space:\n\\begin{equation}\n\\gamma^{2}+\\theta^{2}=\\omega^{2}\n\\end{equation}"
                     .into()
             )
         );
@@ -731,10 +673,10 @@ mod tests {
 
     #[test]
     fn a_page_number_is_only_dropped_after_a_display_equation() {
-        // no display: a trailing number is content
+        // no display: a trailing number is content, left as its own paragraph
         assert_eq!(
             interpret("Compute the sum of the first $n$ terms.\n\n42"),
-            Reading::Prose("Compute the sum of the first $n$ terms. 42".into())
+            Reading::Prose("Compute the sum of the first $n$ terms.\n\n42".into())
         );
         // an equation reference in running text is not an equation number
         assert!(
@@ -752,6 +694,19 @@ mod tests {
                     .into()
             )
         );
+    }
+
+    #[test]
+    fn math_with_environment_names_or_text_is_never_mistaken_for_a_sentence() {
+        // The model's real output for a cases image: `cases` appears twice in the body.
+        assert!(matches!(
+            interpret(r"$\begin{cases} x+y=2 \\ x-y=0 \end{cases}$"),
+            Reading::Formula(f) if f.starts_with(r"\begin{cases}")
+        ));
+        assert!(matches!(
+            interpret(r"$\text{for all } x \in \mathbb{R}, \quad f(x) \geq 0$"),
+            Reading::Formula(_)
+        ));
     }
 
     use super::{Reading, interpret, segments, strip_fences};
@@ -774,13 +729,14 @@ mod tests {
     }
 
     #[test]
-    fn display_math_inside_prose_becomes_inline() {
+    fn display_math_inside_prose_is_a_display_equation() {
+        // The picture shows it centred on its own line, so it is rebuilt as a display.
         assert_eq!(
             interpret(
                 "Prove that for every integer n\n\n$$\\sum_{k=1}^n k = \\frac{n(n+1)}{2}$$\n\nholds."
             ),
             Reading::Prose(
-                "Prove that for every integer $n$ $\\sum_{k=1}^n k = \\frac{n(n+1)}{2}$ holds."
+                "Prove that for every integer $n$\n\\[\n\\sum_{k=1}^n k = \\frac{n(n+1)}{2}\n\\]\nholds."
                     .into()
             )
         );
