@@ -109,7 +109,8 @@ LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|unlicense|notice|copyright)([-_
 
 
 def run(*cmd):
-    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    # cargo prints UTF-8; without this Windows decodes it as cp1252 and dies on some bytes
+    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf8", errors="replace", check=True).stdout
 
 
 # The platforms texcopy is released for.
