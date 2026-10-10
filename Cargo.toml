@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2024"
 description = "Select LaTeX-rendered math on screen and get its LaTeX source on your clipboard"
 license = "MIT"
+# The newest requirement among the dependencies (egui) is 1.95; CI checks this version.
+rust-version = "1.95"
+repository = "https://github.com/Phoenixxo/texcopy"
+homepage = "https://github.com/Phoenixxo/texcopy"
+readme = "README.md"
+keywords = ["latex", "ocr", "math", "screenshot", "clipboard"]
+categories = ["command-line-utilities", "multimedia::images"]
 
 # `texcopy` is the command line; `texcopy-gui` is the same program without a console window on Windows.
 [[bin]]
