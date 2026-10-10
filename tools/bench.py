@@ -141,6 +141,66 @@ DOCS = {
     "bibliography": "\\begin{thebibliography}{9}\n\\bibitem{a} A. Author, \\emph{A Book}, 2020.\n\\bibitem{b} B. Writer, A Paper, 2021.\n\\end{thebibliography}",
 }
 
+# Tables are graded on what they say, not how they look: the grid of cell texts, compared position
+# by position, ignoring alignment, rules and column spec. Each is (source tabular, text above it).
+TABLES = {
+    "text and numbers": (r"\begin{tabular}{lcc}\hline Name & Age & City \\ \hline Ann & 31 & Oslo \\ Bob & 28 & Rome \\ Cy & 45 & Paris \\ \hline\end{tabular}", ""),
+    "execution times": (r"\begin{tabular}{rcc}\hline $n$ & Recursive time (ms) & DP time (ms) \\ \hline 5 & 0.000037 & 0.000022 \\ 7 & 0.000164 & 0.000025 \\ 9 & 0.000679 & 0.000031 \\ 11 & 0.002809 & 0.000041 \\ 13 & 0.011786 & 0.000052 \\ \hline\end{tabular}", ""),
+    "percent and ampersand": (r"\begin{tabular}{lrr}\hline Item & Rate & Share \\ \hline Tea \& Coffee & 12\% & 3.5\% \\ Milk & 8\% & 1\% \\ \hline\end{tabular}", ""),
+    "empty cells": (r"\begin{tabular}{ccc}\hline A & B & C \\ \hline 1 & & 3 \\ & 5 & \\ 7 & 8 & 9 \\ \hline\end{tabular}", ""),
+    "negatives and units": (r"\begin{tabular}{lcc}\hline Sample & Offset (mm) & Gain (dB) \\ \hline S1 & $-0.5$ & 12.4 \\ S2 & $+1.25$ & $-3.0$ \\ S3 & 0 & 7.75 \\ \hline\end{tabular}", ""),
+    "math cells": (r"\begin{tabular}{ccc}\hline $x$ & $x^2$ & $\sqrt{x}$ \\ \hline 1 & 1 & 1 \\ 4 & 16 & 2 \\ 9 & 81 & 3 \\ \hline\end{tabular}", ""),
+    "six columns": (r"\begin{tabular}{llllll}\hline Id & Name & Dept & Year & Score & Grade \\ \hline 1 & Ann & Math & 2021 & 91 & A \\ 2 & Bob & Art & 2022 & 78 & C \\ 3 & Cy & Bio & 2020 & 85 & B \\ \hline\end{tabular}", ""),
+    "grouped header": (r"\begin{tabular}{lcc}\hline & \multicolumn{2}{c}{Scores} \\ Name & Math & Art \\ \hline Ann & 90 & 85 \\ Bob & 72 & 64 \\ \hline\end{tabular}", ""),
+    "yes no matrix": (r"\begin{tabular}{lccc}\hline Feature & Free & Pro & Team \\ \hline Export & yes & yes & yes \\ Sync & no & yes & yes \\ Admin & no & no & yes \\ \hline\end{tabular}", ""),
+    "twelve rows": (r"\begin{tabular}{cc}\hline $k$ & $2^k$ \\ \hline " + r" \\ ".join(f"{k} & {2**k}" for k in range(1, 13)) + r" \\ \hline\end{tabular}", ""),
+    "prices": (r"\begin{tabular}{lr}\hline Item & Price \\ \hline Pen & \$1.50 \\ Book & \$20.00 \\ Bag & \$1,250.00 \\ \hline\end{tabular}", ""),
+    "wrapped text cells": (r"\begin{tabular}{|p{4.5cm}|p{6cm}|}\hline Term & Meaning \\ \hline Cut-vertex & A vertex whose removal increases the number of connected components \\ \hline Bridge & An edge whose removal disconnects the graph \\ \hline\end{tabular}", ""),
+    "units in cells": (r"\begin{tabular}{lrr}\hline Material & Density & Melting point \\ \hline Iron & 7.87 g/cm$^3$ & 1538 $^\circ$C \\ Copper & 8.96 g/cm$^3$ & 1085 $^\circ$C \\ Lead & 11.34 g/cm$^3$ & 327 $^\circ$C \\ \hline\end{tabular}", ""),
+    "formula cells": (r"\begin{tabular}{cc}\hline Function & Derivative \\ \hline $\sin x$ & $\cos x$ \\ $e^{x}$ & $e^{x}$ \\ $\ln x$ & $\frac{1}{x}$ \\ $x^{n}$ & $n x^{n-1}$ \\ \hline\end{tabular}", ""),
+    "totals row": (r"\begin{tabular}{lrr}\hline Region & Q1 & Q2 \\ \hline North & 120 & 135 \\ South & 98 & 110 \\ East & 143 & 150 \\ \hline Total & 361 & 395 \\ \hline\end{tabular}", ""),
+    "dense numbers": (r"\begin{tabular}{cccccccc}\hline " + r" \\ ".join(" & ".join(str((r * 8 + c) * 7 % 97) for c in range(8)) for r in range(6)) + r" \\ \hline\end{tabular}", ""),
+    "two tables": (r"\begin{tabular}{lc}\hline A & 1 \\ B & 2 \\ C & 3 \\ \hline\end{tabular}", "First table:"),
+    "heading above": (r"\begin{tabular}{lrr}\hline Year & Revenue & Profit \\ \hline 2020 & 1,200 & 150 \\ 2021 & 1,800 & 310 \\ \hline\end{tabular}", "Financial summary (in thousands)"),
+}
+
+
+def table_grid(latex):
+    """Cell texts of the first tabular in `latex` as a list of rows (normalised for comparison)."""
+    m = re.search(r"\\begin\{tabular\}\{(?:[^{}]|\{[^{}]*\})*\}(.*?)\\end\{tabular\}", latex, re.S)
+    if not m:
+        return None
+    body = re.sub(r"\\(hline|toprule|midrule|bottomrule)|\\cline\{[^}]*\}", "", m.group(1))
+    rows = []
+    for row in re.split(r"\\\\", body):
+        if not row.strip():
+            continue
+        cells = []
+        for cell in re.split(r"(?<!\\)&", row):
+            mc = re.fullmatch(r"\s*\\multicolumn\{(\d+)\}\{[^}]*\}\{(.*)\}\s*", cell, re.S)
+            if mc:
+                cells += [mc.group(2)] + [""] * (int(mc.group(1)) - 1)
+            else:
+                cells.append(cell)
+        norm = lambda c: re.sub(r"\s+|[{}$]|\\,", "", c.replace("\\%", "%").replace("\\&", "&").replace("\\$", "$"))
+        cells = [norm(c) for c in cells]
+        while cells and not cells[-1]:
+            cells.pop()
+        rows.append(cells)
+    return rows
+
+
+def grade_table(true_src, output):
+    """EXACT: same grid. close: at least 90% of cells match in place. differs: otherwise. FAIL: no table."""
+    want, got = table_grid(true_src), table_grid(output or "")
+    if got is None:
+        return "FAIL", 0.0
+    total = sum(max(len(r), 1) for r in want)
+    hits = sum(1 for i, r in enumerate(want) for j, c in enumerate(r) if i < len(got) and j < len(got[i]) and got[i][j] == c)
+    sim = hits / max(total, 1)
+    return ("EXACT" if want == got else "close" if sim >= 0.9 else "differs"), round(sim, 3)
+
+
 # Not expected to work: reported for information, never graded.
 INFO_ONLY = {
     "table": r"\begin{tabular}{|c|c|c|}\hline Name & Age & City \\ \hline Ann & 31 & Oslo \\ Bob & 28 & Rome \\ \hline\end{tabular}",
@@ -218,12 +278,19 @@ class Bench:
         ratio = ae / max(ink, 1.0)
         return ("EXACT" if ae == 0 else "close" if ratio < 0.15 else "differs"), round(max(0.0, 1 - ratio), 3)
 
-    def grade(self, ref_png, true_src, output, pre=""):
-        norm = lambda s: re.sub(r"\\left|\\right|\\,|\\displaystyle|\s+|[{}]", "", s)
+    def grade(self, ref_png, true_src, output, pre="", kind="math"):
+        """A formula is graded by re-rendering. A sentence (the vision model read the picture as text
+        with inline math) is rendered as text and graded on content: it can match in content but never
+        in layout, so the best it can score is "close"."""
+        sentence = kind == "prose"
+        strip = r"\\left|\\right|\\,|\\displaystyle|\s+|[{}]" + (r"|\\text|\\quad|\\qquad|\\ |\$" if sentence else "")
+        norm = lambda s: re.sub(strip, "", s)
         sim = difflib.SequenceMatcher(None, norm(true_src), norm(output)).ratio()
-        out_png = self.render(output, pre=pre) if output else None
+        out_png = (self.render(output, pre=pre, raw=sentence) if output else None)
         if not out_png:
             return "FAIL", sim
+        if sentence:
+            return ("close" if sim >= 0.95 else "differs"), sim
         cmp = run("magick", "compare", "-metric", "AE", ref_png, out_png, "null:")
         if cmp.stderr.strip().startswith("0"):
             return "EXACT", sim
@@ -271,7 +338,7 @@ def collect(b, suites):
 
     def add(suite, case, ref, src, image, pre=""):
         out, meta = b.texcopy(image)
-        g, sim = b.grade(ref, src, out, pre)
+        g, sim = b.grade(ref, src, out, pre, meta.get("kind", "math"))
         rows.append({"suite": suite, "case": case, "grade": g, "sim": round(sim, 3), "output": out,
                      "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
         print(f"  {g:8} {suite:16} {case}", file=sys.stderr)
@@ -327,6 +394,20 @@ def collect(b, suites):
             rows.append({"suite": "documents", "case": name, "grade": g, "sim": sim, "output": out, "raw": meta.get("raw"),
                          "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
             print(f"  {g:8} {'documents':16} {name}", file=sys.stderr)
+    if "tables" in suites:
+        for name, (src, above) in TABLES.items():
+            body = (above + "\n\n" if above else "") + src
+            ref = b.render(body, pre=DOC_PRE, raw=True, opts="[12pt]", strict=False)
+            if not ref:
+                print(f"  SKIPPED  tables           {name}: reference failed to render", file=sys.stderr)
+                continue
+            out, meta = b.texcopy(ref, kind="prose")
+            g, sim = grade_table(src, out)
+            if g != "FAIL" and not b.render(out, pre=DOC_PRE, raw=True, opts="[12pt]", strict=True):
+                g = "FAIL"  # the grid was right but the LaTeX does not compile
+            rows.append({"suite": "tables", "case": name, "grade": g, "sim": sim, "output": out, "raw": meta.get("raw"),
+                         "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
+            print(f"  {g:8} {'tables':16} {name}", file=sys.stderr)
     if "real" in suites:
         index = os.path.join(REAL_DIR, "cases.json")
         if not os.path.exists(index):
@@ -398,7 +479,7 @@ def compare(rows, path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bin", default=os.path.join(ROOT, "target/release/texcopy"))
-    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose", "real", "documents"])
+    ap.add_argument("--suite", default="all", choices=["all", "basic", "degraded", "stress", "prose", "real", "documents", "tables"])
     ap.add_argument("--tool-args", default="", help="extra flags for texcopy, e.g. '--fit pad'")
     ap.add_argument("--save", help="write results JSON here")
     ap.add_argument("--baseline", help="compare against a saved results JSON")
@@ -408,7 +489,7 @@ def main():
     missing = [t for t in ("pdflatex", "pdftoppm", "magick") if not shutil.which(t)]
     if missing or not os.path.exists(a.bin):
         sys.exit(f"missing: {', '.join(missing) or a.bin} (build with `cargo build --release`)")
-    suites = {"basic", "degraded", "stress", "prose", "documents"} | ({"real"} if os.path.exists(os.path.join(REAL_DIR, "cases.json")) else set()) if a.suite == "all" else {a.suite}
+    suites = {"basic", "degraded", "stress", "prose", "documents", "tables"} | ({"real"} if os.path.exists(os.path.join(REAL_DIR, "cases.json")) else set()) if a.suite == "all" else {a.suite}
     with tempfile.TemporaryDirectory() as work:
         rows = collect(Bench(a.bin, shlex.split(a.tool_args), work), suites)
     summarize(rows)

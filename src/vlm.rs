@@ -23,7 +23,7 @@ use image::{DynamicImage, ImageFormat, imageops::FilterType};
 use crate::{
     convert,
     fetch::{self, Download},
-    helper, prose, table,
+    helper, table,
     ui::{self, Event, Reporter},
 };
 
@@ -526,11 +526,6 @@ fn real_words(s: &str) -> usize {
         .count()
 }
 
-/// Clean one table cell: variables marked as math, logos restored, LaTeX specials escaped.
-fn clean_cell(text: &str) -> String {
-    table::escape_outside_math(&prose::replace_logos(&prose::mark_math(text)))
-}
-
 /// Output that contains an HTML table: each table becomes a `tabular`, and the text around it is
 /// read like any other text. None when there is no usable table.
 fn interpret_with_tables(raw: &str) -> Option<String> {
@@ -538,7 +533,7 @@ fn interpret_with_tables(raw: &str) -> Option<String> {
     let mut rest = raw;
     let mut found = false;
     while let Some((start, end)) = table::find(rest) {
-        let Some(latex) = table::to_latex(&rest[start..end], &clean_cell) else {
+        let Some(latex) = table::to_latex(&rest[start..end], &convert::cell) else {
             break;
         };
         found = true;
@@ -590,7 +585,9 @@ pub fn interpret(raw: &str) -> Reading {
         .join(" ");
     let has_math = segs.iter().any(|s| s.math);
     let words = real_words(&outside);
-    if (has_math && words >= 1) || words >= 3 || has_structure(raw) {
+    // A formula picture never comes back as several lines of plain text.
+    let text_lines = outside.lines().filter(|l| !l.trim().is_empty()).count();
+    if (has_math && words >= 1) || words >= 3 || has_structure(raw) || text_lines >= 2 {
         return Reading::Prose(convert::to_latex(raw));
     }
     let formula = segs
@@ -690,7 +687,7 @@ mod tests {
         assert_eq!(
             interpret(raw),
             Reading::Prose(
-                "Execution-time comparison\n\\begin{center}\n\\begin{tabular}{rcc}\n\\hline\n$n$ & Recursive time (ms) & DP time (ms) \\\\\n\\hline\n5 & 0.000037 & 0.000022 \\\\\n23 & 13.314562 & 0.000154 \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
+                "Execution-time comparison\n\\begin{center}\n\\begin{tabular}{rrr}\n\\hline\n$n$ & Recursive time (ms) & DP time (ms) \\\\\n\\hline\n5 & 0.000037 & 0.000022 \\\\\n23 & 13.314562 & 0.000154 \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
                     .into()
             )
         );

@@ -7,7 +7,7 @@
 //! The text is split into blocks on blank lines. Each block becomes a heading, a list, code, a display
 //! equation or a paragraph; paragraphs, list items and headings share one cleanup path (`finish`).
 
-use crate::{prose, vlm};
+use crate::{prose, table, vlm};
 
 /// A literal `$` in text (a price, say). Hidden behind this while the text is processed, because
 /// everything downstream splits on `$` to find math; turned into `\$` at the end.
@@ -101,6 +101,36 @@ pub fn to_latex(raw: &str) -> String {
 
 fn is_qed(text: &str) -> bool {
     matches!(text, "$\\square$" | "$\\blacksquare$")
+}
+
+/// A table cell: the same cleanup as a paragraph, with no block structure, so a cell that starts
+/// with "- " or "1. " stays text. A lone letter is a variable in a header (`n`) but a label in the
+/// body (a grade, a group), so only the header's is marked as math.
+pub fn cell(raw: &str, header: bool) -> String {
+    if is_body_label(raw, header) {
+        return raw.trim().to_string();
+    }
+    inline(raw)
+}
+
+fn is_body_label(raw: &str, header: bool) -> bool {
+    let t = raw.trim();
+    !header && t.chars().count() == 1 && t.chars().all(|c| c.is_ascii_alphabetic())
+}
+
+fn inline(raw: &str) -> String {
+    let (mut parked, mut buf) = (Vec::new(), String::new());
+    for seg in vlm::segments(raw) {
+        if seg.math {
+            buf.push(OPEN);
+            buf.push_str(&parked.len().to_string());
+            buf.push(CLOSE);
+            parked.push(seg.body);
+        } else {
+            buf.push_str(&seg.body.replace('$', &DOLLAR.to_string()));
+        }
+    }
+    finish(&buf, &parked)
 }
 
 fn flush_text(buf: &mut String, inline: &[String], pieces: &mut Vec<Piece>) {
@@ -214,38 +244,47 @@ fn heading(line: &str) -> Option<(usize, &str)> {
     (1..=6).contains(&level).then_some((level, rest.trim()))
 }
 
+/// A block before its text is cleaned up: paragraphs wait as raw lines, because a run of lines of
+/// equal width may turn out to be a table the model wrote as plain words.
+enum Draft {
+    Lines(Vec<String>),
+    Done(Piece),
+}
+
 fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
-    let mut pieces = Vec::new();
+    let mut drafts: Vec<Draft> = Vec::new();
     let (mut para, mut list): (Vec<String>, Vec<Item>) = (Vec::new(), Vec::new());
     let mut code: Option<Vec<String>> = None;
     let mut after_blank = false;
 
-    let flush_para = |para: &mut Vec<String>, pieces: &mut Vec<Piece>| {
+    let flush_para = |para: &mut Vec<String>, drafts: &mut Vec<Draft>| {
         if !para.is_empty() {
-            pieces.push(Piece::Para(finish(&para.join(" "), inline)));
-            para.clear();
+            drafts.push(Draft::Lines(std::mem::take(para)));
         }
     };
-    let flush_list = |list: &mut Vec<Item>, pieces: &mut Vec<Piece>| {
+    let flush_list = |list: &mut Vec<Item>, drafts: &mut Vec<Draft>| {
         if list.is_empty() {
             return;
         }
         let items = std::mem::take(list);
         // A lone "5." is a numbered line of text (a problem number), not a list.
         if items.len() == 1 && items[0].number.is_some() {
-            pieces.push(Piece::Para(finish(&items[0].original, inline)));
+            drafts.push(Draft::Lines(vec![items[0].original.clone()]));
         } else {
-            pieces.push(Piece::Raw(list_latex(&items, inline)));
+            drafts.push(Draft::Done(Piece::Raw(list_latex(&items, inline))));
         }
+    };
+    let verbatim = |lines: &[String]| {
+        Draft::Done(Piece::Raw(format!(
+            "\\begin{{verbatim}}\n{}\n\\end{{verbatim}}",
+            lines.join("\n")
+        )))
     };
 
     for line in text.lines() {
         if let Some(lines) = code.as_mut() {
             if line.trim_start().starts_with("```") {
-                pieces.push(Piece::Raw(format!(
-                    "\\begin{{verbatim}}\n{}\n\\end{{verbatim}}",
-                    lines.join("\n")
-                )));
+                drafts.push(verbatim(lines));
                 code = None;
             } else {
                 lines.push(line.to_string());
@@ -253,25 +292,28 @@ fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
             continue;
         }
         if line.trim().is_empty() {
-            flush_para(&mut para, &mut pieces);
+            flush_para(&mut para, &mut drafts);
             after_blank = true;
             continue;
         }
         if line.trim_start().starts_with("```") {
-            flush_para(&mut para, &mut pieces);
-            flush_list(&mut list, &mut pieces);
+            flush_para(&mut para, &mut drafts);
+            flush_list(&mut list, &mut drafts);
             code = Some(Vec::new());
         } else if let Some((level, title)) = heading(line) {
-            flush_para(&mut para, &mut pieces);
-            flush_list(&mut list, &mut pieces);
+            flush_para(&mut para, &mut drafts);
+            flush_list(&mut list, &mut drafts);
             let cmd = match level {
                 1 | 2 => "section*",
                 3 => "subsection*",
                 _ => "subsubsection*",
             };
-            pieces.push(Piece::Raw(format!("\\{cmd}{{{}}}", finish(title, inline))));
+            drafts.push(Draft::Done(Piece::Raw(format!(
+                "\\{cmd}{{{}}}",
+                finish(title, inline)
+            ))));
         } else if let Some(item) = list_marker(line) {
-            flush_para(&mut para, &mut pieces);
+            flush_para(&mut para, &mut drafts);
             list.push(item);
         } else if !list.is_empty() && !after_blank {
             // a wrapped line of the previous list item
@@ -281,20 +323,117 @@ fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
             last.original.push(' ');
             last.original.push_str(line.trim());
         } else {
-            flush_list(&mut list, &mut pieces);
+            flush_list(&mut list, &mut drafts);
             para.push(line.trim().to_string());
         }
         after_blank = false;
     }
     if let Some(lines) = code {
-        pieces.push(Piece::Raw(format!(
-            "\\begin{{verbatim}}\n{}\n\\end{{verbatim}}",
-            lines.join("\n")
-        )));
+        drafts.push(verbatim(&lines));
     }
-    flush_para(&mut para, &mut pieces);
-    flush_list(&mut list, &mut pieces);
+    flush_para(&mut para, &mut drafts);
+    flush_list(&mut list, &mut drafts);
+
+    // Resolve: consecutive paragraphs are checked together for plain-text tables.
+    let mut pieces = Vec::new();
+    let mut group: Vec<Vec<String>> = Vec::new();
+    for draft in drafts {
+        match draft {
+            Draft::Lines(lines) => group.push(lines),
+            Draft::Done(piece) => {
+                resolve_paragraphs(&mut group, inline, &mut pieces);
+                pieces.push(piece);
+            }
+        }
+    }
+    resolve_paragraphs(&mut group, inline, &mut pieces);
     pieces
+}
+
+/// How many lines from the start of `lines` form a table written as plain words: at least three
+/// lines with the same number (2 to 10) of short words, one of the columns made of numbers.
+/// Real sentences are long and ragged, so they don't match.
+fn plain_table_len(lines: &[&str]) -> usize {
+    // A line ending in a colon introduces what follows ("First table:"); it is not a row.
+    if lines.first().is_none_or(|l| l.trim_end().ends_with(':')) {
+        return 0;
+    }
+    let width = lines.first().map_or(0, |l| l.split_whitespace().count());
+    if !(2..=10).contains(&width) {
+        return 0;
+    }
+    let rows: Vec<Vec<&str>> = lines
+        .iter()
+        .map(|l| l.split_whitespace().collect::<Vec<_>>())
+        .take_while(|r| r.len() == width && r.iter().all(|w| w.chars().count() <= 16))
+        .collect();
+    let numeric_column =
+        (0..width).any(|c| rows.iter().skip(1).all(|r| table::is_number_like(r[c])));
+    // Two columns are only a table when the labels differ: "Problem 1 / Problem 2 / Problem 3" is not.
+    let labels_differ = width > 2 || {
+        let mut firsts: Vec<&str> = rows.iter().map(|r| r[0]).collect();
+        firsts.sort_unstable();
+        firsts.dedup();
+        firsts.len() == rows.len()
+    };
+    if rows.len() >= 3 && numeric_column && labels_differ {
+        rows.len()
+    } else {
+        0
+    }
+}
+
+/// Clean the paragraphs in `group` into pieces, turning plain-word tables into `tabular`s.
+fn resolve_paragraphs(group: &mut Vec<Vec<String>>, inline: &[String], pieces: &mut Vec<Piece>) {
+    let flat: Vec<(usize, &str)> = group
+        .iter()
+        .enumerate()
+        .flat_map(|(i, p)| p.iter().map(move |l| (i, l.as_str())))
+        .collect();
+    let texts: Vec<&str> = flat.iter().map(|(_, l)| *l).collect();
+    let mut plain_from = 0;
+    let mut i = 0;
+    let flush_plain = |from: usize, to: usize, pieces: &mut Vec<Piece>| {
+        let mut k = from;
+        while k < to {
+            let block = flat[k].0;
+            let end = (k..to).find(|&j| flat[j].0 != block).unwrap_or(to);
+            let joined = flat[k..end]
+                .iter()
+                .map(|(_, l)| *l)
+                .collect::<Vec<_>>()
+                .join(" ");
+            pieces.push(Piece::Para(finish(&joined, inline)));
+            k = end;
+        }
+    };
+    while i < flat.len() {
+        let n = plain_table_len(&texts[i..]);
+        if n == 0 {
+            i += 1;
+            continue;
+        }
+        flush_plain(plain_from, i, pieces);
+        let rows: Vec<Vec<String>> = texts[i..i + n]
+            .iter()
+            .map(|l| l.split_whitespace().map(str::to_string).collect())
+            .collect();
+        let clean = |t: &str, header: bool| {
+            if is_body_label(t, header) {
+                t.trim().to_string()
+            } else {
+                finish(t, inline) // `inline` holds the math parked in the surrounding text
+            }
+        };
+        match table::from_rows(&rows, &clean) {
+            Some(latex) => pieces.push(Piece::Raw(latex)),
+            None => flush_plain(i, i + n, pieces),
+        }
+        i += n;
+        plain_from = i;
+    }
+    flush_plain(plain_from, flat.len(), pieces);
+    group.clear();
 }
 
 /// `itemize` / `enumerate`, nested by marker and indentation.
@@ -610,6 +749,39 @@ mod tests {
             "\\textbf{Problem 3.} Show it, \\emph{carefully}."
         );
         assert_eq!(to_latex("wait * until * done"), "wait * until * done");
+    }
+
+    #[test]
+    fn lines_of_equal_width_with_a_number_column_are_a_table() {
+        let latex = to_latex(
+            "Id Name Dept Year Score Grade\n\n1 Ann Math 2021 91 A\n\n2 Bob Art 2022 78 C\n\n3 Cy Bio 2020 85 B",
+        );
+        assert_eq!(
+            latex,
+            "\\begin{center}\n\\begin{tabular}{rllrrl}\n\\hline\nId & Name & Dept & Year & Score & Grade \\\\\n\\hline\n1 & Ann & Math & 2021 & 91 & A \\\\\n2 & Bob & Art & 2022 & 78 & C \\\\\n3 & Cy & Bio & 2020 & 85 & B \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
+        );
+    }
+
+    #[test]
+    fn a_two_column_table_needs_distinct_labels() {
+        let table = to_latex("First table:\n\nA 1\n\nB 2\n\nC 3");
+        assert!(
+            table.starts_with("First table:\n\\begin{center}"),
+            "{table}"
+        );
+        assert!(table.contains("{lr}"), "{table}");
+        // a repeated label is a list of headings, not a table
+        assert!(!to_latex("Problem 1\n\nProblem 2\n\nProblem 3").contains("tabular"));
+    }
+
+    #[test]
+    fn ordinary_lines_of_text_are_not_mistaken_for_a_table() {
+        // same word count on each line, but no column of numbers
+        let text = "Show that every tree\n\nProve that every graph\n\nFind the maximum value";
+        assert!(!to_latex(text).contains("tabular"));
+        // wrapped sentence lines of different lengths
+        let text = "Let G be a connected graph with n vertices and\nm edges. Show that the graph has a spanning tree.";
+        assert!(!to_latex(text).contains("tabular"));
     }
 
     #[test]

@@ -1,8 +1,8 @@
 //! Tables. The vision model writes a table it sees as an HTML `<table>`; this turns that into a
 //! LaTeX `tabular`.
 //!
-//! The HTML says nothing about alignment or rules, so those are guesses: whole-number columns are
-//! right-aligned and the rest centred, with a rule above the table, under a header row and below.
+//! The HTML says nothing about alignment or rules, so those are guesses: number-like columns are
+//! right-aligned and text columns left-aligned, with a rule above the table, under a header row and below.
 
 /// A cell as the HTML described it.
 struct Cell {
@@ -118,39 +118,43 @@ fn parse(html: &str) -> Vec<Vec<Cell>> {
     rows
 }
 
-/// Escape the characters LaTeX treats specially, leaving `$...$` math alone.
-pub fn escape_outside_math(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for (i, part) in text.split('$').enumerate() {
-        if i > 0 {
-            out.push('$');
-        }
-        if i % 2 == 1 {
-            out.push_str(part);
-            continue;
-        }
-        for ch in part.chars() {
-            match ch {
-                '&' | '%' | '#' | '_' => {
-                    out.push('\\');
-                    out.push(ch);
-                }
-                _ => out.push(ch),
-            }
-        }
-    }
-    out
-}
-
-fn is_whole_number(s: &str) -> bool {
-    let d = s.trim_start_matches('-');
-    !d.is_empty() && d.chars().all(|c| c.is_ascii_digit())
-}
-
 /// A LaTeX `tabular` (inside `center`) for the HTML table, or None if it has no cells.
-/// `clean` turns one cell's text into LaTeX (marking variables, restoring logos, ...).
-pub fn to_latex(html: &str, clean: &dyn Fn(&str) -> String) -> Option<String> {
-    let rows = parse(html);
+/// `clean` turns one cell's text into LaTeX (marking variables, restoring logos, ...); its flag says
+/// whether the cell is in the header row.
+pub fn to_latex(html: &str, clean: &dyn Fn(&str, bool) -> String) -> Option<String> {
+    layout(parse(html), clean)
+}
+
+/// A `tabular` for rows of plain cell texts (a table the model wrote as lines of words).
+pub fn from_rows(rows: &[Vec<String>], clean: &dyn Fn(&str, bool) -> String) -> Option<String> {
+    let cells = rows
+        .iter()
+        .map(|r| {
+            r.iter()
+                .map(|t| Cell {
+                    text: t.clone(),
+                    colspan: 1,
+                    rowspan: 1,
+                    header: false,
+                })
+                .collect()
+        })
+        .collect();
+    layout(cells, clean)
+}
+
+/// Does `text` read as a number: `12`, `-0.5`, `1,250.00`, `$20`, `12%`?
+pub fn is_number_like(text: &str) -> bool {
+    let t = text
+        .trim()
+        .trim_start_matches(['+', '-', '\u{2212}', '$', '€', '£', '¥']);
+    let t = t.trim_end_matches('%');
+    t.chars().any(|c| c.is_ascii_digit())
+        && t.chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+}
+
+fn layout(rows: Vec<Vec<Cell>>, clean: &dyn Fn(&str, bool) -> String) -> Option<String> {
     if rows.is_empty() {
         return None;
     }
@@ -174,7 +178,7 @@ pub fn to_latex(html: &str, clean: &dyn Fn(&str) -> String) -> Option<String> {
             }
             carry[col..col + cell.colspan].fill(cell.rowspan - 1);
             out.push(Some(Placed {
-                latex: clean(&cell.text),
+                latex: String::new(), // filled in below, once we know which row is the header
                 raw: cell.text.clone(),
                 colspan: cell.colspan,
             }));
@@ -194,7 +198,13 @@ pub fn to_latex(html: &str, clean: &dyn Fn(&str) -> String) -> Option<String> {
                 .filter(|c| !c.text.is_empty())
                 .all(|c| c.text.chars().any(char::is_alphabetic)));
 
-    // Whole-number columns right-aligned, the rest centred.
+    for (r, row) in grid.iter_mut().enumerate() {
+        for placed in row.iter_mut().flatten() {
+            placed.latex = clean(&placed.raw, has_header && r == 0);
+        }
+    }
+
+    // Number-like columns right-aligned, text columns left-aligned.
     let mut spec = String::new();
     for target in 0..n_cols {
         let (mut numeric, mut seen) = (true, false);
@@ -207,12 +217,12 @@ pub fn to_latex(html: &str, clean: &dyn Fn(&str) -> String) -> Option<String> {
                 };
                 if col == target && p.colspan == 1 && !p.raw.is_empty() {
                     seen = true;
-                    numeric &= is_whole_number(&p.raw);
+                    numeric &= is_number_like(&p.raw);
                 }
                 col += p.colspan;
             }
         }
-        spec.push(if numeric && seen { 'r' } else { 'c' });
+        spec.push(if numeric && seen { 'r' } else { 'l' });
     }
 
     let mut out = format!("\\begin{{center}}\n\\begin{{tabular}}{{{spec}}}\n\\hline\n");
@@ -238,19 +248,24 @@ pub fn to_latex(html: &str, clean: &dyn Fn(&str) -> String) -> Option<String> {
 mod tests {
     use super::*;
 
-    fn plain(s: &str) -> String {
-        escape_outside_math(s)
+    fn plain(s: &str, _header: bool) -> String {
+        s.replace('&', "\\&")
+            .replace('%', "\\%")
+            .replace('_', "\\_")
     }
 
     /// What the vision model really returned for a small execution-time table.
     const TIMES: &str = "<table border=1><tr><td>n</td><td>Recursive time (ms)</td><td>DP time (ms)</td></tr><tr><td>5</td><td>0.000037</td><td>0.000022</td></tr><tr><td>7</td><td>0.000164</td><td>0.000025</td></tr><tr><td>23</td><td>13.314562</td><td>0.000154</td></tr></table>";
 
     #[test]
-    fn a_header_row_a_whole_number_column_and_rules() {
-        let latex = to_latex(TIMES, &|c| if c == "n" { "$n$".into() } else { plain(c) }).unwrap();
+    fn a_header_row_number_columns_right_and_rules() {
+        let latex = to_latex(TIMES, &|c, h| {
+            if c == "n" { "$n$".into() } else { plain(c, h) }
+        })
+        .unwrap();
         assert_eq!(
             latex,
-            "\\begin{center}\n\\begin{tabular}{rcc}\n\\hline\n$n$ & Recursive time (ms) & DP time (ms) \\\\\n\\hline\n5 & 0.000037 & 0.000022 \\\\\n7 & 0.000164 & 0.000025 \\\\\n23 & 13.314562 & 0.000154 \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
+            "\\begin{center}\n\\begin{tabular}{rrr}\n\\hline\n$n$ & Recursive time (ms) & DP time (ms) \\\\\n\\hline\n5 & 0.000037 & 0.000022 \\\\\n7 & 0.000164 & 0.000025 \\\\\n23 & 13.314562 & 0.000154 \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
         );
     }
 
@@ -272,7 +287,7 @@ mod tests {
             "{latex}"
         );
         assert!(latex.contains("a\\_b & 50\\% \\\\"), "{latex}");
-        assert!(latex.contains("{cc}"), "{latex}");
+        assert!(latex.contains("{lr}"), "{latex}");
     }
 
     #[test]
