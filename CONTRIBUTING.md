@@ -1,6 +1,6 @@
 # Contributing to texcopy
 
-Thanks for wanting to help. texcopy is small enough that one person can understand all of it, and bug reports with a screenshot are the most useful thing you can send.
+Thanks for wanting to help. texcopy is small enough that one person can understand all of it. It will get plenty of things wrong, and that's fine to report: an issue with a screenshot is the most useful thing you can send, and a pull request that fixes it is even better.
 
 ## Reporting a bug
 

@@ -159,7 +159,7 @@ The benchmark (`tools/bench.py`) renders known LaTeX with `pdflatex`, runs texco
 | Same formulas at 50-800 dpi, blurred, noisy, inverted, JPEG | **28 / 30** | the other two are close |
 | Tables, graded on their cells | **16 / 18** | |
 
-That's a benchmark, not a promise, so **proofread what you paste.** A confident answer can still be wrong, usually a symbol that looks like another one (`\epsilon` and `e`, an italic `v` and `\nu`). The full results and the known limits are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+That's a benchmark, not a promise, so **proofread what you paste.** A confident answer can still be wrong, usually a symbol that looks like another one (`\epsilon` and `e`, an italic `v` and `\nu`). The full results, and a list of where it gets things wrong, are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md#where-it-gets-things-wrong). If you find a case it gets wrong, [open an issue](https://github.com/Phoenixxo/texcopy/issues/new/choose).
 
 ## 🔒 Privacy
 
@@ -240,7 +240,7 @@ Stuff I'd like to get to, no promises:
 
 ## 🤝 Contributing
 
-Contributions are welcome. Bug reports with a screenshot help the most. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, it covers the setup, the benchmark (and why to compare against the previous build) and the commit style. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. Wrong or malformed output is expected in plenty of cases, so [issues](https://github.com/Phoenixxo/texcopy/issues/new/choose) are welcome too, and pull requests that fix them even more. A screenshot of what you selected helps the most. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, it covers the setup, the benchmark (and why to compare against the previous build) and the commit style. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## 🙏 Acknowledgements
 

@@ -88,4 +88,4 @@ Set `version` in `Cargo.toml`, commit, and push a tag like `vX.Y.Z`. `release.ym
 
 ## What's still rough
 
-The honest list is in [BENCHMARKS.md](BENCHMARKS.md#limitations). The big one: I've only run it by hand on macOS. The Windows and Linux builds, the built-in overlay on those systems, and picking a region on a second monitor have been built and tested by CI but not tried on real machines.
+The list of where it gets things wrong is in [BENCHMARKS.md](BENCHMARKS.md#where-it-gets-things-wrong). The big one: I've only run it by hand on macOS. The Windows and Linux builds, the built-in overlay on those systems, and picking a region on a second monitor have been built and tested by CI but not tried on real machines.

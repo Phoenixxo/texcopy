@@ -1,4 +1,4 @@
-# Benchmarks and limitations
+# Benchmarks
 
 I don't want to just demo texcopy, I want to measure it. `tools/bench.py` renders known LaTeX with `pdflatex`, runs texcopy on the picture, and grades the answer by *re-rendering it and comparing to the original*. So an answer that's different but equivalent still counts as right.
 
@@ -105,13 +105,20 @@ What the misses have in common, found by this suite:
 - **Tables from real papers are 0 of 5.** The cells are usually right, but `\toprule`, bold headers and `p{4cm}` columns don't survive, and one came back unbalanced.
 - **Multi-line `align*`, `gathered` and `split`** come back as `aligned` or a one-column `array`, so the alignment shifts.
 
-## Limitations
+## Where it gets things wrong
 
-- **Proofread the output.** texcopy warns about tokens the small model was under 50% sure of, and it refuses to copy output where the model got stuck repeating itself. A confident answer can still be wrong though. Typical small-model mistakes are `\epsilon` read as `e`, `\bar` as `\vec`, and `\text{...}` as `\mathrm{...}`. The vision engine doesn't report confidence, so it can't warn.
-- The output uses `\text`, `\binom`, `equation`, `align` and `pmatrix`-style environments, so the document you paste into needs `amsmath`. Tables don't need a package. (`--raw` shows exactly what the small model produced.)
-- **The output is a reconstruction.** Bold, italic, small caps, underline and typewriter text, vertical table rules, theorem boxes and footnote layout aren't reliably in what the model reads, so they come out plain. That's on purpose, not a bug. The goal is the content.
-- **Fonts.** Times, txfonts and Latin Modern math all read exactly in the benchmark. I haven't tested other math fonts (Palatino, Utopia, Charter and so on) because the TeX install the benchmark runs on doesn't have them.
-- **Only macOS has actually been run.** CI builds and tests Windows and Linux, but I haven't exercised the Windows and Linux clipboard, capture, built-in selector overlay or helper install on real machines (or the vision engine's CPU speed there). The overlay only covers the primary monitor.
-- The small model only knows 1,200 tokens, so custom macros and rarely used symbols can't be represented.
+Sometimes the output is just wrong. It might not compile, it might render as something else, or it might be shaped differently from what you were looking at. I'd rather you expect that than get surprised by it. Every suite above has misses in it, and the real arXiv papers are where it struggles most.
+
+If you hit one, please tell me. [Open an issue](https://github.com/Phoenixxo/texcopy/issues/new/choose) with the picture and what you got (`texcopy image.png --json` has the details). A pull request is even better. Fixes are welcome, and so are new benchmark cases that show a miss. [CONTRIBUTING.md](../CONTRIBUTING.md) has the setup.
+
+The kinds of wrong I know about:
+
+- **Misread symbols.** texcopy warns about tokens the small model was under 50% sure of, and it refuses to copy output where the model got stuck repeating itself. A confident answer can still be wrong though. Typical mistakes are `\epsilon` read as `e`, `\bar` as `\vec`, and `\text{...}` as `\mathrm{...}`. The vision engine doesn't report confidence, so it can't warn.
+- **Wrong structure.** Equation numbers, `\binom`, multi-line `align`, root indexes and real-paper tables, all covered above.
+- **Things it leaves out on purpose.** Bold, italic, small caps, underline and typewriter text, vertical table rules, theorem boxes and footnote layout aren't reliably in what the model reads, so they come out plain. The goal is a correct reconstruction of the content, not your source.
+- **Packages.** The output uses `\text`, `\binom`, `equation`, `align` and `pmatrix`-style environments, so the document you paste into needs `amsmath`. Tables don't need a package. (`--raw` shows exactly what the small model produced.)
+- **Fonts I haven't tried.** Times, txfonts and Latin Modern math all read exactly in the benchmark. I haven't tested Palatino, Utopia, Charter and so on because the TeX install the benchmark runs on doesn't have them.
+- **Windows and Linux.** I've only run texcopy by hand on macOS. CI builds and tests the other two, but I haven't tried the clipboard, capture, built-in selector overlay or helper install on real machines (or the vision engine's CPU speed there). The overlay only covers the primary monitor.
+- **Rare symbols.** The small model only knows 1,200 tokens, so custom macros and rarely used symbols can't be represented.
 
 If what you're copying from is a web page using KaTeX or MathJax, the exact TeX is already in the page's DOM and you don't need OCR at all.
