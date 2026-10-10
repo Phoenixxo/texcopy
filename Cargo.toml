@@ -5,6 +5,12 @@ edition = "2024"
 description = "Select LaTeX-rendered math on screen and get its LaTeX source on your clipboard"
 license = "MIT"
 
+# `texcopy` is the command line; `texcopy-gui` is the same program without a console window on Windows.
+[[bin]]
+name = "texcopy-gui"
+path = "src/bin/texcopy-gui.rs"
+required-features = ["gui"]
+
 [dependencies]
 anyhow = "1.0.104"
 arboard = { version = "3.6.1", features = ["wayland-data-control"] }
