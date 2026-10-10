@@ -58,6 +58,23 @@ Today I am learning \LaTeX{}. I can write in line math such as $a^2 + b^2 = c^2$
 - **The logos** `LATEX`/`LaTeX` and `TEX`/`TeX` outside math become `\LaTeX{}` and `\TeX{}` (the logo is drawn, so the model can only read it as capitals).
 - Text after a display equation starts on its own line. Everything else is still joined into one line.
 
+**Tables** (vision engine) come back as a `tabular`:
+
+```
+\begin{center}
+\begin{tabular}{rcc}
+\hline
+$n$ & Recursive time (ms) & DP time (ms) \\
+\hline
+5 & 0.000037 & 0.000022 \\
+...
+\hline
+\end{tabular}
+\end{center}
+```
+
+The model reads the cells; the layout is guessed, because the model's HTML table says nothing about alignment or rules. Whole-number columns are right-aligned and the rest centred; there is a rule above, below, and under a header row, and no vertical lines. `colspan` becomes `\multicolumn`; `rowspan` leaves the covered cells empty. Adjust `{rcc}` and the rules to match your table.
+
 The model is trained on formulas, so it writes sentences as `\mathrm{W o r d s ~ l i k e ~ t h i s}`, wraps visual lines in an `array`, and doesn't say which letters were italic. Prose mode (`src/prose.rs`) flattens the lines into one paragraph, glues words broken at a line end (`cut-` + `vertex`), re-joins a formula cut by a line break, and wraps the math in `$...$` using rules: a lone letter other than `a`, `A`, `I` is math; so are intervals like `[a,b]`, expressions with `= < > + ^ _`, and digit-letter mixes like `n-1` (but not `3-regular`). It only activates when there are at least four real words and no more math-like tokens than word-like ones, so formulas with a bit of `\text{if }` are untouched. `--wrap` is ignored for sentences, and `--json` reports `"kind": "prose"` or `"math"`.
 
 Limits, measured on `tools/bench.py --suite prose` (21 cases, 17 exact):

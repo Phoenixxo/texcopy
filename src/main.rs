@@ -8,6 +8,7 @@ mod helper;
 mod model;
 mod prose;
 mod spec;
+mod table;
 mod tidy;
 mod ui;
 mod vlm;

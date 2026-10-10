@@ -22,7 +22,7 @@ use image::{DynamicImage, ImageFormat, imageops::FilterType};
 
 use crate::{
     fetch::{self, Download},
-    helper, prose,
+    helper, prose, table,
     ui::{self, Event, Reporter},
 };
 
@@ -582,13 +582,55 @@ fn real_words(s: &str) -> usize {
         .count()
 }
 
+/// Clean one table cell: variables marked as math, logos restored, LaTeX specials escaped.
+fn clean_cell(text: &str) -> String {
+    table::escape_outside_math(&prose::replace_logos(&prose::mark_math(text)))
+}
+
+/// Output that contains an HTML table: each table becomes a `tabular`, and the text around it is
+/// read as a sentence. None when there is no usable table.
+fn interpret_with_tables(raw: &str) -> Option<String> {
+    let mut parts: Vec<String> = Vec::new();
+    let mut rest = raw;
+    let mut found = false;
+    while let Some((start, end)) = table::find(rest) {
+        let Some(latex) = table::to_latex(&rest[start..end], &clean_cell) else {
+            break;
+        };
+        found = true;
+        parts.extend(text_lines(&rest[..start]));
+        parts.push(latex);
+        rest = &rest[end..];
+    }
+    if !found {
+        return None;
+    }
+    parts.extend(text_lines(rest));
+    Some(parts.join("\n"))
+}
+
+/// Text around a table as finished lines (empty if it holds nothing).
+fn text_lines(text: &str) -> Vec<String> {
+    build_lines(segments(text))
+        .into_iter()
+        .map(|l| match l {
+            Line::Text(t) => prose::replace_logos(&prose::mark_math(&t)),
+            Line::Code(c) => c,
+        })
+        .collect()
+}
+
 /// Turn the model's Markdown into either prose or a bare formula.
 ///
 /// Anything with a real word next to its math is prose, even a one-line exercise like
 /// `Is $C_6$ bi-graceful?`: calling that a formula would throw the words away. Only output that is
 /// essentially pure math (or plain text too short to be a sentence) is a formula.
 pub fn interpret(raw: &str) -> Reading {
-    let segs = segments(strip_fences(raw));
+    let raw = strip_fences(raw);
+    if let Some(text) = interpret_with_tables(raw) {
+        return Reading::Prose(text);
+    }
+    let segs = segments(raw);
     let outside: String = segs
         .iter()
         .filter(|s| !s.math)
@@ -697,6 +739,18 @@ mod tests {
         // an equation reference in running text is not an equation number
         assert!(
             matches!(interpret("See the equation (1) above for $x$."), Reading::Prose(p) if p.contains("(1)"))
+        );
+    }
+
+    #[test]
+    fn an_html_table_becomes_a_tabular_and_the_heading_above_it_stays_text() {
+        let raw = "Execution-time comparison\n\n<table border=1><tr><td>n</td><td>Recursive time (ms)</td><td>DP time (ms)</td></tr><tr><td>5</td><td>0.000037</td><td>0.000022</td></tr><tr><td>23</td><td>13.314562</td><td>0.000154</td></tr></table>";
+        assert_eq!(
+            interpret(raw),
+            Reading::Prose(
+                "Execution-time comparison\n\\begin{center}\n\\begin{tabular}{rcc}\n\\hline\n$n$ & Recursive time (ms) & DP time (ms) \\\\\n\\hline\n5 & 0.000037 & 0.000022 \\\\\n23 & 13.314562 & 0.000154 \\\\\n\\hline\n\\end{tabular}\n\\end{center}"
+                    .into()
+            )
         );
     }
 
