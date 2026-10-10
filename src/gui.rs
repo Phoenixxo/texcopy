@@ -681,11 +681,25 @@ impl Drop for App {
     }
 }
 
+/// The icon for the window, the taskbar and the Dock (the PNG is made by packaging/icon/make_icon.py).
+fn window_icon() -> egui::IconData {
+    let rgba = image::load_from_memory(include_bytes!("../packaging/icon/icon-256.png"))
+        .expect("the embedded icon is a valid PNG")
+        .to_rgba8();
+    egui::IconData {
+        width: rgba.width(),
+        height: rgba.height(),
+        rgba: rgba.into_raw(),
+    }
+}
+
 /// Open the window. `selftest` is a picture to use instead of a real screen selection.
 pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
     let options = eframe::NativeOptions {
         viewport: ViewportBuilder::default()
             .with_title("texcopy")
+            .with_app_id("texcopy") // matches StartupWMClass in the Linux menu entry
+            .with_icon(std::sync::Arc::new(window_icon()))
             .with_inner_size(vec2(WINDOW_SIZE.0, WINDOW_SIZE.1))
             .with_resizable(true)
             // No minimize/zoom buttons: tiling window managers (AeroSpace) treat such a window as a

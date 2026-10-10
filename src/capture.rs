@@ -147,6 +147,7 @@ fn overlay_selector(_out: &std::path::Path) -> Result<bool> {
 /// nothing behind when they press Esc. Compiled on every OS so the logic can be tested with fake
 /// programs; only used on Linux.
 #[cfg(any(target_os = "linux", test))]
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // tests only, off Linux
 mod linux_tools {
     use std::{
         path::{Path, PathBuf},

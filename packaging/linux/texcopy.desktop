@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=texcopy
+GenericName=LaTeX from screen
+Comment=Select LaTeX-rendered text on screen and copy its LaTeX
+Exec=texcopy
+Icon=texcopy
+Terminal=false
+Categories=Utility;Office;
+Keywords=latex;ocr;math;screenshot;
+StartupWMClass=texcopy

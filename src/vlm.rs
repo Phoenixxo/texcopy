@@ -112,10 +112,18 @@ pub fn find_server(over: Option<&Path>) -> Option<PathBuf> {
         } else {
             "llama-server"
         };
-        let paths = std::env::var_os("PATH")?;
-        std::env::split_paths(&paths)
-            .map(|d| d.join(name))
-            .find(|p| p.is_file())
+        let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
+            .map(|p| std::env::split_paths(&p).collect())
+            .unwrap_or_default();
+        // A program started from Finder or a launcher does not get the shell's PATH, so also look
+        // where Homebrew and distro packages put it.
+        dirs.extend(
+            ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"]
+                .iter()
+                .filter(|_| cfg!(unix))
+                .map(PathBuf::from),
+        );
+        dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
     })
 }
 

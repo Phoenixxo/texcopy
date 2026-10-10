@@ -10,6 +10,18 @@ Copied to clipboard.
 
 Everything runs locally. Nothing is uploaded.
 
+## Install
+
+Download the file for your system from the [Releases](../../releases) page (each release lists SHA-256 checksums in `SHA256SUMS`).
+
+**macOS (Apple Silicon)**: unzip `texcopy-*-macos-arm64.zip` and drag `texcopy.app` to Applications. The app is signed ad hoc, not notarised by Apple, so the first time you open it macOS says it can't verify the developer: right-click the app, choose **Open**, then **Open** again (or run `xattr -dr com.apple.quarantine /Applications/texcopy.app`). The first capture asks for **Screen Recording** permission (System Settings, Privacy & Security); allow it for texcopy and reopen the app.
+
+**Windows (x64)**: unzip `texcopy-*-windows-x64.zip` anywhere. `texcopy-gui.exe` opens the window (no console); `texcopy.exe` is the command line. Windows SmartScreen may warn about an unrecognised app the first time: choose **More info**, then **Run anyway**.
+
+**Linux (x64)**: `tar xzf texcopy-*-linux-*.tar.gz && cd texcopy-*/ && ./install.sh` installs the program, a menu entry and the icon under `~/.local` (no root; `./install.sh --remove` undoes it). For the window's drag-to-select, install any one of `grim`+`slurp` (Wayland), `maim`, `scrot`, `spectacle`, `gnome-screenshot` or `flameshot`; without one, texcopy uses its own full-screen overlay.
+
+The first time you capture, the window offers to download the vision engine (about 1 GB, checksum-verified); it works without it, using the small 118 MB formula model. Everything runs on your computer.
+
 ## The window
 
 `texcopy` with no arguments opens a small window: a **Capture** button (or press `C`), the options, and the output text. Click Capture, drag over something, and the LaTeX appears and is copied to your clipboard. Changing `wrap` or `engine` updates it; Esc closes the window.
@@ -85,70 +97,9 @@ Sometimes the model writes a table as plain lines instead (`Id Name Year` / `1 A
 
 The tables benchmark (`tools/bench.py --suite tables`) grades the *cells*, not the look: 16 of 18 exact. The two misses are a `rowspan` whose text sits in the other row, and `g/cm$^3$` that the model reads as `g/cm3`.
 
-## How it works
+With `--engine small`, the model is trained on formulas, so it writes sentences as `\mathrm{W o r d s ~ l i k e ~ t h i s}`, wraps visual lines in an `array`, and doesn't say which letters were italic. Prose mode (`src/prose.rs`) flattens the lines into one paragraph, glues words broken at a line end (`cut-` + `vertex`), re-joins a formula cut by a line break, and wraps the math in `$...$` using rules: a lone letter other than `a`, `A`, `I` is math; so are intervals like `[a,b]`, expressions with `= < > + ^ _`, and digit-letter mixes like `n-1` (but not `3-regular`). It only activates when there are at least four real words and no more math-like tokens than word-like ones, so formulas with a bit of `\text{if }` are untouched. `--wrap` is ignored for sentences, and `--json` reports `"kind": "prose"` or `"math"`.
 
-LaTeX output (a screenshot, a PDF page) doesn't contain its source, so recovering it is OCR:
-
-1. The image comes from a file, the clipboard, a screenshot (`--screen`, cross-platform via `xcap`) or, on macOS, `screencapture -i` drag-select.
-2. The image is flattened onto white, inverted if it's dark mode, and resized to the model's 384x384 input (stretched by default, which handles wide formulas best; `--fit pad` keeps the aspect ratio instead).
-3. A vision transformer (the *encoder*) turns it into 578 feature vectors.
-4. A small transformer *decoder* writes LaTeX tokens one at a time, looking at those vectors, until it emits end-of-sequence.
-5. `tidy.rs` rewrites the token stream (`\frac { a } { b }`) into idiomatic LaTeX (`\frac{a}{b}`). It only changes formatting, never meaning. If the image turns out to be a sentence rather than a formula, `prose.rs` takes over (see below).
-
-**Two engines.** The *small* engine is described below. The *vision* engine (OvisOCR2, a 0.8B vision-language model) reads whole paragraphs and very long equations, which the small one cannot; see "Vision engine". `--engine auto` (the default) uses the vision engine when it is set up, and for a bare formula still prefers the small model.
-
-The small model is [`breezedeus/pix2text-mfr`](https://huggingface.co/breezedeus/pix2text-mfr) (MIT), run through ONNX Runtime via the [`ort`](https://crates.io/crates/ort) crate. About 118 MB, downloaded on first run to your OS's per-user cache folder (for example `~/Library/Caches/texcopy` on macOS). A `./models` directory or `--model-dir` / `$TEXCOPY_MODEL_DIR` takes precedence.
-
-## Sentences with inline math
-
-Point it at a line or two of a textbook problem and it returns running text with the math marked:
-
-```
-$ texcopy problem.png
-5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.
-```
-
-With the vision engine, a page of text works too. texcopy rebuilds it as LaTeX that **renders the same as the picture**; it cannot know the author's original source (the picture can't tell `\textbf{x}` from `{\bf x}`), so the result is a correct reconstruction, not a copy:
-
-```
-$ texcopy page.png
-\section*{Introduction}
-Today I am learning \LaTeX{}. I can write in line math such as $a^2 + b^2 = c^2$.
-
-I can also give equations their own space:
-\begin{equation}
-\gamma^{2}+\theta^{2}=\omega^{2}
-\end{equation}
-```
-
-- **Display equations** are display equations. With a number beside them (`(1)`, or a `\tag`) they become `\begin{equation}...\end{equation}` (LaTeX writes the number itself); without one they become `\[ ... \]`; `align`-type environments are kept as they are. A page number left at the very end after one is dropped.
-- **Paragraphs** keep their blank line; lines wrapped inside a paragraph are joined.
-- **Headings** (`##`) become `\section*{...}` (`###` is `\subsection*`). The model marks centred text as a heading too, and texcopy can't tell the difference.
-- **Lists** become `itemize` / `enumerate`, nested when the bullets change. A lone "5." is a problem number, not a list.
-- **Text is made safe for LaTeX:** `& % # _` and prices (`\$5`) are escaped, `"..."` and curly quotes become ` ``...'' `, dashes become `--` and `---`, a `□` ends a proof flush right, and the drawn `LATEX`/`TEX` logos become `\LaTeX{}`/`\TeX{}`.
-- **Code** in a fenced block becomes `verbatim`; `**bold**` and `*italic*` Markdown, if the model writes any, become `\textbf` and `\emph`.
-- **Not recoverable:** the model usually returns bold, italic, small caps, underline and typewriter text as plain words, and does not report vertical table rules, so those come out plain.
-
-**Tables** (vision engine) come back as a `tabular`:
-
-```
-\begin{center}
-\begin{tabular}{rcc}
-\hline
-$n$ & Recursive time (ms) & DP time (ms) \\
-\hline
-5 & 0.000037 & 0.000022 \\
-...
-\hline
-\end{tabular}
-\end{center}
-```
-
-The model reads the cells; the layout is guessed, because the model's HTML table says nothing about alignment or rules. Whole-number columns are right-aligned and the rest centred; there is a rule above, below, and under a header row, and no vertical lines. `colspan` becomes `\multicolumn`; `rowspan` leaves the covered cells empty. Adjust `{rcc}` and the rules to match your table.
-
-The model is trained on formulas, so it writes sentences as `\mathrm{W o r d s ~ l i k e ~ t h i s}`, wraps visual lines in an `array`, and doesn't say which letters were italic. Prose mode (`src/prose.rs`) flattens the lines into one paragraph, glues words broken at a line end (`cut-` + `vertex`), re-joins a formula cut by a line break, and wraps the math in `$...$` using rules: a lone letter other than `a`, `A`, `I` is math; so are intervals like `[a,b]`, expressions with `= < > + ^ _`, and digit-letter mixes like `n-1` (but not `3-regular`). It only activates when there are at least four real words and no more math-like tokens than word-like ones, so formulas with a bit of `\text{if }` are untouched. `--wrap` is ignored for sentences, and `--json` reports `"kind": "prose"` or `"math"`.
-
-Limits, measured on `tools/bench.py --suite prose` (21 cases, 17 exact):
+Limits of the small model (measured with `--engine small` on `tools/bench.py --suite prose`, 21 cases, 17 exact; the vision engine reads 3-6 line paragraphs):
 
 - **One or two lines work; three or more are unreliable.** The model reads the whole image at once and on a tall block it can lose the spaces between words (`beaconnectedgraphwith`). texcopy warns when it sees that. Select one line at a time.
 - **It can't see italics**, so it cannot tell the variable `a` from the article "a" (both stay words), and it sometimes reads an italic `v` as `\nu`. texcopy prints a note whenever it outputs `\nu`.
@@ -239,6 +190,10 @@ apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev 
 The release binary is about 31 MB with the window (30.8 MB on Apple Silicon; about 23 MB without it), built with fat LTO, `panic = "abort"` and stripped symbols. About four fifths of its machine code is ONNX Runtime (C++), statically linked, so Rust compiler flags can only shrink the remaining fifth. Optimizing for size (`opt-level = "s"`/`"z"`) would save another 1-2 MB but made full-screen captures 13-57% slower, so it is not used. Image files in PNG, JPEG, WebP, BMP, GIF and TIFF are supported.
 
 CI (`.github/workflows/ci.yml`) builds, lints and tests on macOS (Apple Silicon), Windows and Linux.
+
+### Packaging and releases
+
+`packaging/` holds the scripts that turn a built binary into a download: `macos/make-app.sh` (the `.app` and its zip), `linux/make-tarball.sh` (tarball with `install.sh`, a `.desktop` entry and the icon) and `windows/make-zip.ps1` (zip with `texcopy.exe` and the windowless `texcopy-gui.exe`). `packaging/icon/make_icon.py` redraws the icon. CI runs all three scripts on every push. To release: set `version` in `Cargo.toml`, commit, and push a tag `vX.Y.Z`; `.github/workflows/release.yml` builds the three platforms, packages them and publishes a GitHub release with checksums. "Run workflow" on the Actions page builds the same files without publishing.
 
 ## Benchmark
 

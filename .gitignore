@@ -2,3 +2,4 @@ target/
 models/
 gallery/
 tools/fixtures/private/
+dist/

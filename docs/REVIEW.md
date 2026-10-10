@@ -230,12 +230,22 @@ Resolve these over time; tick when closed.
 ## 7. Roadmap
 
 - [x] **Phase 1** — portable core, quality, CI
-- [ ] **Phase 2** — spike: one `egui` window from full-screen frozen overlay to small popup (**check in after it**)
-- [ ] **Phase 3** — popup app: drag-select overlay, editable result, copy button, wrap selector, low-confidence highlighting, background model load with progress bar
-- [ ] **Phase 4** — packaging: shortcut docs per OS, macOS `.app`, release builds from CI
+- [x] **Phase 2** — spike (`spikes/gui/`): a full-screen overlay turned into a popup was fragile (a tiling window manager moved the windows, a second window was offset by the menu bar). Result: use the OS's own selector where there is one, and run texcopy's overlay as its own process otherwise.
+- [x] **Phase 3** — the window (`src/gui.rs`): Capture button, wrap and engine options, output text; in-window first-run download with progress; the vision engine is pre-warmed while you drag and unloaded when idle; settings remembered.
+- [x] **Phase 4** — packaging (`packaging/`): macOS `.app`, Windows zip with a console-free `texcopy-gui.exe`, Linux tarball with installer, release workflow. **Never run on Windows or Linux yet** (see the checklist below).
 - [x] **Decided:** vision-language backend OvisOCR2 via a `llama-server` helper (the Rust-native `oar-ocr-vl`/Candle route was spiked and rejected: 4.7 s on CPU, 72-78 s on Metal, 3.7-4.9 GB, vs 0.3 s and 1.4 GB). Context: (OvisOCR2 / MinerU2.5-Pro / PaddleOCR-VL). On 45 real textbook exercises: texcopy's small model 22 exact / 14 close / 9 wrong; all three vision models 44 exact / 1 close / 0 wrong, ~0.3-0.45 s each, ~1.35-1.5 GB RAM while loaded (with `--cache-ram 0`), 1.0-1.8 GB on disk.
 - [ ] **Next candidate** — split images into text lines and read each (fixes 3+ line paragraphs and very long lines); decide how to handle `v` vs `\nu`
 - [ ] **Later** — train or fine-tune your own model (the data can be generated with `pdflatex`); minimal ONNX Runtime build for a much smaller binary; row-splitting for multi-line formulas; splitting very wide equations
+
+### Review checklist for phases 3 and 4
+
+- [ ] **`src/engine.rs`**: `Options` (what to do) and `Warm` (the loaded engines). The command line makes a fresh `Warm` per run; the window keeps one. Check `prewarm` never downloads or asks.
+- [ ] **`src/gui.rs`**: three threads (UI, one worker owning the engines, a short thread per Capture). Closing the window must join the worker, or `llama-server` is orphaned. `vlm.rs` also records each helper's pid in a note file and reaps helpers whose owner died (macOS and Linux).
+- [ ] **`src/convert.rs`**: the model's Markdown to LaTeX: headings, lists, display equations, paragraphs, code, and one cleanup path for text. **`src/table.rs`**: HTML tables (and plain-line tables) to `tabular`. Both are graded by the `documents` and `tables` suites in `tools/bench.py`, which re-render the output (documents) or compare cells (tables).
+- [ ] **Output is "a correct reconstruction", not the author's source.** Bold/italic/small caps, vertical table rules and theorem styling are not in the model's output and are out of scope.
+- [ ] **`src/capture.rs`, `src/overlay.rs`**: selector order is the OS's own (macOS `screencapture`, Linux tools), then the overlay. The overlay is verified on macOS only (`TEXCOPY_SELECTOR=overlay`, `TEXCOPY_OVERLAY_AUTO` for a scripted drag); the Linux tool chain is tested with fake programs.
+- [ ] **Not yet verified on a real machine:** the Windows and Linux builds, the overlay on Windows/Linux/Wayland/multi-monitor, the release workflow (CI has never run: there is no GitHub remote yet). First thing to do after pushing: run the CI and the release workflow by hand ("Run workflow") and fix what they report.
+- [ ] **Signing:** the macOS app is ad hoc signed, not notarised; Windows is unsigned. Users see an "unidentified developer" / SmartScreen warning once (the README says how to pass it).
 
 ---
 
@@ -249,4 +259,4 @@ Resolve these over time; tick when closed.
 - **ONNX / ONNX Runtime**: a portable network file format / the engine that runs it.
 - **LTO**: link-time optimization, whole-program optimization across crates.
 - **EXACT / close / differs / FAIL**: the benchmark's grades (section 2F).
-- **Frozen-screenshot overlay**: planned selector design; capture the screen first, then draw a dimmed copy to drag over, so it behaves the same on every OS.
+- **Frozen-screenshot overlay**: texcopy's own selector (`src/overlay.rs`): capture the screen first, then draw a dimmed copy to drag over. Used where the OS has no selector of its own.
