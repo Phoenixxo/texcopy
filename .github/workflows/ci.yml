@@ -1,5 +1,6 @@
 name: CI
-# Format, lint, build, package. The tests have their own workflow (tests.yml) and badge.
+# Format and lint (Linux only), then build and package on every platform.
+# The tests have their own workflow (tests.yml) and badge.
 
 on:
   push:
@@ -10,8 +11,34 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Formatting and lint don't depend on the OS, so they run once, on Linux.
+  lint:
+    name: format and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install Linux build dependencies (screen capture and the window)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libclang-dev libxcb1-dev libxrandr-dev \
+            libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev \
+            libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            tools/gen
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo fmt --check --manifest-path tools/gen/Cargo.toml
+      - run: cargo clippy --locked --all-targets --manifest-path tools/gen/Cargo.toml -- -D warnings
+
+  # Build the release binary and run the packaging script on every platform.
   build:
-    name: ${{ matrix.os }}
+    name: build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -21,8 +48,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
       - name: Install Linux build dependencies (screen capture and the window)
         if: runner.os == 'Linux'
         run: |
@@ -31,11 +56,6 @@ jobs:
             libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev \
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
-      - name: Format
-        if: runner.os == 'Linux'
-        run: cargo fmt --check
-      - name: Lint
-        run: cargo clippy --locked --all-targets -- -D warnings
       - name: Build release
         run: cargo build --locked --release
       # The packaging scripts run on every platform so a broken one is found before a release.
@@ -64,25 +84,6 @@ jobs:
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --locked
-
-  # The benchmark's case generator (tools/gen) is its own small crate; keep it building and clean.
-  generator:
-    name: benchmark generator
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools/gen
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: tools/gen
-      - run: cargo fmt --check
-      - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo test --locked
 
   # The CLI-only build must keep working on a machine without the capture libraries.
   headless:
