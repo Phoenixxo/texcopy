@@ -1,12 +1,12 @@
 name: Bug report
-description: texcopy gave the wrong LaTeX, crashed, or did not run
+description: texcopy gave the wrong LaTeX, crashed, or wouldn't run
 labels: [bug]
 body:
   - type: textarea
     id: picture
     attributes:
       label: The picture
-      description: Attach the screenshot you selected (crop it to the part you captured). If it is copyrighted, crop it as small as you can.
+      description: Attach the screenshot you selected, cropped to the part you captured. If it's copyrighted, crop it as small as you can.
     validations:
       required: true
   - type: textarea
@@ -27,7 +27,7 @@ body:
     id: version
     attributes:
       label: texcopy version
-      description: Output of `texcopy --version`
+      description: The output of `texcopy --version`
     validations:
       required: true
   - type: dropdown
@@ -48,4 +48,4 @@ body:
     id: more
     attributes:
       label: Anything else
-      description: Steps to reproduce, error messages, whether it used the window or the command line.
+      description: Steps to reproduce, error messages, and whether you used the window or the command line.

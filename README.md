@@ -21,11 +21,11 @@
 </p>
 
 > [!NOTE]
-> texcopy is an early release. It is developed and tested on macOS (Apple Silicon). The Windows and Linux builds are produced and tested by CI, but have not yet been run by hand on real machines, so expect rough edges there and please [report them](https://github.com/Phoenixxo/texcopy/issues).
+> texcopy is an early release. I build and test it on my Mac (Apple Silicon). The Windows and Linux builds exist and CI runs on them, but I haven't actually run them on a real machine yet, so expect rough edges there. If something breaks, please [open an issue](https://github.com/Phoenixxo/texcopy/issues).
 
-You are reading a textbook PDF, a paper, or a lecture slide, and you want that equation in your notes. Retyping `\frac`, `\sum_{k=1}^{n}` and friends is slow, and you *will* make a typo.
+You're reading a textbook PDF, a paper or a slide, and you want that equation in your notes. Retyping `\frac` and `\sum_{k=1}^{n}` is slow, and you'll get something wrong.
 
-**texcopy** lets you drag a box around anything LaTeX-rendered on your screen and puts the LaTeX on your clipboard. Not just single formulas: whole sentences with inline math, numbered equations, lists, headings and tables too. It runs entirely on your computer. No account, no API key, nothing uploaded.
+texcopy fixes that. Drag a box around anything that was rendered with LaTeX and the LaTeX ends up on your clipboard. It's not just single formulas either. Sentences with inline math, numbered equations, lists, headings and tables work too. Everything runs on your computer. No account, no API key, nothing gets uploaded.
 
 <p align="center">
   <img src=".github/assets/readme/demo.png" alt="A sentence and a numbered equation on screen, and the LaTeX texcopy puts on the clipboard" width="620">
@@ -46,48 +46,48 @@ You are reading a textbook PDF, a paper, or a lecture slide, and you want that e
 
 ## ✨ Features
 
-- **More than formulas.** Sentences with inline math, numbered and unnumbered display equations, bullet and numbered lists, section headings and tables all come back as LaTeX.
-- **A correct reconstruction, not a guess at the source.** A picture cannot tell `\textbf{x}` from `{\bf x}`, so texcopy gives you LaTeX that *renders the same as what you selected*. The content is what you get; the author's exact markup is not recoverable.
-- **Private by design.** Everything runs on your machine. The only network traffic is the one-time download of the models.
-- **Fast.** About a third of a second per capture once warm (Apple M4 Pro). The window loads the model while you are still dragging out the box.
-- **A real app and a real command line.** A small window (Capture button, a couple of options, the output text) for everyday use, and a scriptable `texcopy` CLI with JSON output.
-- **Two engines.** A 118 MB formula model that works anywhere, and an optional 1 GB vision model that reads paragraphs, long equations and tables. The window offers the download on first run.
-- **Measured, not just demoed.** A benchmark renders known LaTeX, runs texcopy on the picture and compares the result; see [how accurate it is](#-how-accurate-is-it).
+- **More than formulas.** Sentences with inline math, numbered and unnumbered display equations, bullet and numbered lists, headings and tables all come back as LaTeX.
+- **Looks the same, not the same source.** The picture doesn't have the author's original LaTeX in it, so texcopy can't give you that. It gives you LaTeX that renders the same as what you selected.
+- **Private.** Everything runs on your machine. The only thing that touches the network is the one-time model download.
+- **Fast.** About a third of a second per capture once it's warm (Apple M4 Pro). The window loads the model while you're still dragging the box.
+- **App and command line.** There's a small window (a Capture button, a couple of options, the output text) and a `texcopy` command with JSON output for scripts.
+- **Two engines.** A 118 MB formula model that works anywhere, and an optional 1 GB vision model that reads paragraphs, long equations and tables. The window offers the download the first time you capture.
+- **Measured.** A benchmark renders known LaTeX, runs texcopy on the picture and compares the result. See [how accurate it is](#-how-accurate-is-it).
 
 ## 📦 Install
 
-Download the file for your system from the [latest release](https://github.com/Phoenixxo/texcopy/releases/latest). Every release lists SHA-256 checksums in `SHA256SUMS`.
+Grab the file for your system from the [latest release](https://github.com/Phoenixxo/texcopy/releases/latest). Each release has SHA-256 checksums in `SHA256SUMS`.
 
 | System | Download | Then |
 |---|---|---|
-| **macOS** (Apple Silicon) | `texcopy-…-macos-arm64.zip` | Unzip, drag `texcopy.app` to Applications |
-| **Windows** (x64) | `texcopy-…-windows-x64.zip` | Unzip anywhere, run `texcopy-gui.exe` |
+| **macOS** (Apple Silicon) | `texcopy-…-macos-arm64.zip` | Unzip it, drag `texcopy.app` to Applications |
+| **Windows** (x64) | `texcopy-…-windows-x64.zip` | Unzip it anywhere, run `texcopy-gui.exe` |
 | **Linux** (x64) | `texcopy-…-linux-….tar.gz` | `tar xzf` it, run `./install.sh` |
 
 <details>
 <summary><b>First launch on each system</b> (the one-time security prompts)</summary>
 
-**macOS.** The app is signed ad hoc, not notarised by Apple, so the first time macOS says it cannot verify the developer. Right-click the app, choose **Open**, then **Open** again. (Or run `xattr -dr com.apple.quarantine /Applications/texcopy.app`.) The first capture asks for **Screen Recording** permission under System Settings, Privacy & Security; allow it for texcopy and reopen the app.
+**macOS.** The app is signed ad hoc and not notarised by Apple, so the first time macOS says it can't verify the developer. Right-click the app, choose **Open**, then **Open** again. (Or run `xattr -dr com.apple.quarantine /Applications/texcopy.app`.) The first capture asks for **Screen Recording** permission in System Settings, Privacy & Security. Allow it for texcopy and reopen the app.
 
-**Windows.** `texcopy-gui.exe` opens the window with no console; `texcopy.exe` is the command line. SmartScreen may warn about an unrecognised app: choose **More info**, then **Run anyway**.
+**Windows.** `texcopy-gui.exe` opens the window with no console. `texcopy.exe` is the command line. SmartScreen might warn about an app it doesn't know. Choose **More info**, then **Run anyway**.
 
-**Linux.** `./install.sh` installs the program, a menu entry and the icon under `~/.local` with no root (`./install.sh --remove` undoes it). For drag-to-select, install any one of `grim` + `slurp` (Wayland), `maim`, `scrot`, `spectacle`, `gnome-screenshot` or `flameshot`. Without one, texcopy uses its own full-screen overlay.
+**Linux.** `./install.sh` puts the program, a menu entry and the icon under `~/.local`, no root needed (`./install.sh --remove` undoes it). For drag-to-select, install any one of `grim` + `slurp` (Wayland), `maim`, `scrot`, `spectacle`, `gnome-screenshot` or `flameshot`. If you have none, texcopy uses its own full-screen overlay.
 
 </details>
 
 The first time you capture, the window offers to download the vision engine (about 1 GB, checksum-verified, with a progress bar). Say "Not now" and it uses the small formula model instead. You can change your mind later with `texcopy --setup`.
 
-To build from source instead, see [Building](#-building).
+Want to build it yourself? See [Building](#-building).
 
 ## 🚀 Usage
 
 ### The window
 
-Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX appears and is already on your clipboard. Esc closes the window.
+Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX shows up and it's already on your clipboard. Esc closes the window.
 
-- **wrap** puts `$ … $` or `\[ … \]` around a single formula (sentences already carry their own).
-- **engine** picks `auto` (the default), `small` (formula model only) or `vlm` (vision model only). Changing it re-reads the same picture.
-- Small grey notes appear under the text only when something deserves a second look, such as a symbol the model was unsure about.
+- **wrap** puts `$ … $` or `\[ … \]` around a single formula. Sentences already have their own.
+- **engine** is `auto` (default), `small` (formula model only) or `vlm` (vision model only). Changing it re-reads the same picture.
+- You'll see small grey notes under the text only when something deserves a second look, like a symbol the model wasn't sure about.
 
 ### The command line
 
@@ -104,7 +104,7 @@ texcopy --setup               # set up the vision engine (asks first)
 texcopy --engine small|vlm|auto
 ```
 
-Run `texcopy --help` for everything.
+`texcopy --help` has the rest.
 
 ## 📝 What it can read
 
@@ -117,27 +117,27 @@ Run `texcopy --help` for everything.
 | A bullet or numbered list | `itemize` / `enumerate`, nested when the bullets change |
 | A heading | `\section*{…}` |
 | A table | a `tabular` inside `center` |
-| `& % # _ $`, quotes, dashes | escaped and converted so the result compiles |
+| `& % # _ $`, quotes, dashes | escaped and converted so it compiles |
 | The LaTeX logo | `\LaTeX{}` |
 
-**What it will not recover** is styling that is not part of the content: bold, italic, small caps, underline, vertical table rules, theorem boxes. They come back as plain text. The details, with examples, are in [docs/OUTPUT.md](docs/OUTPUT.md).
+What it won't get back is styling that isn't part of the content: bold, italic, small caps, underline, vertical table rules, theorem boxes. Those come out as plain text. [docs/OUTPUT.md](docs/OUTPUT.md) has the details and examples.
 
 ## ⚙️ Configuration
 
-Your window choices (`wrap`, `engine`) are remembered in `settings.json` in your user config folder. Everything else is a flag or an environment variable:
+The window remembers `wrap` and `engine` in a `settings.json` in your user config folder. Everything else is a flag or an environment variable:
 
 | Variable | What it does |
 |---|---|
 | `TEXCOPY_ENGINE` | default engine: `auto`, `small` or `vlm` |
 | `TEXCOPY_SELECTOR` | set to `overlay` to force texcopy's own selection overlay |
-| `TEXCOPY_CACHE_DIR` | where models and the helper are stored (default: your OS cache folder) |
-| `TEXCOPY_MODEL_DIR` | use a different small-model folder; see [custom models](docs/CUSTOM_MODELS.md) |
-| `TEXCOPY_VLM_DIR` | folder holding the vision model files |
-| `TEXCOPY_LLAMA_SERVER` | path to your own `llama-server` (for example a GPU build) |
+| `TEXCOPY_CACHE_DIR` | where models and the helper live (default: your OS cache folder) |
+| `TEXCOPY_MODEL_DIR` | use a different small-model folder, see [custom models](docs/CUSTOM_MODELS.md) |
+| `TEXCOPY_VLM_DIR` | folder with the vision model files |
+| `TEXCOPY_LLAMA_SERVER` | path to your own `llama-server` (a GPU build, say) |
 
 ## 🧠 How it works
 
-LaTeX output (a screenshot, a PDF page) does not contain its source, so recovering it is OCR:
+A screenshot of LaTeX doesn't contain the LaTeX, so getting it back is OCR:
 
 ```
  drag a box ──▶ screenshot ──▶  small model   ─┐
@@ -146,49 +146,49 @@ LaTeX output (a screenshot, a PDF page) does not contain its source, so recoveri
                               └ (1 GB, llama.cpp, optional)
 ```
 
-The small model reads one formula at a time and runs inside the program. The vision model is a 0.8-billion-parameter model run by a short-lived local `llama-server`; it reads whole pages. Whatever the model says is then rebuilt into compilable LaTeX: sections, lists, equation environments, tables, escaped characters. Full walkthrough: [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
+The small model reads one formula at a time and runs inside the program. The vision model is a 0.8 billion parameter model run by a short-lived local `llama-server`, and it reads whole pages. Whatever the model says then gets rebuilt into LaTeX that compiles: sections, lists, equation environments, tables, escaped characters. The long version is in [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 
 ## 📊 How accurate is it?
 
-The benchmark (`tools/bench.py`) renders known LaTeX with `pdflatex`, runs texcopy on the picture, and re-renders the answer to compare. On an Apple M4 Pro with the vision engine:
+The benchmark (`tools/bench.py`) renders known LaTeX with `pdflatex`, runs texcopy on the picture, then re-renders the answer and compares. On an Apple M4 Pro with the vision engine:
 
 | Test | Exact | Notes |
 |---|---:|---|
-| 45 real textbook exercises | **44 / 45** | the other drops a full stop |
+| 45 real textbook exercises | **44 / 45** | the other one drops a full stop |
 | Single formulas, simple to nested | **15 / 15** | |
 | Same formulas at 50-800 dpi, blurred, noisy, inverted, JPEG | **28 / 30** | the other two are close |
 | Tables, graded on their cells | **16 / 18** | |
 
-That is a benchmark, not a promise: **proofread what you paste.** A confident answer can still be wrong, typically a symbol that looks like another (`\epsilon` and `e`, an italic `v` and `\nu`). Full results, methods and known limits are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
+That's a benchmark, not a promise, so **proofread what you paste.** A confident answer can still be wrong, usually a symbol that looks like another one (`\epsilon` and `e`, an italic `v` and `\nu`). The full results and the known limits are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ## 🔒 Privacy
 
-texcopy never uploads your screenshots or text. It makes network requests only to download the models and the helper, once: the small model from Hugging Face, the vision model from Hugging Face, and `llama-server` from GitHub. Each file's size and SHA-256 are checked before it is used, and a mismatch deletes it.
+texcopy never uploads your screenshots or your text. It only goes online to download the models and the helper, once: the small model and the vision model from Hugging Face, and `llama-server` from GitHub. Every file's size and SHA-256 get checked before it's used, and a mismatch deletes it.
 
 ## ❓ FAQ
 
 <details>
-<summary><b>macOS says it cannot verify the developer</b></summary>
+<summary><b>macOS says it can't verify the developer</b></summary>
 
-See [first launch](#-install) above: right-click, **Open**. The app is not notarised because that needs a paid Apple developer account.
+See [first launch](#-install) above: right-click, **Open**. The app isn't notarised because that needs a paid Apple developer account.
 </details>
 
 <details>
 <summary><b>The capture is blank or black on macOS</b></summary>
 
-texcopy needs **Screen Recording** permission (System Settings, Privacy & Security). Allow it, then quit and reopen the app. When running from a terminal, the permission belongs to that terminal.
+texcopy needs **Screen Recording** permission (System Settings, Privacy & Security). Allow it, then quit and reopen the app. If you're running it from a terminal, the permission belongs to that terminal.
 </details>
 
 <details>
 <summary><b>The first capture is slow</b></summary>
 
-The first read after installing starts the vision model, which can take several seconds (longer while macOS checks the freshly downloaded helper). After that the window keeps it loaded, so reads take a fraction of a second. It unloads itself after a few idle minutes to free about 1.4 GB of memory.
+The first read after installing starts the vision model, which can take a few seconds (longer while macOS checks the freshly downloaded helper). After that the window keeps it loaded, so a read takes a fraction of a second. It unloads itself after a few idle minutes to free about 1.4 GB of memory.
 </details>
 
 <details>
 <summary><b>My centred text came back as a <code>\section*</code></b></summary>
 
-The model marks centred, prominent text as a heading and texcopy cannot tell the difference from a real one. Change it by hand.
+The model treats centred, prominent text as a heading and texcopy can't tell it from a real one. Just change it by hand.
 </details>
 
 <details>
@@ -200,13 +200,13 @@ Yes, once the models are downloaded.
 <details>
 <summary><b>Which LaTeX packages does the output need?</b></summary>
 
-`amsmath` for `equation`, `align` and matrices. Tables, sections and lists need nothing extra.
+`amsmath` for `equation`, `align` and matrices. Tables, sections and lists don't need anything extra.
 </details>
 
 <details>
 <summary><b>Can it read handwriting or a photo of a page?</b></summary>
 
-It is built and measured for rendered LaTeX on a screen. Other inputs may work but are untested.
+It's built and measured for rendered LaTeX on a screen. Other stuff might work, but I haven't tested it.
 </details>
 
 ## 🔧 Building
@@ -226,40 +226,33 @@ sudo apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1
   libxcursor-dev libxi-dev libgl1-mesa-dev
 ```
 
-`cargo build --release --no-default-features` builds just the command line, without the window or screen capture and without those libraries. Packaging scripts for the macOS app, the Windows zip and the Linux tarball are in [`packaging/`](packaging); pushing a tag like `v0.1.0` makes CI build and publish all three.
+`cargo build --release --no-default-features` builds just the command line, with no window and no screen capture, and without those libraries. The scripts that build the macOS app, the Windows zip and the Linux tarball are in [`packaging/`](packaging). Pushing a tag like `v0.1.0` makes CI build and publish all three.
 
 ## 🧭 Roadmap
 
-Ideas, not promises:
+Stuff I'd like to get to, no promises:
 
-- Run and fix the Windows and Linux builds on real machines (the most useful contribution right now).
+- Run and fix the Windows and Linux builds on real machines. This is the most useful thing anyone can help with right now.
 - A global keyboard shortcut and a menu-bar / tray icon.
 - Notarised macOS builds, plus Homebrew, winget and Scoop packages.
 - Reading very long paragraphs by splitting them into lines.
-- Training a smaller model of our own, and a much smaller ONNX Runtime build.
+- Training a smaller model of my own, and a much smaller ONNX Runtime build.
 
 ## 🤝 Contributing
 
-Contributions are welcome, and bug reports with a screenshot are the most valuable of all. Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it explains the setup, the benchmark (and why to compare against the previous build), and the commit style. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. Bug reports with a screenshot help the most. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, it covers the setup, the benchmark (and why to compare against the previous build) and the commit style. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## 🙏 Acknowledgements and licenses
+## 🙏 Acknowledgements
 
-texcopy is [MIT licensed](LICENSE), and it stands on other people's work. The main pieces:
+texcopy runs on other people's models and runtimes:
 
-| Component | What it does here | License |
-|---|---|---|
-| [pix2text-mfr](https://huggingface.co/breezedeus/pix2text-mfr) by breezedeus | the small formula model (downloaded on first run) | MIT |
-| [OvisOCR2](https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF), GGUF conversion by bartowski | the vision model (optional download) | Apache-2.0 |
-| [llama.cpp](https://github.com/ggml-org/llama.cpp) | runs the vision model (a downloaded helper, `llama-server`) | MIT |
-| [ONNX Runtime](https://onnxruntime.ai), through [`ort`](https://crates.io/crates/ort) | runs the small model, linked into the program | MIT |
-| [egui / eframe](https://github.com/emilk/egui) | the window; its bundled fonts are OFL-1.1 and Ubuntu Font License | MIT or Apache-2.0 |
-| [xcap](https://crates.io/crates/xcap), [arboard](https://crates.io/crates/arboard) | screen capture, clipboard | Apache-2.0; MIT or Apache-2.0 |
-| [image](https://crates.io/crates/image), [tokenizers](https://crates.io/crates/tokenizers), [clap](https://crates.io/crates/clap), [ureq](https://crates.io/crates/ureq) and others | image decoding, tokenizing, the command line, downloads | MIT or Apache-2.0 |
+- [pix2text-mfr](https://huggingface.co/breezedeus/pix2text-mfr) by breezedeus (MIT): the small formula model.
+- [OvisOCR2](https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF) (Apache-2.0), GGUF conversion by bartowski: the vision model.
+- [ONNX Runtime](https://onnxruntime.ai) (MIT): runs the small model.
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) (MIT): runs the vision model.
 
-In total texcopy is built from about 500 Rust crates. All of them are under permissive licenses (MIT, Apache-2.0, BSD, ISC, Zlib and similar); none requires GPL, AGPL or LGPL terms. (A few offer one of those *as an option* next to a permissive one, and texcopy uses the permissive one. One crate, `option-ext`, is MPL-2.0 and is used unmodified.) The models and the helper are downloaded, not bundled.
-
-The license notices these licenses require ship with every download as `THIRD_PARTY_LICENSES.md` (inside `texcopy.app/Contents/Resources` on macOS), generated from `Cargo.lock` by `tools/third_party_licenses.py` so they always match the code.
+The models and llama.cpp get downloaded the first time you use them. They aren't bundled in the app.
 
 ## 📄 License
 
-[MIT](LICENSE). Use it, change it, ship it.
+[MIT](LICENSE). Do what you want with it.

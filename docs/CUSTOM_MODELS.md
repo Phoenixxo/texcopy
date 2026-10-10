@@ -1,6 +1,6 @@
 # Using a different model
 
-Model-specific values live in `src/spec.rs`. To use another encoder-decoder, or one you trained yourself, put its ONNX files in a folder and add an optional `spec.json` (any omitted field keeps the pix2text-mfr default):
+The values that are specific to a model live in `src/spec.rs`. To use another encoder-decoder model, or one you trained yourself, put its ONNX files in a folder and add a `spec.json` next to them. Anything you leave out keeps the pix2text-mfr default.
 
 ```json
 {
@@ -15,4 +15,6 @@ Model-specific values live in `src/spec.rs`. To use another encoder-decoder, or 
 }
 ```
 
-then run `texcopy --model-dir path/to/folder`. The ONNX graphs must follow the Hugging Face `optimum` export convention: encoder `pixel_values` -> `last_hidden_state`; decoder `input_ids` + `encoder_hidden_states` -> `logits`, without a KV cache. Set `base_url` to a place that serves `{base_url}/{file}` if texcopy should download missing files, or `null` for local-only models.
+Then run `texcopy --model-dir path/to/folder`.
+
+The ONNX graphs have to follow the Hugging Face `optimum` export layout: the encoder takes `pixel_values` and gives `last_hidden_state`, and the decoder takes `input_ids` + `encoder_hidden_states` and gives `logits`, with no KV cache. Set `base_url` to somewhere that serves `{base_url}/{file}` if you want texcopy to download missing files, or `null` for a local-only model.

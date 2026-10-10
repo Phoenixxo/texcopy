@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Question or idea
     url: https://github.com/Phoenixxo/texcopy/discussions
-    about: Ask how to do something, or float an idea, before it becomes an issue.
+    about: Ask how to do something, or float an idea, before it turns into an issue.
   - name: Security problem
     url: https://github.com/Phoenixxo/texcopy/security/advisories/new
     about: Please report vulnerabilities privately.
