@@ -7,6 +7,8 @@ mod fetch;
 mod gui;
 mod helper;
 mod model;
+#[cfg(all(feature = "gui", feature = "capture"))]
+mod overlay;
 mod prose;
 mod spec;
 mod table;
@@ -32,6 +34,10 @@ struct Cli {
     /// Drag-select a screen region in the terminal instead of opening the window (macOS only for now)
     #[arg(long, conflicts_with_all = ["image", "clipboard", "screen"])]
     select: bool,
+
+    /// Internal: run the built-in region selector and write the cropped PNG here (see overlay.rs)
+    #[arg(long, hide = true, value_name = "PNG")]
+    select_overlay: Option<PathBuf>,
 
     /// Internal: open the window, "capture" this picture, check the result, exit
     #[arg(long, hide = true, value_name = "PNG")]
@@ -113,6 +119,11 @@ fn main() -> Result<()> {
         let mut text = String::new();
         std::io::stdin().read_to_string(&mut text)?;
         return clipboard::hold(&text);
+    }
+
+    #[cfg(all(feature = "gui", feature = "capture"))]
+    if let Some(out) = cli.select_overlay.clone() {
+        return overlay::run(out);
     }
 
     if cli.setup {
