@@ -66,13 +66,9 @@ The diff lists every case that got better or worse by name. Aggregate numbers hi
 
 ## Changing dependencies
 
-`THIRD_PARTY_LICENSES.md` lists the license notices of everything texcopy is built from, and CI checks that it is current. After adding, removing or updating a dependency, regenerate it and commit the result:
+Please check that a new dependency's license is permissive (MIT, Apache-2.0, BSD, ISC, Zlib). Avoid GPL, AGPL and LGPL-only crates: they would change what we can ship.
 
-```bash
-python3 tools/third_party_licenses.py THIRD_PARTY_LICENSES.md
-```
-
-Please also check that a new dependency's license is permissive (MIT, Apache-2.0, BSD, ISC, Zlib). Avoid GPL, AGPL and LGPL-only crates: they would change what we can ship.
+You do not need to update any notices file. The license notices that MIT, Apache and BSD require to travel with a download are generated from `Cargo.lock` when the packages are built (`tools/third_party_licenses.py`), so they stay in step with the dependencies automatically.
 
 ## Pull requests
 

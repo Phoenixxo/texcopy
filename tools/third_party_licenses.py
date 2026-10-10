@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Writes THIRD_PARTY_LICENSES.md: the license notice of every Rust crate texcopy is built from.
 
-    python3 tools/third_party_licenses.py THIRD_PARTY_LICENSES.md
+    python3 tools/third_party_licenses.py THIRD_PARTY_LICENSES.md   # or any other path
+
+The file is not kept in the repository: the packaging scripts generate it into each download, so it
+always matches Cargo.lock. (A copy written to the repo root is ignored by git.)
 
 MIT, Apache-2.0, BSD, ISC, OFL and MPL all require their copyright and license notices to travel
 with a distributed binary, so every download ships this file (the packaging scripts run this tool).
