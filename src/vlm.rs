@@ -277,6 +277,93 @@ pub fn ensure(
     Ok(setup)
 }
 
+/// `<temp>/texcopy-llama-<owner pid>.pid`: the helper's pid, written by the texcopy that started it.
+fn pidfile(owner: u32) -> PathBuf {
+    std::env::temp_dir().join(format!("texcopy-llama-{owner}.pid"))
+}
+
+/// Kill helpers left behind by a texcopy that was force-quit or crashed (a normal exit stops its
+/// helper). Only a helper whose owner no longer exists, and that really is `llama-server`.
+fn reap_orphans() {
+    reap_in(
+        &std::env::temp_dir(),
+        &process_alive,
+        &is_llama_server,
+        &kill_process,
+    );
+}
+
+fn reap_in(
+    dir: &Path,
+    owner_alive: &dyn Fn(u32) -> bool,
+    is_ours: &dyn Fn(u32) -> bool,
+    kill: &dyn Fn(u32),
+) {
+    let me = std::process::id();
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let Some(owner) = name
+            .strip_prefix("texcopy-llama-")
+            .and_then(|r| r.strip_suffix(".pid"))
+            .and_then(|r| r.parse::<u32>().ok())
+        else {
+            continue;
+        };
+        if owner == me || owner_alive(owner) {
+            continue;
+        }
+        if let Some(helper) = fs::read_to_string(entry.path())
+            .ok()
+            .and_then(|t| t.trim().parse::<u32>().ok())
+            && is_ours(helper)
+        {
+            kill(helper);
+        }
+        let _ = fs::remove_file(entry.path());
+        let _ = fs::remove_file(dir.join(format!("texcopy-llama-{owner}.log")));
+    }
+}
+
+#[cfg(unix)]
+fn process_alive(pid: u32) -> bool {
+    Command::new("kill")
+        .args(["-0", &pid.to_string()])
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
+#[cfg(unix)]
+fn is_llama_server(pid: u32) -> bool {
+    Command::new("ps")
+        .args(["-p", &pid.to_string(), "-o", "comm="])
+        .output()
+        .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).contains("llama-server"))
+}
+
+#[cfg(unix)]
+fn kill_process(pid: u32) {
+    let _ = Command::new("kill")
+        .arg(pid.to_string())
+        .stderr(Stdio::null())
+        .status();
+}
+
+// Windows has no ps/kill; orphan cleanup is not attempted there (a normal exit still stops the helper).
+#[cfg(not(unix))]
+fn process_alive(_pid: u32) -> bool {
+    true
+}
+#[cfg(not(unix))]
+fn is_llama_server(_pid: u32) -> bool {
+    false
+}
+#[cfg(not(unix))]
+fn kill_process(_pid: u32) {}
+
 /// A running `llama-server`. Stopped when dropped.
 pub struct Server {
     child: Child,
@@ -287,6 +374,7 @@ pub struct Server {
 
 impl Server {
     pub fn start(bin: &Path, files: &Files) -> Result<Self> {
+        reap_orphans();
         let port = TcpListener::bind("127.0.0.1:0")?.local_addr()?.port();
         let log = std::env::temp_dir().join(format!("texcopy-llama-{}.log", std::process::id()));
         let out = File::create(&log)?;
@@ -304,6 +392,8 @@ impl Server {
             .stderr(out)
             .spawn()
             .with_context(|| format!("starting {}", bin.display()))?;
+        // Leave a note of who owns this helper, so a later run can clean it up if we are killed.
+        let _ = fs::write(pidfile(std::process::id()), child.id().to_string());
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .timeout_global(Some(Duration::from_secs(180)))
             .http_status_as_error(false)
@@ -390,6 +480,7 @@ impl Drop for Server {
         let _ = self.child.kill();
         let _ = self.child.wait();
         let _ = fs::remove_file(&self.log);
+        let _ = fs::remove_file(pidfile(std::process::id()));
     }
 }
 
@@ -704,6 +795,55 @@ mod tests {
             interpret(r"$\text{for all } x \in \mathbb{R}, \quad f(x) \geq 0$"),
             Reading::Formula(_)
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_helper_whose_owner_died_is_killed_but_only_if_it_really_is_the_helper() {
+        use std::{cell::RefCell, process::Command};
+        let dir = std::env::temp_dir().join(format!("texcopy-reap-test-{}", std::process::id()));
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // a real process that has already exited: its pid is a dead owner
+        let mut gone = Command::new("true").spawn().unwrap();
+        gone.wait().unwrap();
+        let (dead_owner, live_owner) = (gone.id(), std::process::id() + 1);
+
+        let write = |owner: u32, helper: u32| {
+            std::fs::write(
+                dir.join(format!("texcopy-llama-{owner}.pid")),
+                helper.to_string(),
+            )
+            .unwrap();
+        };
+        write(dead_owner, 4242); // owner dead, helper is the real thing: kill it
+        write(live_owner, 4343); // owner still running: leave alone
+        std::fs::write(dir.join("unrelated.pid"), "1").unwrap();
+
+        let killed = RefCell::new(Vec::new());
+        super::reap_in(&dir, &|p| p == live_owner, &|h| h == 4242, &|h| {
+            killed.borrow_mut().push(h)
+        });
+        assert_eq!(*killed.borrow(), vec![4242]);
+        assert!(
+            !dir.join(format!("texcopy-llama-{dead_owner}.pid")).exists(),
+            "stale note removed"
+        );
+        assert!(
+            dir.join(format!("texcopy-llama-{live_owner}.pid")).exists(),
+            "live owner's note kept"
+        );
+        assert!(dir.join("unrelated.pid").exists());
+
+        // a pid that was reused by some other program is never killed
+        write(dead_owner, 9999);
+        killed.borrow_mut().clear();
+        super::reap_in(&dir, &|_| false, &|_| false, &|h| {
+            killed.borrow_mut().push(h)
+        });
+        assert!(killed.borrow().is_empty());
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     use super::{Reading, interpret, segments, strip_fences};

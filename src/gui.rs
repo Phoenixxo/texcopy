@@ -84,6 +84,8 @@ impl Settings {
 
 enum Job {
     Read(DynamicImage, Engine),
+    /// Start the vision engine in the background so the next read is fast
+    Warm(Engine),
     Install,
     Quit,
 }
@@ -142,6 +144,22 @@ fn spawn_worker(
                         .and_then(describe);
                     eprintln!("[read] {:.2}s", t.elapsed().as_secs_f32());
                     send(Msg::Read(result));
+                }
+                Ok(Job::Warm(engine)) => {
+                    let opts = Options {
+                        engine,
+                        quiet: true,
+                        ..base.clone()
+                    };
+                    let t = Instant::now();
+                    match warm.prewarm(&opts) {
+                        Ok(true) => eprintln!(
+                            "[warm] vision engine ready ({:.1}s)",
+                            t.elapsed().as_secs_f32()
+                        ),
+                        Ok(false) => {}
+                        Err(e) => eprintln!("[warm] could not start the vision engine: {e:#}"),
+                    }
                 }
                 Ok(Job::Install) => {
                     let mut progress = progress_reporter(&send);
@@ -320,6 +338,13 @@ impl App {
         })
     }
 
+    /// Ask the worker to load the vision engine now; a no-op when it is already loaded or not set up.
+    fn warm_up(&self) {
+        if std::env::var_os("TEXCOPY_GUI_NO_PREWARM").is_none() {
+            let _ = self.job_tx.send(Job::Warm(self.settings.engine));
+        }
+    }
+
     fn busy(&self) -> bool {
         self.capturing || self.reading || self.installing.is_some()
     }
@@ -332,13 +357,22 @@ impl App {
         self.capturing = true;
         self.done = None;
         self.error = None;
+        // The engine loads while the user is still dragging out the region.
+        self.warm_up();
         ctx.send_viewport_cmd(ViewportCommand::Visible(false));
         let (tx, ctx) = (self.msg_tx.clone(), ctx.clone());
         let fake = self.test.as_ref().map(|t| t.picture.clone());
         std::thread::spawn(move || {
             std::thread::sleep(HIDE_DELAY);
             let result = match fake {
-                Some(p) => image::open(p).map(Some).map_err(|e| e.to_string()),
+                Some(p) => {
+                    // self-test only: stand in for the seconds a person spends dragging a region
+                    let ms = std::env::var("TEXCOPY_SELFTEST_SELECT_MS")
+                        .ok()
+                        .and_then(|v| v.parse().ok());
+                    std::thread::sleep(Duration::from_millis(ms.unwrap_or(0)));
+                    image::open(p).map(Some).map_err(|e| e.to_string())
+                }
                 None => capture::interactive().map_err(|e| format!("{e:#}")),
             };
             let _ = tx.send(Msg::Captured(result));
@@ -692,6 +726,7 @@ pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
                 }),
             };
             app.refresh_setup();
+            app.warm_up();
             Ok(Box::new(app))
         }),
     )

@@ -16,7 +16,7 @@ Everything runs locally. Nothing is uploaded.
 
 - **On macOS the selection is the system crosshair** (`screencapture -i`), so tiling window managers and multiple monitors cannot get in the way. Windows and Linux do not have a selector in the window yet; use `texcopy --clipboard` after a Snipping Tool or Flameshot capture.
 - **First run:** if the vision engine is not set up, the window offers to download it (size shown, checksum-verified, with a progress bar). "Not now" is remembered.
-- **It stays fast:** the window keeps the vision engine loaded between captures (the second read takes about 0.3 s instead of 1-2 s) and unloads it after 2.5 minutes idle, freeing about 1.4 GB.
+- **It stays fast:** the window starts the vision engine in the background when it opens and again when you click Capture, so it is already loaded while you drag out the region (the wait after the drag falls from about 1.3 s to 0.4 s on an M4 Pro). It stays loaded between captures (a read takes about 0.3 s) and unloads after 2.5 minutes idle, freeing about 1.4 GB. If texcopy is force-quit or crashes, the leftover helper is stopped the next time texcopy starts one (macOS and Linux).
 - Settings (`wrap`, `engine`) are remembered in `settings.json` in the per-user config folder.
 - Notes appear in small grey text under the output only when something deserves a second look (low-confidence symbols, a possible cut-off, run-together words).
 

@@ -105,6 +105,19 @@ impl Warm {
         self.recognizer = None;
     }
 
+    /// Start the vision engine now, if it is already set up, so the first read doesn't wait for it.
+    /// Never downloads and never asks; does nothing for `--engine small`. True if it is running.
+    pub fn prewarm(&mut self, opts: &Options) -> Result<bool> {
+        if opts.engine == Engine::Small || self.server.is_some() {
+            return Ok(self.server.is_some());
+        }
+        let Some(setup) = vlm::ready(opts.llama_server.as_deref(), opts.vlm_dir.clone()) else {
+            return Ok(false);
+        };
+        self.server = Some(vlm::Server::start(&setup.server, &setup.files)?);
+        Ok(true)
+    }
+
     pub fn is_warm(&self) -> bool {
         self.server.is_some() || self.recognizer.is_some()
     }
