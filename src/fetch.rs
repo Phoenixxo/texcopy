@@ -354,9 +354,13 @@ mod tests {
     }
 
     #[test]
-    fn cache_dir_is_per_user_and_named_texcopy() {
+    fn cache_dir_is_per_user_and_under_texcopy() {
+        // Windows puts it at ...\texcopy\cache, the others end in texcopy
         let dir = super::cache_dir().expect("a cache directory");
-        assert_eq!(dir.file_name().unwrap(), "texcopy", "{dir:?}");
+        assert!(
+            dir.components().any(|c| c.as_os_str() == "texcopy"),
+            "{dir:?}"
+        );
         assert!(dir.is_absolute(), "{dir:?}");
     }
 }
