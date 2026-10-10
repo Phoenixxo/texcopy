@@ -64,6 +64,16 @@ The diff lists every case that got better or worse by name. Aggregate numbers hi
 - Keep a change to one idea. Several small pull requests beat one big one.
 - **Commit messages** are one line in [Conventional Commits](https://www.conventionalcommits.org) style: `fix: keep the blank line between paragraphs`, `feat: read tables from plain lines`. Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.
 
+## Changing dependencies
+
+`THIRD_PARTY_LICENSES.md` lists the license notices of everything texcopy is built from, and CI checks that it is current. After adding, removing or updating a dependency, regenerate it and commit the result:
+
+```bash
+python3 tools/third_party_licenses.py THIRD_PARTY_LICENSES.md
+```
+
+Please also check that a new dependency's license is permissive (MIT, Apache-2.0, BSD, ISC, Zlib). Avoid GPL, AGPL and LGPL-only crates: they would change what we can ship.
+
 ## Pull requests
 
 Fork, branch off `main`, and open the pull request against `main`. CI (`CI` and `Tests` on macOS, Windows and Linux) must pass. Fill in the template; for anything bigger than a small fix, open an issue first so we agree on the approach before you write it.
