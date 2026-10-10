@@ -251,6 +251,8 @@ texcopy stands on other people's work:
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) (MIT), which runs the vision model.
 - [ONNX Runtime](https://onnxruntime.ai) through the [`ort`](https://crates.io/crates/ort) crate, [egui / eframe](https://github.com/emilk/egui), [xcap](https://crates.io/crates/xcap) and [arboard](https://crates.io/crates/arboard).
 
+The full license notices for everything texcopy is built from (about 500 Rust crates, ONNX Runtime and the bundled fonts) ship with every download as `THIRD_PARTY_LICENSES.md` (inside `texcopy.app/Contents/Resources` on macOS). `python3 tools/third_party_licenses.py` regenerates it.
+
 ## 📄 License
 
 [MIT](LICENSE). Use it, change it, ship it.

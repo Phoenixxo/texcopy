@@ -17,6 +17,9 @@ New-Item -ItemType Directory -Force $stage | Out-Null
 foreach ($f in @("target/release/texcopy.exe", "target/release/texcopy-gui.exe", "README.md", "LICENSE")) {
   Copy-Item (Join-Path $root $f) $stage
 }
+# Licence notices that MIT, Apache, BSD and the font licences require to travel with the program.
+python (Join-Path $root "tools/third_party_licenses.py") (Join-Path $stage "THIRD_PARTY_LICENSES.md")
+if ($LASTEXITCODE -ne 0) { throw "could not generate THIRD_PARTY_LICENSES.md" }
 $zip = Join-Path $Out "$name.zip"
 Remove-Item -Force $zip -ErrorAction SilentlyContinue
 Compress-Archive -Path $stage -DestinationPath $zip

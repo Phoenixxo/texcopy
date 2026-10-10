@@ -30,6 +30,10 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/texcopy.icns"
 
+# Licence notices that MIT, Apache, BSD and the font licences require to travel with the program.
+cp "$root/LICENSE" "$app/Contents/Resources/LICENSE"
+python3 "$root/tools/third_party_licenses.py" "$app/Contents/Resources/THIRD_PARTY_LICENSES.md"
+
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -56,6 +60,6 @@ codesign --verify --deep --strict "$app"
 
 zip="$out/texcopy-$version-macos-$arch.zip"
 rm -f "$zip"
-ditto -c -k --keepParent "$app" "$zip"
+ditto -c -k --norsrc --keepParent "$app" "$zip"  # --norsrc: no ._* metadata files in the zip
 echo "built $app"
 echo "built $zip ($(du -h "$zip" | cut -f1))"
