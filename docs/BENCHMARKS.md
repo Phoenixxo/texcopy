@@ -34,7 +34,7 @@ python3 tools/bench.py                                   # all suites
 python3 tools/bench.py --baseline tools/baseline.json    # report what got better or worse
 ```
 
-`tools/book_cases.py` cuts real exercise screenshots out of a textbook PDF that has a text layer (ebook conversions work well) and writes ground truth from the PDF's own text and italics. Put them in the gitignored `tools/fixtures/private/` and run `python3 tools/bench.py --suite real`; the crops are copyrighted, so they are never committed. `tools/bakeoff.py` scores vision-language OCR models served by llama.cpp on the same cases (see `docs/REVIEW.md`).
+`tools/book_cases.py` cuts real exercise screenshots out of a textbook PDF that has a text layer (ebook conversions work well) and writes ground truth from the PDF's own text and italics. Put them in the gitignored `tools/fixtures/private/` and run `python3 tools/bench.py --suite real`; the crops are copyrighted, so they are never committed. `tools/bakeoff.py` scores vision-language OCR models served by llama.cpp on the same cases (see `tools/bakeoff.py --help`).
 
 ```
 python3 tools/bench.py --suite documents     # one suite: basic, degraded, stress, prose, real, documents, tables
@@ -42,7 +42,7 @@ python3 tools/bench.py --save now.json       # save results, then later:
 python3 tools/bench.py --baseline now.json   # a case-by-case diff against the saved run
 ```
 
-**Always compare against the previous build before trusting a change.** Run the suites with the old binary (`--bin path/to/old/texcopy --save old.json`) and the new one, and diff. Aggregate numbers hide regressions; the diff names the case that got worse.
+`tools/baseline.json` holds the maintainer's results for every suite except the private `real` one; a case or two can differ on other hardware. **Always compare against the previous build before trusting a change.** Run the suites with the old binary (`--bin path/to/old/texcopy --save old.json`) and the new one, and diff. Aggregate numbers hide regressions; the diff names the case that got worse.
 
 ## Limitations
 

@@ -54,7 +54,7 @@ The diff lists every case that got better or worse by name. Aggregate numbers hi
 | `src/convert.rs`, `src/table.rs` | the model's Markdown / HTML into LaTeX |
 | `src/prose.rs`, `src/tidy.rs`, `src/model.rs` | the small formula model and its clean-up |
 | `src/capture.rs`, `src/overlay.rs` | selecting a region on each OS |
-| `docs/REVIEW.md` | a longer tour for maintainers, with a review checklist |
+| `docs/ARCHITECTURE.md` | a longer map of how the pieces fit, and why |
 
 ## Style
 
