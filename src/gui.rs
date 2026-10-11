@@ -409,6 +409,7 @@ impl App {
                 }
                 Msg::Read(result) => {
                     self.reading = false;
+                    self.installing = None; // a first run small model download shows progress too.
                     if let Some(t) = self.test.as_mut()
                         && let Some(start) = t.read_started.take()
                     {
