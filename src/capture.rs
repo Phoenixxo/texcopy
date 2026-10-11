@@ -1,13 +1,9 @@
-//! Getting an image of something on screen.
-//!
-//! `screenshot` works on Windows, macOS and Linux (via the `xcap` crate) and returns
-//! a whole monitor; cropping to a region is done by the caller. `interactive` is the
-//! drag-to-select experience, which currently only exists where the OS provides it.
+//! get an image of something on screen.
 
 use anyhow::{Context, Result};
 use image::DynamicImage;
 
-/// Capture one monitor: `index` into the OS's monitor list, or the primary monitor.
+/// capture one monitor, by index or the primary one.
 #[cfg(feature = "capture")]
 pub fn screenshot(index: Option<usize>) -> Result<DynamicImage> {
     let monitors = xcap::Monitor::all().context("listing monitors")?;
@@ -39,7 +35,7 @@ pub fn screenshot(_index: Option<usize>) -> Result<DynamicImage> {
     anyhow::bail!("this build has no screen capture; rebuild with the default `capture` feature")
 }
 
-/// Crop `img` to `x,y,w,h` (pixels in the captured image), clamped to its bounds.
+/// crop to x,y,w,h, clamped to the image.
 pub fn crop(img: &DynamicImage, region: &str) -> Result<DynamicImage> {
     let nums: Vec<u32> = region
         .split(',')
@@ -60,12 +56,7 @@ pub fn crop(img: &DynamicImage, region: &str) -> Result<DynamicImage> {
     Ok(img.crop_imm(x, y, w, h))
 }
 
-/// Drag-select a region. `None` means the user cancelled.
-///
-/// The OS's own selector comes first: `screencapture -i` on macOS, and on Linux whichever of
-/// `grim`+`slurp`, `maim`, `scrot`, `spectacle`, `gnome-screenshot` or `flameshot` is installed. They
-/// are immune to window managers and work on Wayland. Without one (Windows, or a bare Linux), texcopy's
-/// own overlay is used. `TEXCOPY_SELECTOR=overlay` forces the overlay.
+/// drag to select a region, None if cancelled.
 pub fn interactive() -> Result<Option<DynamicImage>> {
     let path = std::env::temp_dir().join(format!("texcopy-{}.png", std::process::id()));
     std::fs::remove_file(&path).ok();
@@ -87,12 +78,11 @@ pub fn interactive() -> Result<Option<DynamicImage>> {
     Ok(Some(img?))
 }
 
-/// The OS's selector. `Ok(None)`: there isn't one here. `Ok(Some(false))`: the user cancelled.
-/// `Ok(Some(true))`: a PNG was written to `out`.
+/// the OS's own selector, None if there isn't one.
 #[cfg(target_os = "macos")]
 fn system_selector(out: &std::path::Path) -> Result<Option<bool>> {
     use std::process::Command;
-    // -i: interactive crosshair selection, -x: no shutter sound. Esc cancels (no file written).
+    // -i for crosshair selection, -x for no shutter sound.
     let status = Command::new("screencapture")
         .args(["-i", "-x"])
         .arg(out)
@@ -114,7 +104,7 @@ fn system_selector(_out: &std::path::Path) -> Result<Option<bool>> {
     Ok(None)
 }
 
-/// texcopy's own overlay, run as a child process (`texcopy --select-overlay <png>`).
+/// our own overlay, run as a child process.
 #[cfg(all(feature = "gui", feature = "capture"))]
 fn overlay_selector(out: &std::path::Path) -> Result<bool> {
     use std::process::Command;
@@ -143,11 +133,9 @@ fn overlay_selector(_out: &std::path::Path) -> Result<bool> {
     )
 }
 
-/// Region-selector programs on Linux. Each writes a PNG of the area the user drags, or leaves
-/// nothing behind when they press Esc. Compiled on every OS so the logic can be tested with fake
-/// programs; only used on Linux.
+/// region selector programs on linux.
 #[cfg(any(target_os = "linux", test))]
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // tests only, off Linux
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // tests only, off linux.
 mod linux_tools {
     use std::{
         path::{Path, PathBuf},
@@ -166,7 +154,7 @@ mod linux_tools {
         Flameshot,
     }
 
-    /// Which program to prefer: the Wayland-native ones first on Wayland, the X11 ones first on X11.
+    /// which one to try first on wayland or X11.
     fn order(wayland: bool) -> [Tool; 6] {
         use Tool::*;
         if wayland {
@@ -194,7 +182,7 @@ mod linux_tools {
         dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
     }
 
-    /// Run the first installed selector. `Ok(None)`: none installed. `Ok(Some(false))`: cancelled.
+    /// run the first selector that's installed.
     pub fn select(dirs: &[PathBuf], wayland: bool, out: &Path) -> Result<Option<bool>> {
         for tool in order(wayland) {
             if let Some(done) = run(tool, dirs, out)? {
@@ -204,7 +192,7 @@ mod linux_tools {
         Ok(None)
     }
 
-    /// `Ok(None)` when this tool isn't installed (try the next).
+    /// None when the tool isn't installed.
     fn run(tool: Tool, dirs: &[PathBuf], out: &Path) -> Result<Option<bool>> {
         let wrote = |out: &Path| out.metadata().is_ok_and(|m| m.len() > 0);
         let status = |cmd: &mut Command| cmd.status().map(|s| s.success()).unwrap_or(false);
@@ -213,7 +201,7 @@ mod linux_tools {
                 let (Some(slurp), Some(grim)) = (find(dirs, "slurp"), find(dirs, "grim")) else {
                     return Ok(None);
                 };
-                // slurp prints the dragged rectangle ("x,y WxH") and exits non-zero on Esc
+                // slurp prints the rectangle and exits non-zero on esc.
                 let geometry = Command::new(slurp).output()?;
                 if !geometry.status.success() {
                     return Ok(Some(false));
@@ -237,7 +225,7 @@ mod linux_tools {
                 let Some(bin) = find(dirs, "spectacle") else {
                     return Ok(None);
                 };
-                // -b background (no window), -r rectangular region, -n no notification, -o output file
+                // -b no window, -r region, -n no notification, -o output file.
                 status(Command::new(bin).args(["-b", "-r", "-n", "-o"]).arg(out)) && wrote(out)
             }
             Tool::GnomeScreenshot => {
@@ -250,7 +238,7 @@ mod linux_tools {
                 let Some(bin) = find(dirs, "flameshot") else {
                     return Ok(None);
                 };
-                // --raw prints the PNG on stdout; nothing is printed when the user cancels
+                // --raw prints the png on stdout, nothing if cancelled.
                 let shot = Command::new(bin).args(["gui", "--raw"]).output()?;
                 if shot.status.success() && !shot.stdout.is_empty() {
                     std::fs::write(out, &shot.stdout)?;
@@ -290,10 +278,10 @@ mod linux_tools {
             let out = dir.join("out.png");
             let dirs = vec![dir.clone()];
 
-            // nothing installed
+            // nothing installed.
             assert_eq!(select(&dirs, false, &out).unwrap(), None);
 
-            // maim "selects" by writing the file named in its last argument
+            // maim writes the file named in its last argument.
             script(
                 &dir,
                 "maim",
@@ -303,11 +291,11 @@ mod linux_tools {
             assert!(out.exists());
             std::fs::remove_file(&out).unwrap();
 
-            // the user pressing Esc: the tool exits without writing anything
+            // esc exits without writing anything.
             script(&dir, "maim", "exit 1");
             assert_eq!(select(&dirs, false, &out).unwrap(), Some(false));
 
-            // slurp + grim: slurp's rectangle is passed to grim; slurp failing is a cancel
+            // slurp's rectangle goes to grim and slurp failing means cancel.
             std::fs::remove_file(dir.join("maim")).unwrap();
             script(&dir, "slurp", r#"echo "10,20 300x200""#);
             script(
@@ -321,7 +309,7 @@ mod linux_tools {
             assert_eq!(select(&dirs, true, &out).unwrap(), Some(false));
             assert!(!out.exists());
 
-            // a missing tool is skipped in favour of the next one that is installed
+            // a missing tool gets skipped for the next one.
             std::fs::remove_file(dir.join("slurp")).unwrap();
             std::fs::remove_file(dir.join("grim")).unwrap();
             script(&dir, "scrot", r#"for last; do :; done; echo PNG > "$last""#);

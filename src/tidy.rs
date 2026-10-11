@@ -1,11 +1,6 @@
-//! Post-processing of the decoder's raw output.
-//!
-//! The model was trained on LaTeX normalised to one token per symbol, so its output
-//! looks like `\frac { a } { b }` or `\mathrm { s i n }`. Every transformation here
-//! keeps the formula's meaning and only makes it read like hand-written LaTeX.
-//! Real spaces never get lost: the model spells them out as `~` or `\ `.
+//! cleans up the decoder's raw output, the meaning stays the same.
 
-/// Commands whose next `{...}` group is an argument, so its braces must stay.
+/// commands whose next {...} group is an argument so the braces stay.
 const TAKES_ARG: &[&str] = &[
     "frac",
     "dfrac",
@@ -44,7 +39,7 @@ const TAKES_ARG: &[&str] = &[
     "xrightarrow",
 ];
 
-/// Old-style font switches and their modern command equivalents.
+/// old style font switches and their new commands.
 const FONT_SWITCHES: &[(&str, &str)] = &[
     ("\\bf", "\\mathbf"),
     ("\\rm", "\\mathrm"),
@@ -54,20 +49,20 @@ const FONT_SWITCHES: &[(&str, &str)] = &[
     ("\\tt", "\\mathtt"),
 ];
 
-/// Names that have a built-in command (`\sin`, `\lim`, ...).
+/// names that have a built in command.
 const OPERATORS: &[&str] = &[
     "sin", "cos", "tan", "cot", "sec", "csc", "arcsin", "arccos", "arctan", "sinh", "cosh", "tanh",
     "coth", "log", "ln", "lg", "exp", "lim", "limsup", "liminf", "max", "min", "sup", "inf", "det",
     "dim", "gcd", "ker", "deg", "arg", "hom", "Pr",
 ];
 
-/// What kind of thing the model read.
+/// what kind of thing the model read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
-    /// A formula: `$...$`-style wrapping is the caller's choice.
+    /// a formula, wrapping is up to the caller.
     Math,
-    /// A sentence with inline math, already containing its own `$...$`.
+    /// a sentence with its own $...$.
     Prose,
 }
 
@@ -76,7 +71,7 @@ pub fn tidy(raw: &str) -> String {
     tidy_with_kind(raw).0
 }
 
-/// Tidy the model's output, recognising sentences (see `prose.rs`) as well as formulas.
+/// tidy the model's output for sentences and formulas.
 pub fn tidy_with_kind(raw: &str) -> (String, Kind) {
     let s = compact(raw);
     match crate::prose::convert(&s, &|m| tidy_math(m.to_string())) {
@@ -85,7 +80,7 @@ pub fn tidy_with_kind(raw: &str) -> (String, Kind) {
     }
 }
 
-/// The formula rules, applied to already-compacted text.
+/// the formula rules, on compacted text.
 fn tidy_math(s: String) -> String {
     let s = modernize_fonts(&s);
     let s = known_operators(&s);
@@ -95,11 +90,11 @@ fn tidy_math(s: String) -> String {
     let s = mathrm_to_text(&s);
     let s = collapse_double_braces(&s);
     let s = unbrace_scripts(&s);
-    // A trailing row break before \end{...} is noise the model likes to add.
+    // a trailing row break before \end is noise.
     s.replace("\\\\ \\end{", "\\end{")
 }
 
-/// `\overline{{G}}` -> `\overline{G}`: an outer group whose only content is one inner group.
+/// \overline{{G}} to \overline{G}, an outer group with one inner group.
 fn collapse_double_braces(s: &str) -> String {
     let mut s = s.to_string();
     let mut i = 0;
@@ -113,15 +108,14 @@ fn collapse_double_braces(s: &str) -> String {
         {
             s.remove(outer_end);
             s.remove(i);
-            continue; // the inner group may itself be doubled
+            continue; // the inner group may be doubled too.
         }
         i += 1;
     }
     s
 }
 
-/// Drop all whitespace except the single space TeX needs between a control word
-/// and a following letter. Row separators (`&`, `\\`) get readable padding.
+/// drop all whitespace except the space TeX needs after a control word.
 fn compact(s: &str) -> String {
     let pad = |out: &mut String| {
         if !out.is_empty() && !out.ends_with(' ') {
@@ -158,7 +152,7 @@ fn compact(s: &str) -> String {
                     pad(&mut out);
                     out.push_str("\\\\ ");
                 }
-                // Control symbols such as `\,` `\{` and `\ ` (the latter is a real space).
+                // control symbols like \, \{ and \ .
                 Some(n) => {
                     chars.next();
                     out.push('\\');
@@ -176,13 +170,13 @@ fn compact(s: &str) -> String {
     out.trim().to_string()
 }
 
-/// Index of the `}` matching the `{` at `open`.
+/// index of the } that matches the { at open.
 pub(crate) fn matching_brace(s: &str, open: usize) -> Option<usize> {
     let b = s.as_bytes();
     let (mut depth, mut i) = (0usize, open);
     while i < b.len() {
         match b[i] {
-            b'\\' => i += 1, // skip the escaped character
+            b'\\' => i += 1, // skip the escaped character.
             b'{' => depth += 1,
             b'}' => {
                 depth -= 1;
@@ -197,8 +191,7 @@ pub(crate) fn matching_brace(s: &str, open: usize) -> Option<usize> {
     None
 }
 
-/// Can a `{...}` group starting at `start` be replaced by a bare command without
-/// changing how TeX groups things? Not if it is a script or a command argument.
+/// can a {...} group be replaced by a bare command without changing the grouping.
 fn group_is_removable(s: &str, start: usize) -> bool {
     let Some(&prev) = start.checked_sub(1).and_then(|i| s.as_bytes().get(i)) else {
         return true;
@@ -220,7 +213,7 @@ fn group_is_removable(s: &str, start: usize) -> bool {
         | b' '
         | b'0'..=b'9' => true,
         b'a'..=b'z' | b'A'..=b'Z' => {
-            // Either the end of a control word or a plain variable.
+            // end of a control word or a plain variable.
             let head = &s[..start];
             let word_start = head
                 .trim_end_matches(|c: char| c.is_ascii_alphabetic())
@@ -230,15 +223,15 @@ fn group_is_removable(s: &str, start: usize) -> bool {
                 None => true,
             }
         }
-        _ => false, // `^`, `_`, `}` ...
+        _ => false, // ^, _, } and so on.
     }
 }
 
-/// `{\bf E}` -> `\mathbf{E}`, keeping the outer braces where they matter.
+/// {\bf E} to \mathbf{E}.
 fn modernize_fonts(s: &str) -> String {
     let mut s = s.to_string();
     loop {
-        // Take the rightmost match so the group cannot contain another one.
+        // take the rightmost match so the group can't contain another.
         let found = FONT_SWITCHES
             .iter()
             .filter_map(|&(old, new)| s.rfind(&format!("{{{old} ")).map(|i| (i, old, new)))
@@ -260,7 +253,7 @@ fn modernize_fonts(s: &str) -> String {
     s
 }
 
-/// `\operatorname*{lim}` -> `\lim`, `\operatorname{sin}` -> `\sin`.
+/// \operatorname*{lim} to \lim and the like.
 fn known_operators(s: &str) -> String {
     const PREFIX: &str = "\\operatorname";
     let mut out = String::with_capacity(s.len());
@@ -292,7 +285,7 @@ fn known_operators(s: &str) -> String {
     out
 }
 
-/// `x^{2}` -> `x^2`, `a_{i}` -> `a_i` (only for single alphanumeric characters).
+/// x^{2} to x^2 for single alphanumeric characters.
 fn unbrace_scripts(s: &str) -> String {
     let c: Vec<char> = s.chars().collect();
     let mut out = String::with_capacity(s.len());
@@ -314,12 +307,12 @@ fn unbrace_scripts(s: &str) -> String {
     out
 }
 
-/// Environments whose cells the model wraps in redundant braces (`{a} & {b}`).
+/// environments where the model wraps cells in extra braces.
 const CELL_ENVS: &[&str] = &[
     "matrix", "pmatrix", "bmatrix", "vmatrix", "Vmatrix", "Bmatrix", "cases",
 ];
 
-/// `\left<d1>\begin{matrix}..\end{matrix}\right<d2>` -> the matching named environment.
+/// \left<d1>\begin{matrix}..\end{matrix}\right<d2> to the named environment.
 const MATRIX_DELIMS: &[(&str, &str, &str)] = &[
     ("(", ")", "pmatrix"),
     ("[", "]", "bmatrix"),
@@ -329,7 +322,7 @@ const MATRIX_DELIMS: &[(&str, &str, &str)] = &[
     ("\\{", ".", "cases"),
 ];
 
-/// Byte index of the `\end{env}` that closes an environment whose body starts at `s[0]`.
+/// byte index of the \end{env} that closes the environment.
 fn find_env_end(s: &str, env: &str) -> Option<usize> {
     let (begin, end) = (format!("\\begin{{{env}}}"), format!("\\end{{{env}}}"));
     let (mut depth, mut i) = (0usize, 0);
@@ -350,7 +343,7 @@ fn find_env_end(s: &str, env: &str) -> Option<usize> {
     None
 }
 
-/// `\left(\begin{matrix}..\end{matrix}\right)` -> `\begin{pmatrix}..\end{pmatrix}` (and friends).
+/// \left(\begin{matrix}..\end{matrix}\right) to pmatrix and friends.
 fn delimited_matrices(s: &str) -> String {
     const OPEN: &str = "\\begin{matrix}";
     let mut out = String::with_capacity(s.len());
@@ -381,7 +374,7 @@ fn delimited_matrices(s: &str) -> String {
     out
 }
 
-/// Remove the `{...}` the model puts around every cell, and a trailing empty row.
+/// remove the braces around every cell and a trailing empty row.
 fn unwrap_cells(body: &str) -> String {
     let mut rows: Vec<Vec<String>> = vec![vec![String::new()]];
     let (mut depth, mut chars) = (0i32, body.chars().peekable());
@@ -458,7 +451,7 @@ fn unwrap_matrix_cells(s: &str) -> String {
     s
 }
 
-/// `\left(n\atop k\right)` -> `\binom{n}{k}`.
+/// \left(n\atop k\right) to \binom{n}{k}.
 fn binomials(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut rest = s;
@@ -480,7 +473,7 @@ fn binomials(s: &str) -> String {
     out
 }
 
-/// For text just after `\left(`: if it is `A\atop B\right)`, return `(A, B, text after the \right))`.
+/// text after \left( that looks like A\atop B\right).
 fn binom_parts(after: &str) -> Option<(String, String, &str)> {
     let (mut brace, mut nest, mut i) = (0i32, 0i32, 0);
     let mut atop = None;
@@ -504,14 +497,14 @@ fn binom_parts(after: &str) -> Option<(String, String, &str)> {
         {
             if brace == 0 && nest == 0 {
                 if atop.is_some() {
-                    return None; // two \atop at the top level: not a binomial
+                    return None; // two \atop at the top level means no binomial.
                 }
                 atop = Some(i);
             }
             i += 5;
         } else {
             match t.as_bytes()[0] {
-                b'\\' => i += 1, // skip the escaped character below
+                b'\\' => i += 1, // skip the escaped character below.
                 b'{' => brace += 1,
                 b'}' => brace -= 1,
                 _ => {}
@@ -522,7 +515,7 @@ fn binom_parts(after: &str) -> Option<(String, String, &str)> {
     None
 }
 
-/// `\mathrm{if~}` -> `\text{if }`: only when the `~` or `\ ` shows the content is real text.
+/// \mathrm{if~} to \text{if }, only when ~ or \ shows it's real text.
 fn mathrm_to_text(s: &str) -> String {
     const OPEN: &str = "\\mathrm{";
     let mut out = String::with_capacity(s.len());
@@ -558,7 +551,7 @@ fn mathrm_to_text(s: &str) -> String {
 mod tests {
     use super::tidy;
 
-    // Inputs below are real model outputs for pdflatex-rendered formulas.
+    // inputs below are real model output for pdflatex formulas.
     #[test]
     fn compacts_and_unbraces() {
         assert_eq!(tidy("E = m c ^ { 2 }"), "E=mc^2");
@@ -578,7 +571,7 @@ mod tests {
     fn keeps_explicit_spaces() {
         assert_eq!(tidy(r"\mathrm { s u c h \ t h a t }"), r"\text{such that}");
         assert_eq!(tidy(r"\mathrm { i f ~ } x"), r"\text{if }x");
-        // No explicit space: could be an operator name, so it stays \mathrm.
+        // no explicit space so it could be an operator, stays \mathrm.
         assert_eq!(tidy(r"\mathrm { V a r } ( X )"), r"\mathrm{Var}(X)");
         assert_eq!(tidy(r"\mathrm { d } x"), r"\mathrm{d}x");
     }
@@ -589,7 +582,7 @@ mod tests {
             tidy(r"\nabla \times { \bf E } = - \frac { \partial { \bf B } } { \partial t }"),
             r"\nabla\times\mathbf{E}=-\frac{\partial\mathbf{B}}{\partial t}"
         );
-        // Script and argument positions keep their braces.
+        // script and argument positions keep their braces.
         assert_eq!(tidy(r"x ^ { \bf a }"), r"x^{\mathbf{a}}");
         assert_eq!(tidy(r"\frac { a } { \bf b }"), r"\frac{a}{\mathbf{b}}");
         assert_eq!(tidy(r"\sqrt { \bf b }"), r"\sqrt{\mathbf{b}}");
@@ -613,7 +606,7 @@ mod tests {
     fn collapses_redundant_double_braces() {
         assert_eq!(tidy(r"\overline { { G } }"), r"\overline{G}");
         assert_eq!(tidy(r"\frac { { a } } { b }"), r"\frac{a}{b}");
-        // Two groups side by side, or a group with more than one inner part, are left alone.
+        // two groups side by side or with more inner parts are left alone.
         assert_eq!(tidy(r"{ { a } { b } }"), r"{{a}{b}}");
         assert_eq!(tidy(r"x ^ { { \bf y } z }"), r"x^{\mathbf{y}z}");
     }
@@ -644,7 +637,7 @@ mod tests {
             tidy(r"\left\{ \begin{matrix} { x + y = 2 } \\ { x - y = 0 } \end{matrix} \right."),
             r"\begin{cases}x+y=2 \\ x-y=0\end{cases}"
         );
-        // Delimiters that don't match a known environment are left alone.
+        // delimiters with no matching environment are left alone.
         assert_eq!(
             tidy(r"\left( \begin{matrix} a \end{matrix} \right]"),
             r"\left(\begin{matrix}a\end{matrix}\right]"
@@ -660,7 +653,7 @@ mod tests {
             ),
             r"f(x)=\begin{cases}x^2 & \text{if }x\geq0 \\ -x & \mathrm{otherwise}\end{cases}"
         );
-        // Two adjacent groups in one cell are not one wrapper.
+        // two adjacent groups in one cell stay as they are.
         assert_eq!(
             tidy(r"\begin{matrix} { a } { b } & c \end{matrix}"),
             r"\begin{matrix}{a}{b} & c\end{matrix}"
@@ -673,7 +666,7 @@ mod tests {
             tidy(r"\sum _ { k = 0 } ^ { n } \left( n \atop k \right) x ^ { k }"),
             r"\sum_{k=0}^n\binom{n}{k}x^k"
         );
-        // Not a binomial: no \atop, or a different closing delimiter.
+        // no \atop or a different closing delimiter, no binomial.
         assert_eq!(tidy(r"\left( a + b \right)"), r"\left(a+b\right)");
         assert_eq!(tidy(r"\left( n \atop k \right]"), r"\left(n\atop k\right]");
     }

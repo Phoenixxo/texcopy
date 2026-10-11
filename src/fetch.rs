@@ -1,4 +1,4 @@
-//! Locating the model files, and downloading them on first run.
+//! finds the model files and downloads them on first run.
 
 use std::{
     fs::{self, File, OpenOptions},
@@ -14,8 +14,7 @@ use crate::{
     ui::{self, Event, Reporter},
 };
 
-/// Per-user cache directory for downloaded files (platform-appropriate on every OS).
-/// `TEXCOPY_CACHE_DIR` overrides it, which is handy for tests and portable installs.
+/// per user cache dir, TEXCOPY_CACHE_DIR overrides it.
 pub(crate) fn cache_dir() -> Option<PathBuf> {
     if let Some(dir) = std::env::var_os("TEXCOPY_CACHE_DIR") {
         return Some(PathBuf::from(dir));
@@ -23,8 +22,7 @@ pub(crate) fn cache_dir() -> Option<PathBuf> {
     directories::ProjectDirs::from("", "", "texcopy").map(|d| d.cache_dir().to_path_buf())
 }
 
-/// Find a directory holding a complete model and its spec, downloading the default
-/// model into the cache if needed. Order: explicit override, `./models`, the per-user cache.
+/// find a complete model dir, downloading the default into the cache if needed.
 pub fn locate(over: Option<PathBuf>, report: Reporter) -> Result<(PathBuf, ModelSpec)> {
     let cache = cache_dir();
     let candidates: Vec<PathBuf> = match &over {
@@ -41,7 +39,7 @@ pub fn locate(over: Option<PathBuf>, report: Reporter) -> Result<(PathBuf, Model
         }
     }
 
-    // Nothing complete on disk: fetch into the override, or else the cache.
+    // nothing on disk, fetch into the override or the cache.
     let target = over
         .or(cache)
         .context("cannot determine a cache directory; pass --model-dir")?;
@@ -74,7 +72,7 @@ pub fn locate(over: Option<PathBuf>, report: Reporter) -> Result<(PathBuf, Model
     Ok((target, spec))
 }
 
-/// A file to fetch. `size` and `sha256` are checked when given.
+/// a file to fetch, size and sha256 get checked when given.
 pub(crate) struct Download<'a> {
     pub url: &'a str,
     pub dest: &'a Path,
@@ -83,7 +81,7 @@ pub(crate) struct Download<'a> {
     pub sha256: Option<&'a str>,
 }
 
-/// Download without checks (used for the small default model).
+/// download with no checks.
 pub(crate) fn download(url: &str, dest: &Path, report: Reporter) -> Result<()> {
     let label = dest
         .file_name()
@@ -117,16 +115,15 @@ pub(crate) fn sha256_file(path: &Path) -> Result<String> {
         .collect())
 }
 
-/// Download with a progress display, resuming an interrupted `.part` file, and verifying the size
-/// and SHA-256 when they are known. A file that fails verification is deleted, never kept.
+/// download with progress, resume a .part file and verify size and sha256.
 pub(crate) fn download_verified(d: &Download, report: Reporter) -> Result<()> {
     if d.dest.is_file()
         && d.sha256
             .is_none_or(|h| sha256_file(d.dest).is_ok_and(|got| got == h))
     {
-        return Ok(()); // already here (and intact, when we can tell)
+        return Ok(()); // already here and intact.
     }
-    // Write to a .part file so an interrupted download is never mistaken for the real thing.
+    // write to a .part file so a half download never looks finished.
     let mut part = d.dest.as_os_str().to_owned();
     part.push(".part");
     let part = PathBuf::from(part);
@@ -144,7 +141,7 @@ pub(crate) fn download_verified(d: &Download, report: Reporter) -> Result<()> {
         let resp = req
             .call()
             .with_context(|| format!("downloading {}", d.url))?;
-        // 206 means the server continued where we stopped; anything else sends the whole file.
+        // 206 means the server continued, anything else sends the whole file.
         let resumed = have > 0 && resp.status().as_u16() == 206;
         if !resumed {
             have = 0;
@@ -225,8 +222,7 @@ mod tests {
         thread,
     };
 
-    /// Serve `data` over HTTP on localhost for `connections` requests. With `honour_range`, a
-    /// `Range: bytes=N-` request gets a 206 continuing at N, like Hugging Face and GitHub do.
+    /// serve data over localhost, with honour_range a Range request gets a 206.
     fn serve(data: Vec<u8>, honour_range: bool, connections: usize) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}/file.bin", listener.local_addr().unwrap());
@@ -349,13 +345,13 @@ mod tests {
         let (data, sha) = payload();
         let dir = tmp("have");
         fs::write(dir.join("file.bin"), &data).unwrap();
-        // no server at all: it must not even try
+        // no server at all, it must not try.
         fetch("http://127.0.0.1:9/never", &dir, 5000, &sha).unwrap();
     }
 
     #[test]
     fn cache_dir_is_per_user_and_under_texcopy() {
-        // Windows puts it at ...\texcopy\cache, the others end in texcopy
+        // windows puts it at ...\texcopy\cache, the others end in texcopy.
         let dir = super::cache_dir().expect("a cache directory");
         assert!(
             dir.components().any(|c| c.as_os_str() == "texcopy"),

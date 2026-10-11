@@ -1,6 +1,4 @@
-//! Terminal user interface: a yes/no prompt and download progress.
-//!
-//! Everything goes to stderr, so stdout stays clean for the LaTeX (`texcopy x.png > out.tex`).
+//! terminal UI, a yes/no prompt and download progress.
 
 use std::{
     io::{BufRead, IsTerminal, Write},
@@ -9,13 +7,12 @@ use std::{
 
 use anyhow::{Result, bail};
 
-/// Is a person sitting at a terminal (so a prompt makes sense)?
+/// is a person at a terminal.
 pub fn interactive() -> bool {
     std::io::stdin().is_terminal() && std::io::stderr().is_terminal()
 }
 
-/// Ask a yes/no question. Default is no. `assume_yes` (--yes) answers for the user. When nobody can
-/// answer (a script, a pipe, --json) this is an error that says how to approve, never a silent yes.
+/// ask yes/no, default no, assume_yes answers for the user, errors when nobody can answer.
 pub fn confirm(question: &str, assume_yes: bool) -> Result<bool> {
     if assume_yes {
         return Ok(true);
@@ -32,7 +29,7 @@ pub fn confirm(question: &str, assume_yes: bool) -> Result<bool> {
     Ok(matches!(line.trim().to_lowercase().as_str(), "y" | "yes"))
 }
 
-/// 1234567 -> "1.2 MB" (decimal units, like download pages show).
+/// 1234567 to 1.2 MB, decimal units.
 pub fn human_bytes(n: u64) -> String {
     let n = n as f64;
     if n < 1e3 {
@@ -57,8 +54,7 @@ pub fn human_duration(secs: f64) -> String {
     }
 }
 
-/// One progress line, e.g.
-/// `  model.gguf             [████████████░░░░░░░░░░░░]  50%  406.8 MB / 813.6 MB  12.0 MB/s  ETA 34s`
+/// one progress line.
 pub fn bar_line(label: &str, done: u64, total: Option<u64>, bytes_per_sec: f64) -> String {
     const WIDTH: usize = 24;
     let label: String = label.chars().take(22).collect();
@@ -89,32 +85,31 @@ pub fn bar_line(label: &str, done: u64, total: Option<u64>, bytes_per_sec: f64) 
     }
 }
 
-/// Something a long setup step tells whoever is watching: the terminal draws it as text and a bar,
-/// the window draws it as its own progress display.
+/// something a long setup step tells whoever is watching.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event<'a> {
-    /// "Step 2 of 3: downloading the model"
+    /// step 2 of 3, downloading the model.
     Step {
         k: usize,
         of: usize,
         what: &'a str,
     },
-    /// A download continues from `at` bytes instead of starting over
+    /// a download continues from at bytes.
     Resuming {
         label: &'a str,
         at: u64,
     },
-    /// `done` of `total` bytes of `label` are on disk (`total` is None when the server didn't say)
+    /// done of total bytes are on disk.
     Bytes {
         label: &'a str,
         done: u64,
         total: Option<u64>,
     },
-    /// The file is whole; its checksum is being compared
+    /// the file is whole and its checksum is being compared.
     Verifying {
         label: &'a str,
     },
-    /// The download finished with `done` bytes
+    /// the download finished.
     Finished {
         label: &'a str,
         done: u64,
@@ -122,13 +117,13 @@ pub enum Event<'a> {
     Unpacking,
 }
 
-/// Where setup events go. A closure, so both the terminal and the window can listen.
+/// where setup events go, a closure so the terminal and the window can both listen.
 pub type Reporter<'a> = &'a mut dyn FnMut(Event<'_>);
 
-/// A reporter that ignores everything (tests, quiet runs).
+/// a reporter that ignores everything.
 pub fn silent(_: Event<'_>) {}
 
-/// Draws events on the terminal (stderr): a live bar, or a line per 10% in a log.
+/// draws events on the terminal, a live bar or a line per 10% in a log.
 #[derive(Default)]
 pub struct Terminal {
     progress: Option<Progress>,
@@ -161,11 +156,11 @@ impl Terminal {
     }
 }
 
-/// Download progress: a live bar on a terminal, a line per 10% in a log.
+/// download progress, live bar on a terminal and a line per 10% in a log.
 pub struct Progress {
     label: String,
     total: Option<u64>,
-    /// bytes already on disk when this run started (a resumed download)
+    /// bytes already on disk when this run started.
     base: u64,
     start: Instant,
     last_draw: Instant,
@@ -251,15 +246,15 @@ mod tests {
         assert!(line.contains("10.0 MB/s"), "{line}");
         assert!(line.contains("ETA 5s"), "{line}");
         assert_eq!(line.matches('█').count(), 12);
-        // unknown size, no speed yet: still a readable line
+        // unknown size and no speed yet, still a readable line.
         assert!(bar_line("x", 1_500_000, None, 0.0).contains("1.5 MB"));
-        // overshoot never panics or draws more than the bar
+        // overshoot never panics or draws past the bar.
         assert!(bar_line("x", 200, Some(100), 1.0).contains("100%"));
     }
 
     #[test]
     fn approval_is_never_assumed_without_a_terminal() {
-        // `cargo test` has no terminal on stdin: asking must fail loudly, and --yes must work.
+        // cargo test has no terminal so asking must fail loudly and --yes must work.
         assert!(confirm("Install?", true).unwrap());
         if !super::interactive() {
             let err = confirm("Install?", false).unwrap_err().to_string();

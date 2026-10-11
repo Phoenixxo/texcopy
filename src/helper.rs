@@ -1,8 +1,4 @@
-//! Installing `llama-server` (from llama.cpp, MIT licence) for the user.
-//!
-//! texcopy pins one llama.cpp release, the one it was tested with, and the SHA-256 of each file
-//! GitHub publishes for it. It never runs anything it hasn't checked: a download that doesn't match
-//! its checksum is deleted. The user is asked first (see `vlm::ensure`).
+//! installs llama-server for the user, pinned release and checksum checked.
 
 use std::{
     fs::{self, File},
@@ -33,12 +29,11 @@ pub struct Release {
     pub size: u64,
     pub sha256: &'static str,
     pub archive: Archive,
-    /// For the prompt: what this build is
+    /// what this build is, for the prompt.
     pub describe: &'static str,
 }
 
-/// The CPU builds for each platform; macOS arm64 includes Metal (GPU). Windows and Linux users who
-/// want a GPU build can install one themselves and pass --llama-server.
+/// CPU builds per platform, macOS arm64 has Metal.
 pub const RELEASES: &[Release] = &[
     Release {
         os: "macos",
@@ -100,7 +95,7 @@ pub fn release_for(os: &str, arch: &str) -> Option<&'static Release> {
     RELEASES.iter().find(|r| r.os == os && r.arch == arch)
 }
 
-/// The build for the machine we are running on, if llama.cpp publishes one.
+/// the build for this machine if llama.cpp has one.
 pub fn release_for_this_machine() -> Option<&'static Release> {
     release_for(std::env::consts::OS, std::env::consts::ARCH)
 }
@@ -111,7 +106,7 @@ impl Release {
     }
 }
 
-/// Where texcopy keeps the helper it installed.
+/// where texcopy keeps the helper it installed.
 pub fn install_dir() -> Option<PathBuf> {
     fetch::cache_dir().map(|d| d.join("llama.cpp").join(TAG))
 }
@@ -124,7 +119,7 @@ fn binary_name() -> &'static str {
     }
 }
 
-/// `llama-server` somewhere under `dir` (archives nest it differently per platform).
+/// llama-server somewhere under dir.
 pub fn find_binary(dir: &Path) -> Option<PathBuf> {
     for entry in fs::read_dir(dir).ok()?.flatten() {
         let path = entry.path();
@@ -139,12 +134,12 @@ pub fn find_binary(dir: &Path) -> Option<PathBuf> {
     None
 }
 
-/// The helper texcopy installed earlier, if any.
+/// the helper installed earlier, if any.
 pub fn installed() -> Option<PathBuf> {
     find_binary(&install_dir()?)
 }
 
-/// Download, verify and unpack the helper. Returns the path of `llama-server`.
+/// download, verify and unpack the helper.
 pub fn install(release: &Release, report: Reporter) -> Result<PathBuf> {
     let dir = install_dir().context("cannot determine a cache directory")?;
     if let Some(bin) = find_binary(&dir) {
@@ -164,7 +159,7 @@ pub fn install(release: &Release, report: Reporter) -> Result<PathBuf> {
         report,
     )?;
 
-    // Unpack beside the final folder, then move it into place, so a crash never leaves half an install.
+    // unpack beside the final folder then move it in, so a crash never leaves half an install.
     let staging = parent.join(format!("{TAG}.unpacking"));
     fs::remove_dir_all(&staging).ok();
     fs::create_dir_all(&staging)?;
@@ -211,7 +206,7 @@ fn make_executable(_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Refuse to continue on a platform with no published build.
+/// stop on a platform with no published build.
 pub fn require_release() -> Result<&'static Release> {
     release_for_this_machine().with_context(|| {
         format!(
@@ -264,7 +259,7 @@ mod tests {
         fs::remove_dir_all(&tmp).ok();
         fs::create_dir_all(&tmp).unwrap();
 
-        // .tar.gz with the binary one folder down, as the real archives have it
+        // .tar.gz with the binary one folder down.
         let tgz = tmp.join("a.tar.gz");
         {
             let enc = flate2::write::GzEncoder::new(
@@ -275,7 +270,7 @@ mod tests {
             let mut header = tar::Header::new_gnu();
             let body = b"#!/bin/sh\necho hi\n";
             header.set_size(body.len() as u64);
-            header.set_mode(0o644); // not executable on purpose: install must fix that
+            header.set_mode(0o644); // not executable on purpose, install has to fix that.
             header.set_cksum();
             tarball
                 .append_data(

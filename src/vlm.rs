@@ -1,11 +1,4 @@
-//! The vision-language engine: OvisOCR2 (0.8B, Apache-2.0) served by a short-lived `llama-server`.
-//!
-//! texcopy starts `llama-server` on a free local port, sends the image, reads the Markdown the model
-//! writes, and stops the server again. Nothing stays in memory between runs. The model reads whole
-//! paragraphs and very long equations, which the small formula model cannot.
-//!
-//! Needs two things: the `llama-server` program from llama.cpp (found on PATH, or pass
-//! `--llama-server`), and the model files (1.0 GB, downloaded by `--engine vlm`).
+//! the vision engine, OvisOCR2 served by a short lived llama-server.
 
 use std::{
     fs::{self, File},
@@ -30,9 +23,9 @@ use crate::{
 const BASE_URL: &str = "https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF/resolve/main";
 
 struct RemoteFile {
-    /// name on Hugging Face
+    /// name on hugging face.
     remote: &'static str,
-    /// name we store it under
+    /// name we store it under.
     local: &'static str,
     label: &'static str,
     size: u64,
@@ -56,7 +49,7 @@ const MODEL_FILES: [RemoteFile; 2] = [
     },
 ];
 const PROMPT: &str = "Extract all readable content from the image in natural human reading order and output the result as a single Markdown document.";
-/// Larger screenshots are shrunk to this: the model gains nothing from more pixels and gets slower.
+/// bigger screenshots are shrunk to this.
 const MAX_SIDE: u32 = 2000;
 const MAX_TOKENS: u32 = 2048;
 
@@ -69,7 +62,7 @@ pub struct Files {
     pub mmproj: PathBuf,
 }
 
-/// Where the model lives: an explicit directory, else `<cache>/ovisocr2`.
+/// where the model lives, an explicit dir or <cache>/ovisocr2.
 pub fn model_dir(over: Option<PathBuf>) -> Option<PathBuf> {
     over.or_else(|| fetch::cache_dir().map(|d| d.join("ovisocr2")))
 }
@@ -82,7 +75,7 @@ pub fn files_in(dir: &Path) -> Option<Files> {
     (files.model.is_file() && files.mmproj.is_file()).then_some(files)
 }
 
-/// Download whatever is missing from `dir`, checksum-verified, with progress.
+/// download what's missing, checksum verified, with progress.
 fn download_model(dir: &Path, report: Reporter) -> Result<Files> {
     fs::create_dir_all(dir)?;
     for f in &MODEL_FILES {
@@ -100,8 +93,7 @@ fn download_model(dir: &Path, report: Reporter) -> Result<Files> {
     files_in(dir).context("download finished but the files are missing")
 }
 
-/// `llama-server`: the one texcopy installed (the version it was tested with), else the first on
-/// PATH. An explicit `--llama-server` is used as given.
+/// llama-server we installed, else the first on PATH, --llama-server is used as given.
 pub fn find_server(over: Option<&Path>) -> Option<PathBuf> {
     if let Some(p) = over {
         return p.is_file().then(|| p.to_path_buf());
@@ -115,8 +107,7 @@ pub fn find_server(over: Option<&Path>) -> Option<PathBuf> {
         let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
             .map(|p| std::env::split_paths(&p).collect())
             .unwrap_or_default();
-        // A program started from Finder or a launcher does not get the shell's PATH, so also look
-        // where Homebrew and distro packages put it.
+        // a program started from Finder doesn't get the shell's PATH so look where homebrew and distro packages put it.
         dirs.extend(
             ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"]
                 .iter()
@@ -134,15 +125,14 @@ pub struct Setup {
     pub files: Files,
 }
 
-/// The vision engine if it is already set up. Never asks and never downloads.
+/// the vision engine if it's set up, never asks or downloads.
 pub fn ready(server_over: Option<&Path>, dir_over: Option<PathBuf>) -> Option<Setup> {
     let server = find_server(server_over)?;
     let files = files_in(&model_dir(dir_over)?)?;
     Some(Setup { server, files })
 }
 
-/// What setting the vision engine up would involve, worked out without touching the network.
-/// The terminal prints it and asks `[y/N]`; the window shows it with an Install button.
+/// what setting up the vision engine involves, worked out without the network.
 pub struct Plan {
     server: Option<PathBuf>,
     files: Option<Files>,
@@ -150,7 +140,7 @@ pub struct Plan {
     release: Option<&'static helper::Release>,
 }
 
-/// One thing to download.
+/// one thing to download.
 pub struct PlanItem {
     pub what: String,
     pub size: u64,
@@ -159,7 +149,7 @@ pub struct PlanItem {
 }
 
 impl Plan {
-    /// Nothing left to download: the engine can start.
+    /// nothing left to download.
     pub fn is_ready(&self) -> bool {
         self.release.is_none() && self.files.is_some()
     }
@@ -189,7 +179,7 @@ impl Plan {
         items
     }
 
-    /// Download and install whatever is missing, reporting progress. Returns the ready engine.
+    /// download and install what's missing, reporting progress.
     pub fn install(self, report: Reporter) -> Result<Setup> {
         let n_steps = usize::from(self.release.is_some()) + usize::from(self.files.is_none());
         let mut k = 0;
@@ -222,8 +212,7 @@ impl Plan {
     }
 }
 
-/// Work out what the vision engine still needs. Errors when there is nowhere to put it, or no
-/// helper build exists for this machine.
+/// work out what the vision engine still needs.
 pub fn plan(server_over: Option<&Path>, dir_over: Option<PathBuf>) -> Result<Plan> {
     if let Some(p) = server_over
         && !p.is_file()
@@ -245,8 +234,7 @@ pub fn plan(server_over: Option<&Path>, dir_over: Option<PathBuf>) -> Result<Pla
     })
 }
 
-/// Set the vision engine up from the terminal: explain exactly what will be downloaded, ask once,
-/// then do it with progress. With `assume_yes` (--yes) it explains and proceeds without asking.
+/// set the vision engine up from the terminal, explain, ask once, then do it. --yes skips the ask.
 pub fn ensure(
     server_over: Option<&Path>,
     dir_over: Option<PathBuf>,
@@ -285,13 +273,12 @@ pub fn ensure(
     Ok(setup)
 }
 
-/// `<temp>/texcopy-llama-<owner pid>.pid`: the helper's pid, written by the texcopy that started it.
+/// <temp>/texcopy-llama-<owner pid>.pid, the helper's pid written by the texcopy that started it.
 fn pidfile(owner: u32) -> PathBuf {
     std::env::temp_dir().join(format!("texcopy-llama-{owner}.pid"))
 }
 
-/// Kill helpers left behind by a texcopy that was force-quit or crashed (a normal exit stops its
-/// helper). Only a helper whose owner no longer exists, and that really is `llama-server`.
+/// kill helpers left by a texcopy that crashed, only if the owner is gone and it really is llama-server.
 fn reap_orphans() {
     reap_in(
         &std::env::temp_dir(),
@@ -360,7 +347,7 @@ fn kill_process(pid: u32) {
         .status();
 }
 
-// Windows has no ps/kill; orphan cleanup is not attempted there (a normal exit still stops the helper).
+// windows has no ps or kill so no orphan cleanup there.
 #[cfg(not(unix))]
 fn process_alive(_pid: u32) -> bool {
     true
@@ -372,7 +359,7 @@ fn is_llama_server(_pid: u32) -> bool {
 #[cfg(not(unix))]
 fn kill_process(_pid: u32) {}
 
-/// A running `llama-server`. Stopped when dropped.
+/// a running llama-server, stopped when dropped.
 pub struct Server {
     child: Child,
     port: u16,
@@ -392,15 +379,14 @@ impl Server {
             .arg("--mmproj")
             .arg(&files.mmproj)
             .args(["--host", "127.0.0.1", "--port", &port.to_string()])
-            // all layers on the GPU if there is one; one slot; and no prompt cache, which otherwise
-            // grows the process from 1.4 GB to over 3 GB after a few dozen images
+            // all layers on the GPU if there is one, one slot and no prompt cache since it grows the process from 1.4 GB to over 3 GB.
             .args(["-ngl", "99", "-c", "8192", "-np", "1", "--cache-ram", "0"])
             .stdin(Stdio::null())
             .stdout(out.try_clone()?)
             .stderr(out)
             .spawn()
             .with_context(|| format!("starting {}", bin.display()))?;
-        // Leave a note of who owns this helper, so a later run can clean it up if we are killed.
+        // leave a note of who owns this helper so a later run can clean up if we get killed.
         let _ = fs::write(pidfile(std::process::id()), child.id().to_string());
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .timeout_global(Some(Duration::from_secs(180)))
@@ -433,7 +419,7 @@ impl Server {
             if let Some(status) = self.child.try_wait()? {
                 bail!("llama-server exited ({status}):\n{}", self.log_tail());
             }
-            // 503 while the model loads, 200 when it is ready
+            // 503 while the model loads, 200 when it's ready.
             if self
                 .agent
                 .get(&self.url("/health"))
@@ -450,7 +436,7 @@ impl Server {
         )
     }
 
-    /// Read the image. Returns the model's Markdown and whether it was cut off at the token limit.
+    /// read the image, returns the markdown and whether it hit the token limit.
     pub fn read(&self, img: &DynamicImage) -> Result<(String, bool)> {
         let body = serde_json::json!({
             "messages": [{"role": "user", "content": [
@@ -492,7 +478,7 @@ impl Drop for Server {
     }
 }
 
-/// PNG, shrunk if huge, flattened onto white (the model expects dark ink on a light page).
+/// png, shrunk if huge and flattened onto white.
 fn png_base64(img: &DynamicImage) -> Result<String> {
     let img = if img.width().max(img.height()) > MAX_SIDE {
         img.resize(MAX_SIDE, MAX_SIDE, FilterType::Triangle)
@@ -511,23 +497,23 @@ fn png_base64(img: &DynamicImage) -> Result<String> {
     Ok(base64::engine::general_purpose::STANDARD.encode(png))
 }
 
-/// What the vision model wrote, interpreted.
+/// what the vision model wrote, interpreted.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Reading {
-    /// Running text, with its math as `$...$`.
+    /// running text with its math as $...$.
     Prose(String),
-    /// Just a formula: the LaTeX, without delimiters.
+    /// just a formula, the LaTeX without delimiters.
     Formula(String),
 }
 
 pub struct Segment {
     pub math: bool,
-    /// `$$..$$` or `\[..\]`: the model drew it on a line of its own
+    /// $$..$$ or \[..\], drawn on a line of its own.
     pub display: bool,
     pub body: String,
 }
 
-/// Split Markdown into text and math pieces: `$$..$$`, `\[..\]`, `\(..\)` and `$..$`.
+/// split markdown into text and math pieces.
 pub fn segments(t: &str) -> Vec<Segment> {
     const PAIRS: [(&str, &str, bool); 4] = [
         ("$$", "$$", true),
@@ -574,9 +560,7 @@ pub fn segments(t: &str) -> Vec<Segment> {
     out
 }
 
-/// Two or more real words at the top level of the body: that is a sentence between two prices
-/// ("$5 now and $10 later"), not math. Commands and everything inside braces never count, so
-/// `\text{for all}`, `\begin{cases}` and `\frac{abc}{def}` are all still math.
+/// two or more real words at the top level is a sentence between two prices, commands and braces never count.
 fn reads_like_a_sentence(body: &str) -> bool {
     let (mut plain, mut depth) = (String::new(), 0usize);
     let mut chars = body.chars().peekable();
@@ -595,8 +579,7 @@ fn reads_like_a_sentence(body: &str) -> bool {
     real_words(&plain) >= 2
 }
 
-/// Where the math that opens just before `after` closes. A `$` followed by a digit is not a
-/// closer: it is the next price in "$5 and $10".
+/// where the math that opens before after closes, a $ followed by a digit is the next price.
 fn closing(after: &str, close: &str) -> Option<usize> {
     let mut from = 0;
     while let Some(at) = after[from..].find(close) {
@@ -625,8 +608,7 @@ fn real_words(s: &str) -> usize {
         .count()
 }
 
-/// Output that contains an HTML table: each table becomes a `tabular`, and the text around it is
-/// read like any other text. None when there is no usable table.
+/// output with an HTML table, each table becomes a tabular, None if there's no usable table.
 fn interpret_with_tables(raw: &str) -> Option<String> {
     let mut parts: Vec<String> = Vec::new();
     let mut rest = raw;
@@ -651,7 +633,7 @@ fn interpret_with_tables(raw: &str) -> Option<String> {
     Some(parts.join("\n"))
 }
 
-/// A Markdown heading, bullet or code fence at the start of a line: structure, so not a bare formula.
+/// a heading, bullet or code fence at the start of a line is structure.
 fn has_structure(raw: &str) -> bool {
     raw.lines().any(|l| {
         let t = l.trim_start();
@@ -665,11 +647,7 @@ fn has_structure(raw: &str) -> bool {
     })
 }
 
-/// Turn the model's Markdown into either prose or a bare formula.
-///
-/// Anything with a real word next to its math is prose, even a one-line exercise like
-/// `Is $C_6$ bi-graceful?`: calling that a formula would throw the words away. Only output that is
-/// essentially pure math (or plain text too short to be a sentence) is a formula.
+/// turn the model's markdown into prose or a bare formula, anything with a real word next to its math is prose.
 pub fn interpret(raw: &str) -> Reading {
     let raw = strip_fences(raw);
     if let Some(text) = interpret_with_tables(raw) {
@@ -684,7 +662,7 @@ pub fn interpret(raw: &str) -> Reading {
         .join(" ");
     let has_math = segs.iter().any(|s| s.math);
     let words = real_words(&outside);
-    // A formula picture never comes back as several lines of plain text.
+    // a formula picture never comes back as several lines of plain text.
     let text_lines = outside.lines().filter(|l| !l.trim().is_empty()).count();
     if (has_math && words >= 1) || words >= 3 || has_structure(raw) || text_lines >= 2 {
         return Reading::Prose(convert::to_latex(raw));
@@ -706,13 +684,13 @@ mod tests {
         let fake_server = dir.join("llama-server");
         std::fs::write(&fake_server, b"x").unwrap();
 
-        // helper present, model missing: not ready, and the model is the only item to download
+        // helper there and model missing, the model is the only thing to download.
         let plan = super::plan(Some(&fake_server), Some(dir.clone())).unwrap();
         assert!(!plan.is_ready());
         assert_eq!(plan.items().len(), 1);
         assert_eq!(plan.total_bytes(), super::model_download_bytes());
 
-        // both there: ready, nothing to download
+        // both there, ready.
         std::fs::write(dir.join("model.gguf"), b"x").unwrap();
         std::fs::write(dir.join("mmproj.gguf"), b"x").unwrap();
         let plan = super::plan(Some(&fake_server), Some(dir.clone())).unwrap();
@@ -721,7 +699,7 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    /// What the model really returned for the NYU sample document (page with a numbered equation).
+    /// what the model returned for the NYU sample document.
     const NYU_RAW: &str = "Hello World! Today I am learning LATEX. LATEX is a great program for writing math. I can write in line math such as  $a^2 + b^2 = c^2$.\n\nI can also give equations their own space:\n\n$$ \\gamma^{2}+\\theta^{2}=\\omega^{2} $$\n\n(1)\n\n1";
 
     #[test]
@@ -744,7 +722,7 @@ mod tests {
                     .into()
             )
         );
-        // the number written inside the maths with \tag
+        // the number written inside the maths with \tag.
         assert_eq!(
             interpret("We know that\n\n$$E = mc^2 \\tag{3}$$\n\nholds."),
             Reading::Prose(
@@ -764,17 +742,17 @@ mod tests {
                     .into()
             )
         );
-        // (display_math_inside_prose_becomes_inline covers the mid-sentence case)
+        // display_math_inside_prose_becomes_inline covers the mid sentence case.
     }
 
     #[test]
     fn a_page_number_is_only_dropped_after_a_display_equation() {
-        // no display: a trailing number is content, left as its own paragraph
+        // no display, so a trailing number is content and stays its own paragraph.
         assert_eq!(
             interpret("Compute the sum of the first $n$ terms.\n\n42"),
             Reading::Prose("Compute the sum of the first $n$ terms.\n\n42".into())
         );
-        // an equation reference in running text is not an equation number
+        // an equation reference in running text stays as text.
         assert!(
             matches!(interpret("See the equation (1) above for $x$."), Reading::Prose(p) if p.contains("(1)"))
         );
@@ -794,7 +772,7 @@ mod tests {
 
     #[test]
     fn math_with_environment_names_or_text_is_never_mistaken_for_a_sentence() {
-        // The model's real output for a cases image: `cases` appears twice in the body.
+        // real output for a cases image, cases shows up twice in the body.
         assert!(matches!(
             interpret(r"$\begin{cases} x+y=2 \\ x-y=0 \end{cases}$"),
             Reading::Formula(f) if f.starts_with(r"\begin{cases}")
@@ -813,7 +791,7 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
         std::fs::create_dir_all(&dir).unwrap();
 
-        // a real process that has already exited: its pid is a dead owner
+        // a real process that already exited, its pid is a dead owner.
         let mut gone = Command::new("true").spawn().unwrap();
         gone.wait().unwrap();
         let (dead_owner, live_owner) = (gone.id(), std::process::id() + 1);
@@ -825,8 +803,8 @@ mod tests {
             )
             .unwrap();
         };
-        write(dead_owner, 4242); // owner dead, helper is the real thing: kill it
-        write(live_owner, 4343); // owner still running: leave alone
+        write(dead_owner, 4242); // owner dead and the helper is the real thing, kill it.
+        write(live_owner, 4343); // owner still running, leave it.
         std::fs::write(dir.join("unrelated.pid"), "1").unwrap();
 
         let killed = RefCell::new(Vec::new());
@@ -844,7 +822,7 @@ mod tests {
         );
         assert!(dir.join("unrelated.pid").exists());
 
-        // a pid that was reused by some other program is never killed
+        // a pid reused by another program never gets killed.
         write(dead_owner, 9999);
         killed.borrow_mut().clear();
         super::reap_in(&dir, &|_| false, &|_| false, &|h| {
@@ -862,7 +840,7 @@ mod tests {
             interpret(r"5.4 Prove that if v is a cut-vertex of a graph G, then v is not a cut-vertex of the complement \(\overline{G}\) of G."),
             Reading::Prose(r"5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.".into())
         );
-        // Already marked up, spaces inside the dollars, wrapped over several lines.
+        // already marked up, spaces inside the dollars and wrapped over lines.
         assert_eq!(
             interpret(
                 "Let $ G $ be a graph with $ n \\geq 3 $ vertices.\nShow that $G$ is connected."
@@ -875,7 +853,7 @@ mod tests {
 
     #[test]
     fn display_math_inside_prose_is_a_display_equation() {
-        // The picture shows it centred on its own line, so it is rebuilt as a display.
+        // the picture shows it centred on its own line so rebuild it as a display.
         assert_eq!(
             interpret(
                 "Prove that for every integer n\n\n$$\\sum_{k=1}^n k = \\frac{n(n+1)}{2}$$\n\nholds."
@@ -903,7 +881,7 @@ mod tests {
 
     #[test]
     fn a_formula_with_a_little_text_inside_it_is_still_a_formula() {
-        // The words are inside the math, so there is nothing around it to keep.
+        // the words are inside the math so nothing around it to keep.
         assert!(matches!(
             interpret(r"$$f(x) = 0 \text{ for } x < 1$$"),
             Reading::Formula(_)
@@ -912,8 +890,7 @@ mod tests {
 
     #[test]
     fn one_line_exercises_keep_their_words() {
-        // Real shapes of short textbook exercises that an earlier version turned into bare formulas,
-        // dropping the words around the math.
+        // real shapes of short exercises that used to become bare formulas and lose their words.
         for raw in [
             "3.42 Let $G = 3K_{2} + K_{1}$.",
             "11.28 Determine $mr(C_{3}, C_{4})$.",

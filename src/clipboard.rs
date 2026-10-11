@@ -1,9 +1,4 @@
-//! Clipboard access that behaves the same on Windows, macOS and Linux.
-//!
-//! One catch: on X11 and Wayland the clipboard contents are served by the program that
-//! set them, so a command-line tool that copies and exits would leave the clipboard
-//! empty. On Linux we therefore hand the text to a detached copy of ourselves
-//! (`--hold-clipboard`) that keeps serving it until another program takes over.
+//! clipboard for every OS, on linux a detached copy of us keeps serving the text.
 
 use anyhow::{Context, Result};
 use image::DynamicImage;
@@ -38,7 +33,7 @@ pub fn copy_text(text: &str) -> Result<()> {
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .process_group(0) // survive Ctrl-C and the terminal closing
+        .process_group(0) // survive ctrl-c and the terminal closing.
         .spawn()
         .context("starting the clipboard helper")?;
     child
@@ -47,7 +42,7 @@ pub fn copy_text(text: &str) -> Result<()> {
         .context("helper stdin")?
         .write_all(text.as_bytes())?;
 
-    // If the helper can't reach a clipboard (no display server), it exits immediately.
+    // no display server means no clipboard, so exit.
     std::thread::sleep(Duration::from_millis(200));
     if let Some(status) = child.try_wait()? {
         anyhow::ensure!(
@@ -58,7 +53,7 @@ pub fn copy_text(text: &str) -> Result<()> {
     Ok(())
 }
 
-/// Body of the Linux helper process: read text from stdin and serve it until overwritten.
+/// linux helper, serves stdin on the clipboard until something else takes over.
 #[cfg(target_os = "linux")]
 pub fn hold(text: &str) -> Result<()> {
     use arboard::SetExtLinux;

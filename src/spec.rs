@@ -1,10 +1,4 @@
-//! Everything model-specific lives here, so a different encoder-decoder (or one you
-//! train yourself) is a folder of ONNX files plus an optional `spec.json`, not a code change.
-//!
-//! The ONNX graphs must follow the Hugging Face `optimum` export convention for
-//! VisionEncoderDecoder models: the encoder maps `pixel_values` to
-//! `last_hidden_state`, and the decoder maps `input_ids` + `encoder_hidden_states`
-//! to `logits` (no KV cache).
+//! everything model specific lives here, another model is a folder of ONNX files plus an optional spec.json.
 
 use std::{fs, path::Path};
 
@@ -12,18 +6,18 @@ use anyhow::{Context, Result};
 use clap::ValueEnum;
 use serde::Deserialize;
 
-/// How an image of any shape is turned into the encoder's fixed input size.
+/// how an image is turned into the encoder's input size.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum Fit {
-    /// Squash to the input size, ignoring aspect ratio (what the model's own image processor does)
+    /// squash to the input size like the model's own processor.
     #[default]
     Stretch,
-    /// Pad with the page colour to the input aspect ratio, then shrink
+    /// pad with the page colour to the aspect ratio then shrink.
     Pad,
 }
 
-/// Any field omitted from `spec.json` keeps its pix2text-mfr default.
+/// anything left out of spec.json keeps the pix2text-mfr default.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
 pub struct ModelSpec {
@@ -31,16 +25,16 @@ pub struct ModelSpec {
     pub encoder: String,
     pub decoder: String,
     pub tokenizer: String,
-    /// Size the encoder expects, in pixels.
+    /// size the encoder expects in pixels.
     pub input_width: u32,
     pub input_height: u32,
-    /// Per-channel normalisation: `(pixel / 255 - mean) / std`.
+    /// per channel normalisation, (pixel / 255 - mean) / std.
     pub mean: [f32; 3],
     pub std: [f32; 3],
     pub fit: Fit,
     pub start_token: i64,
     pub eos_token: i64,
-    /// Where to download missing files from (`{base_url}/{file}`); `None` for local-only models.
+    /// where to download missing files from, None for local models.
     pub base_url: Option<String>,
 }
 
@@ -64,7 +58,7 @@ impl Default for ModelSpec {
 }
 
 impl ModelSpec {
-    /// `dir/spec.json` if it exists, otherwise the built-in default.
+    /// dir/spec.json if it exists, else the default.
     pub fn load(dir: &Path) -> Result<Self> {
         let path = dir.join("spec.json");
         if !path.is_file() {

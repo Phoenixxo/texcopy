@@ -1,8 +1,4 @@
-//! Image -> LaTeX recognition with an ONNX vision encoder-decoder (see `spec.rs`).
-//!
-//! The model is a vision encoder-decoder: a ViT turns the image into a grid of
-//! feature vectors, and a small transformer decoder writes LaTeX tokens one at a
-//! time while attending to those vectors.
+//! image to LaTeX with an ONNX vision encoder-decoder, see spec.rs.
 
 use std::path::Path;
 
@@ -17,19 +13,19 @@ use tokenizers::Tokenizer;
 
 use crate::spec::{Fit, ModelSpec};
 
-/// Why decoding stopped.
+/// why decoding stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Stop {
-    /// The model finished (emitted its end-of-sequence token).
+    /// the model finished.
     Eos,
-    /// Hit the token limit before finishing: the output is cut off.
+    /// hit the token limit, the output is cut off.
     MaxTokens,
-    /// The model got stuck repeating the same few tokens; the output is garbage.
+    /// stuck repeating the same few tokens.
     Looped,
 }
 
-/// One generated token and the model's probability for having chosen it.
+/// a generated token and its probability.
 #[derive(Debug, Clone, Serialize)]
 pub struct Token {
     pub text: String,
@@ -38,19 +34,19 @@ pub struct Token {
 
 #[derive(Debug, Clone)]
 pub struct Recognition {
-    /// The raw detokenized output (see `tidy` for turning it into idiomatic LaTeX).
+    /// the raw detokenized output.
     pub text: String,
     pub tokens: Vec<Token>,
     pub stop: Stop,
 }
 
 impl Recognition {
-    /// Probability of the least certain token (1.0 when there are none).
+    /// probability of the least certain token.
     pub fn min_prob(&self) -> f32 {
         self.tokens.iter().map(|t| t.prob).fold(1.0, f32::min)
     }
 
-    /// Average log-probability per token (0.0 is perfectly certain, more negative is worse).
+    /// average log probability per token.
     pub fn mean_logprob(&self) -> f32 {
         if self.tokens.is_empty() {
             return 0.0;
@@ -63,12 +59,10 @@ impl Recognition {
     }
 }
 
-/// Tokens the model was less sure of than this are worth proofreading. Chosen from the
-/// benchmark (tools/bench.py): at 0.5 none of the 44 exactly-recovered formulas were flagged;
-/// at 0.7 a quarter of them were.
+/// tokens less sure than this are worth proofreading, picked from the benchmark.
 pub const LOW_CONFIDENCE: f32 = 0.5;
 
-/// Index and softmax probability of the highest logit.
+/// index and softmax probability of the top logit.
 fn argmax_prob(logits: &[f32]) -> (i64, f32) {
     let (i, &max) = logits
         .iter()
@@ -79,9 +73,7 @@ fn argmax_prob(logits: &[f32]) -> (i64, f32) {
     (i as i64, 1.0 / z)
 }
 
-/// True if the tail of `ids` is a short chunk (period 1..=12) repeated back-to-back at
-/// least 4 times and across at least 32 tokens. Real LaTeX can repeat (`0&0&0&0`), but not
-/// this much without the digits or indices changing.
+/// true if the tail of ids is a short chunk repeated at least 4 times over 32 tokens.
 fn looped(ids: &[i64]) -> bool {
     (1..=12usize).any(|p| {
         let repeats = 4.max(32usize.div_ceil(p));
@@ -115,9 +107,9 @@ impl Recognizer {
         })
     }
 
-    /// Recognise a single formula image (no `$` delimiters).
+    /// recognise one formula image.
     pub fn recognize(&mut self, img: &DynamicImage, max_tokens: usize) -> Result<Recognition> {
-        // 1. Encode the image once.
+        // encode the image once.
         let (w, h) = (
             self.spec.input_width as usize,
             self.spec.input_height as usize,
@@ -131,8 +123,7 @@ impl Recognizer {
         let enc_data = enc_data.to_vec();
         drop(enc_out);
 
-        // 2. Greedy autoregressive decoding. The exported decoder has no KV cache,
-        //    so every step feeds the full prefix again.
+        // greedy decoding, the decoder has no KV cache so each step feeds the whole prefix.
         let mut ids = vec![self.spec.start_token];
         let mut probs: Vec<f32> = Vec::new();
         let mut stop = Stop::MaxTokens;
@@ -156,7 +147,7 @@ impl Recognizer {
             }
         }
 
-        // 3. Token ids -> text (drop the start token).
+        // token ids to text, dropping the start token.
         let ids: Vec<u32> = ids[1..].iter().map(|&i| i as u32).collect();
         let decode = |ids: &[u32]| {
             self.tokenizer
@@ -181,10 +172,7 @@ impl Recognizer {
     }
 }
 
-/// Turn an arbitrary screenshot into the CHW float tensor the encoder wants:
-/// flatten alpha onto white, flip dark-mode captures to dark-on-light, fit it to
-/// the model's input size (stretch, or pad to its aspect ratio first), then
-/// normalise with the spec's per-channel mean and std.
+/// turn a screenshot into the float tensor the encoder wants.
 fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
     let (tw, th) = (spec.input_width, spec.input_height);
     let rgba = img.to_rgba8();
@@ -195,7 +183,7 @@ fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
         rgb.put_pixel(x, y, image::Rgb([blend(p[0]), blend(p[1]), blend(p[2])]));
     }
 
-    // The model was trained on dark ink on a light page.
+    // the model was trained on dark ink on a light page.
     let luma_sum: f64 = rgb
         .pixels()
         .map(|p| 0.299 * p[0] as f64 + 0.587 * p[1] as f64 + 0.114 * p[2] as f64)
@@ -207,7 +195,7 @@ fn preprocess(img: &DynamicImage, spec: &ModelSpec) -> Vec<f32> {
     let resized = match spec.fit {
         Fit::Stretch => image::imageops::resize(&rgb, tw, th, FilterType::CatmullRom),
         Fit::Pad => {
-            // Pad with the page colour (taken from the top-left corner) up to the target aspect ratio.
+            // pad with the page colour from the top left up to the aspect ratio.
             let (w, h) = (rgb.width(), rgb.height());
             let (cw, ch) = if w as u64 * th as u64 >= h as u64 * tw as u64 {
                 (w, (w as u64 * th as u64).div_ceil(tw as u64) as u32)
@@ -250,13 +238,13 @@ mod tests {
     #[test]
     fn detects_runaway_loops_but_not_legitimate_repetition() {
         let mut stuck: Vec<i64> = (1..=10).collect();
-        stuck.extend([7, 8, 9].repeat(12)); // a 3-token chunk repeated 12 times
+        stuck.extend([7, 8, 9].repeat(12)); // a 3 token chunk repeated 12 times.
         assert!(looped(&stuck));
-        assert!(looped(&[5; 40])); // one token repeated forever
+        assert!(looped(&[5; 40])); // one token repeated forever.
 
-        // `0 & 0 & ... ` for a 6-column zero row: period 2, only 6 repeats.
+        // a 6 column zero row has period 2 and only 6 repeats.
         assert!(!looped(&[0, 1].repeat(6)));
-        // Repetition with a changing index (a_1 x_1 + a_2 x_2 ...) never matches exactly.
+        // a changing index never matches exactly.
         let terms: Vec<i64> = (1..=20).flat_map(|k| [10, 11, 100 + k, 12]).collect();
         assert!(!looped(&terms));
         assert!(!looped(&[]));

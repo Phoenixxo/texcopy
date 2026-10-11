@@ -1,8 +1,4 @@
-//! Choosing and running the engines: the one place both the command line and the window call.
-//!
-//! `Options` says what to do; `Warm` holds the expensive things (the running `llama-server`, the
-//! loaded small model) so a long-lived caller like the window can reuse them between reads. The
-//! command line makes a fresh `Warm` per run and drops it, so nothing outlives the command.
+//! picks and runs the engines, the command line and the window both call this.
 
 use std::path::PathBuf;
 
@@ -16,19 +12,19 @@ use crate::{fetch, model, spec::Fit, tidy, ui, vlm};
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Engine {
-    /// The vision engine when it is set up, otherwise the small model
+    /// vision engine if it's set up, otherwise the small model.
     Auto,
-    /// Only the small formula model (fast, 118 MB)
+    /// only the small formula model.
     Small,
-    /// Only the vision engine (OvisOCR2 via llama.cpp, about 1 GB)
+    /// only the vision engine.
     Vlm,
 }
 
-/// Delimiters to put around a formula.
+/// what to put around a formula.
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Wrap {
-    /// Raw LaTeX, no delimiters
+    /// raw LaTeX.
     None,
     /// $...$
     Inline,
@@ -36,7 +32,7 @@ pub enum Wrap {
     Display,
 }
 
-/// A sentence already carries its own $...$ marks, so wrapping only applies to formulas.
+/// sentences already have their own $...$ so this only applies to formulas.
 pub fn wrapped(wrap: Wrap, kind: tidy::Kind, latex: &str) -> String {
     match (wrap, kind) {
         (Wrap::None, _) | (_, tidy::Kind::Prose) => latex.to_string(),
@@ -45,20 +41,20 @@ pub fn wrapped(wrap: Wrap, kind: tidy::Kind, latex: &str) -> String {
     }
 }
 
-/// Everything that decides how an image is read.
+/// everything that decides how an image is read.
 #[derive(Clone)]
 pub struct Options {
     pub engine: Engine,
-    /// Skip cleanup and keep the model's output as-is
+    /// skip cleanup and keep the model's output.
     pub raw: bool,
     pub fit: Option<Fit>,
     pub model_dir: Option<PathBuf>,
     pub max_tokens: usize,
     pub llama_server: Option<PathBuf>,
     pub vlm_dir: Option<PathBuf>,
-    /// Answer yes when the vision engine must be set up first (command line only)
+    /// say yes when the vision engine needs setting up, command line only.
     pub yes: bool,
-    /// Don't print tips and warnings (the window shows its own)
+    /// no tips or warnings, the window shows its own.
     pub quiet: bool,
 }
 
@@ -78,7 +74,7 @@ impl Default for Options {
     }
 }
 
-/// What an engine read, in one shape.
+/// what an engine read.
 pub struct Outcome {
     pub latex: String,
     pub kind: tidy::Kind,
@@ -90,23 +86,22 @@ pub struct Outcome {
     pub tokens: Vec<model::Token>,
 }
 
-/// Loaded engines kept between reads.
+/// engines kept loaded between reads.
 #[derive(Default)]
 pub struct Warm {
     server: Option<vlm::Server>,
     recognizer: Option<model::Recognizer>,
 }
 
-#[cfg_attr(not(feature = "gui"), allow(dead_code))] // only the window keeps engines warm
+#[cfg_attr(not(feature = "gui"), allow(dead_code))] // only the window keeps engines warm.
 impl Warm {
-    /// Stop the helper and unload the models, freeing their memory.
+    /// stop the helper and unload the models.
     pub fn cool_down(&mut self) {
         self.server = None;
         self.recognizer = None;
     }
 
-    /// Start the vision engine now, if it is already set up, so the first read doesn't wait for it.
-    /// Never downloads and never asks; does nothing for `--engine small`. True if it is running.
+    /// start the vision engine now if it's set up, never downloads or asks.
     pub fn prewarm(&mut self, opts: &Options) -> Result<bool> {
         if opts.engine == Engine::Small || self.server.is_some() {
             return Ok(self.server.is_some());
@@ -123,9 +118,7 @@ impl Warm {
     }
 }
 
-/// Choose and run the engines. The vision engine goes first: if it finds text, that is the answer.
-/// If it finds only a formula, the small model is preferred (it is better on isolated formulas),
-/// with the vision engine's formula as the fallback.
+/// pick and run the engines, vision first and the small model preferred for plain formulas.
 pub fn read(
     opts: &Options,
     img: &DynamicImage,
@@ -178,7 +171,7 @@ pub fn read(
         }
         vlm::Reading::Formula(f) => {
             let small = read_small(opts, img, warm, report)?;
-            // The small model giving up is the one case where the vision engine's formula is better.
+            // the small model giving up is when the vision formula is better.
             Ok(if small.stop == model::Stop::Looped {
                 from_vision(f, tidy::Kind::Math)
             } else {
@@ -188,8 +181,7 @@ pub fn read(
     }
 }
 
-/// Run the vision engine. `Ok(None)` means it isn't set up, which is only allowed when `required` is
-/// false; when it is required, a missing piece is set up first (asking the user in the terminal).
+/// run the vision engine, None if it isn't set up and that's allowed.
 fn run_vlm(
     opts: &Options,
     img: &DynamicImage,
@@ -215,14 +207,14 @@ fn run_vlm(
     match server.read(img) {
         Ok(read) => Ok(Some(read)),
         Err(e) => {
-            // A helper that died or hung must not be reused for the next read.
+            // a helper that died or hung doesn't get reused.
             warm.server = None;
             Err(e)
         }
     }
 }
 
-/// The small formula model, with tidy and prose mode.
+/// the small formula model with tidy and prose mode.
 fn read_small(
     opts: &Options,
     img: &DynamicImage,

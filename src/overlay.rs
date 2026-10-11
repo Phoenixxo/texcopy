@@ -1,13 +1,4 @@
-//! The built-in region selector, used where the OS has none of its own (Windows, and Linux without
-//! `grim`/`maim`/`spectacle`/...). It runs as its own short-lived process: `texcopy --select-overlay
-//! <out.png>`. The window launches it the way it launches macOS's `screencapture`.
-//!
-//! The process takes a screenshot of the primary monitor *before* it creates any window (so the overlay
-//! can never appear in its own picture), shows that frozen picture dimmed over the whole screen, lets
-//! you drag a rectangle, and writes the cropped PNG. Esc, or a closed window, writes nothing.
-//!
-//! Being its own process matters: the overlay is then always the first window the process makes, which
-//! is what gets it exactly the frame it asks for (a second window may be moved by the window manager).
+//! the built in region selector for where the OS has none, runs as its own process.
 
 use std::path::PathBuf;
 
@@ -17,12 +8,10 @@ use eframe::egui::{
 };
 use image::RgbaImage;
 
-/// A drag smaller than this (in screenshot pixels) is a click, not a selection.
+/// a drag smaller than this is a click.
 const MIN_SIDE_PX: u32 = 6;
 
-/// Where a selection (in egui points inside the overlay window) lands in the screenshot, as
-/// `(x, y, w, h)` in pixels. The scale is worked out from the window's real size, so it is right
-/// whatever DPI the OS reports. None when the drag is too small to be a selection.
+/// where a selection in the overlay lands in the screenshot, None if too small.
 fn crop_rect(sel: Rect, window: Rect, shot: (u32, u32)) -> Option<(u32, u32, u32, u32)> {
     let (sx, sy) = (
         shot.0 as f32 / window.width(),
@@ -44,7 +33,7 @@ struct Overlay {
     press: Option<Pos2>,
     now: Option<Pos2>,
     started: std::time::Instant,
-    /// Test hook: `TEXCOPY_OVERLAY_AUTO=x0,y0,x1,y1` (points) "drags" this rectangle after 2 s.
+    /// test hook, TEXCOPY_OVERLAY_AUTO=x0,y0,x1,y1 drags this rectangle after 2 s.
     auto: Option<Rect>,
 }
 
@@ -57,7 +46,7 @@ impl Overlay {
         let window = ctx.content_rect();
         let Some((x, y, w, h)) = crop_rect(sel, window, (self.shot.width(), self.shot.height()))
         else {
-            // a click or a tiny drag: keep waiting for a real selection
+            // a click or tiny drag, keep waiting.
             self.press = None;
             self.now = None;
             return;
@@ -65,7 +54,7 @@ impl Overlay {
         let crop = image::imageops::crop_imm(&self.shot, x, y, w, h).to_image();
         if let Err(e) = crop.save(&self.out) {
             eprintln!("could not save the selection: {e}");
-            std::process::exit(1); // the parent reports this as an error, not as a cancel
+            std::process::exit(1); // the parent reports this as an error.
         }
         ctx.send_viewport_cmd(ViewportCommand::Close);
     }
@@ -76,7 +65,7 @@ impl eframe::App for Overlay {
         if ctx.input(|i| i.key_pressed(Key::Escape) || i.viewport().close_requested()) {
             ctx.send_viewport_cmd(ViewportCommand::Close);
         }
-        ctx.request_repaint(); // follow the mouse
+        ctx.request_repaint(); // follow the mouse.
         if let Some(sel) = self.auto
             && self.started.elapsed() > std::time::Duration::from_secs(2)
         {
@@ -111,7 +100,7 @@ impl eframe::App for Overlay {
                 p.image(self.texture.id(), full, whole, Color32::WHITE);
                 p.rect_filled(full, 0.0, Color32::from_black_alpha(110));
                 if let Some(sel) = self.selection() {
-                    // the selected part shows undimmed, as a hole in the dimming
+                    // the selected part shows undimmed.
                     let uv = Rect::from_min_max(
                         pos2(
                             (sel.min.x - full.min.x) / full.width(),
@@ -137,12 +126,11 @@ impl eframe::App for Overlay {
     }
 }
 
-/// Run the selector: capture the primary monitor, let the user drag, write the crop to `out`.
-/// Returns Ok with no file written when the user cancelled.
+/// run the selector, capture the primary monitor, let the user drag and write the crop to out.
 pub fn run(out: PathBuf) -> Result<()> {
-    std::fs::remove_file(&out).ok(); // so "no file afterwards" always means "cancelled"
+    std::fs::remove_file(&out).ok(); // so no file afterwards always means cancelled.
 
-    // Capture BEFORE any window exists, so the overlay is never in its own screenshot.
+    // capture before any window exists so the overlay isn't in its own screenshot.
     let monitors = xcap::Monitor::all().context("listing monitors")?;
     let monitor = monitors
         .iter()
@@ -163,14 +151,12 @@ pub fn run(out: PathBuf) -> Result<()> {
         .with_always_on_top()
         .with_resizable(false);
     if cfg!(target_os = "macos") {
-        // Only reachable on macOS when testing (TEXCOPY_FORCE_OVERLAY): cover the monitor with a plain
-        // borderless window, because native fullscreen would switch Spaces.
+        // macOS test only, a plain borderless window because native fullscreen switches Spaces.
         viewport = viewport
             .with_position(pos2(mx as f32, my as f32))
             .with_inner_size(vec2(mw as f32, mh as f32));
     } else {
-        // Fullscreen covers the monitor in whatever units the OS uses, and works on Wayland, where a
-        // window cannot position itself.
+        // fullscreen covers the monitor and works on wayland.
         viewport = viewport.with_fullscreen(true);
     }
     let options = eframe::NativeOptions {
@@ -215,19 +201,19 @@ mod tests {
 
     #[test]
     fn a_selection_maps_to_screenshot_pixels_at_any_scale() {
-        // 1512x982 points shown for a 3024x1964-pixel screenshot (a 2x Retina display)
+        // 1512x982 points for a 3024x1964 screenshot on a 2x display.
         let window = rect(0.0, 0.0, 1512.0, 982.0);
         assert_eq!(
             crop_rect(rect(200.0, 150.0, 720.0, 340.0), window, (3024, 1964)),
             Some((400, 300, 1040, 380))
         );
-        // 1x display, and a window that is not at the origin
+        // 1x display with a window that isn't at the origin.
         let window = rect(10.0, 20.0, 1930.0, 1100.0);
         assert_eq!(
             crop_rect(rect(110.0, 120.0, 310.0, 220.0), window, (1920, 1080)),
             Some((100, 100, 200, 100))
         );
-        // a screenshot of a different size than the window (fractional scaling): ratio comes from sizes
+        // different sized screenshot and window, the ratio comes from the sizes.
         let window = rect(0.0, 0.0, 1280.0, 720.0);
         assert_eq!(
             crop_rect(rect(640.0, 360.0, 1280.0, 720.0), window, (1920, 1080)),

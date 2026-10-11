@@ -1,35 +1,27 @@
-//! Turning the vision model's Markdown into LaTeX that renders the same as the picture.
-//!
-//! The model reads a page into Markdown: `##` headings, `-` lists, blank lines between paragraphs,
-//! `$..$` and `$$..$$` math, ``` fences. The picture can't tell us which LaTeX the author wrote, so the
-//! goal is *a* correct reconstruction: `\section*`, `itemize`, `equation`, escaped `&%#_`, and so on.
-//!
-//! The text is split into blocks on blank lines. Each block becomes a heading, a list, code, a display
-//! equation or a paragraph; paragraphs, list items and headings share one cleanup path (`finish`).
+//! turns the vision model's markdown into LaTeX that renders the same.
 
 use crate::{prose, table, vlm};
 
-/// A literal `$` in text (a price, say). Hidden behind this while the text is processed, because
-/// everything downstream splits on `$` to find math; turned into `\$` at the end.
+/// a literal $ in text, hidden while we split on $ and put back as \$.
 const DOLLAR: char = '\u{E000}';
-/// Brackets around the index of an inline math piece parked while the text is split into blocks.
+/// brackets of inline math indexes, parked while we split into blocks.
 const OPEN: char = '\u{E001}';
 const CLOSE: char = '\u{E002}';
 
 enum Piece {
-    /// A paragraph of running text (finished LaTeX).
+    /// a paragraph of text.
     Para(String),
-    /// Anything that stands on its own lines: a heading, a list, a display equation, code.
+    /// anything on its own lines, heading, list, equation or code.
     Raw(String),
 }
 
-/// The model's text (no tables) as LaTeX.
+/// the model's text without tables, as LaTeX.
 pub fn to_latex(raw: &str) -> String {
     let segs = vlm::segments(raw);
     let mut pieces: Vec<Piece> = Vec::new();
     let mut inline: Vec<String> = Vec::new();
     let mut buf = String::new();
-    let mut skip = 0usize; // bytes of the next text segment already used (an equation number)
+    let mut skip = 0usize; // bytes of the next text segment already used, like an equation number.
     let mut had_display = false;
     for (i, seg) in segs.iter().enumerate() {
         if !seg.math {
@@ -57,7 +49,7 @@ pub fn to_latex(raw: &str) -> String {
     }
     flush_text(&mut buf, &inline, &mut pieces);
 
-    // A bare number left at the end after a display is the page number from the footer.
+    // a bare number after a display is the page number.
     if had_display
         && pieces.len() >= 2
         && matches!(pieces.last(), Some(Piece::Para(t)) if t.len() <= 4 && t.chars().all(|c| c.is_ascii_digit()))
@@ -65,7 +57,7 @@ pub fn to_latex(raw: &str) -> String {
         pieces.pop();
     }
 
-    // A proof's end mark belongs flush right on the last line of the proof.
+    // a proof's end mark goes flush right.
     let mut merged: Vec<Piece> = Vec::new();
     for piece in pieces {
         match (piece, merged.last_mut()) {
@@ -78,7 +70,7 @@ pub fn to_latex(raw: &str) -> String {
     }
     let pieces = merged;
 
-    // Paragraphs are separated by a blank line; everything else sits on lines of its own.
+    // paragraphs get a blank line, everything else gets its own line.
     let mut out = String::new();
     let mut prev_was_para = false;
     for piece in pieces {
@@ -103,9 +95,7 @@ fn is_qed(text: &str) -> bool {
     matches!(text, "$\\square$" | "$\\blacksquare$")
 }
 
-/// A table cell: the same cleanup as a paragraph, with no block structure, so a cell that starts
-/// with "- " or "1. " stays text. A lone letter is a variable in a header (`n`) but a label in the
-/// body (a grade, a group), so only the header's is marked as math.
+/// a table cell, cleaned like a paragraph with no block structure.
 pub fn cell(raw: &str, header: bool) -> String {
     if is_body_label(raw, header) {
         return raw.trim().to_string();
@@ -140,10 +130,9 @@ fn flush_text(buf: &mut String, inline: &[String], pieces: &mut Vec<Piece>) {
     buf.clear();
 }
 
-// ---- display equations ----
+// display equations.
 
-/// `(1)`, `(2.3)` or `(4a)` at the start of `text` (after spaces): an equation number. Returns the
-/// number and how many bytes it took.
+/// (1), (2.3) or (4a) at the start is an equation number.
 pub fn leading_equation_number(text: &str) -> Option<(String, usize)> {
     let trimmed = text.trim_start();
     let inner = trimmed.strip_prefix('(')?;
@@ -158,7 +147,7 @@ pub fn leading_equation_number(text: &str) -> Option<(String, usize)> {
     valid.then(|| (number.to_string(), text.len() - trimmed.len() + end + 2))
 }
 
-/// Remove a `\tag{..}` from display math (the number was written inside the equation).
+/// drop a \tag{..} from display math.
 pub fn strip_tag(body: &str) -> (String, bool) {
     if let Some(start) = body.find("\\tag{")
         && let Some(len) = body[start..].find('}')
@@ -169,7 +158,7 @@ pub fn strip_tag(body: &str) -> (String, bool) {
     (body.to_string(), false)
 }
 
-/// Environments that are display math by themselves; wrapping them in `\[ \]` would be an error.
+/// environments that are display math already.
 const OWN_DISPLAY: [&str; 8] = [
     "align", "alignat", "flalign", "gather", "multline", "eqnarray", "equation", "split",
 ];
@@ -192,15 +181,15 @@ fn display(body: &str, numbered: bool) -> String {
     }
 }
 
-// ---- blocks: headings, lists, code, paragraphs ----
+// headings, lists, code and paragraphs.
 
 struct Item {
-    /// the bullet character, or '#' for numbered
+    /// the bullet, or # for numbered.
     key: char,
     indent: usize,
     number: Option<usize>,
     text: String,
-    /// the line as the model wrote it (if a lone "1." turns out not to be a list)
+    /// the line as the model wrote it.
     original: String,
 }
 
@@ -236,7 +225,7 @@ fn list_marker(line: &str) -> Option<Item> {
     None
 }
 
-/// `# Title`, `## Section`, `### Subsection` as `\section*{..}` and friends.
+/// # Title and friends become \section*{..}.
 fn heading(line: &str) -> Option<(usize, &str)> {
     let t = line.trim_start();
     let level = t.chars().take_while(|&c| c == '#').count();
@@ -244,8 +233,7 @@ fn heading(line: &str) -> Option<(usize, &str)> {
     (1..=6).contains(&level).then_some((level, rest.trim()))
 }
 
-/// A block before its text is cleaned up: paragraphs wait as raw lines, because a run of lines of
-/// equal width may turn out to be a table the model wrote as plain words.
+/// a block before cleanup, paragraphs wait as raw lines.
 enum Draft {
     Lines(Vec<String>),
     Done(Piece),
@@ -267,7 +255,7 @@ fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
             return;
         }
         let items = std::mem::take(list);
-        // A lone "5." is a numbered line of text (a problem number), not a list.
+        // a lone 5. is a problem number, so no list.
         if items.len() == 1 && items[0].number.is_some() {
             drafts.push(Draft::Lines(vec![items[0].original.clone()]));
         } else {
@@ -316,7 +304,7 @@ fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
             flush_para(&mut para, &mut drafts);
             list.push(item);
         } else if !list.is_empty() && !after_blank {
-            // a wrapped line of the previous list item
+            // a wrapped line of the last list item.
             let last = list.last_mut().expect("checked non-empty");
             last.text.push(' ');
             last.text.push_str(line.trim());
@@ -334,7 +322,7 @@ fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
     flush_para(&mut para, &mut drafts);
     flush_list(&mut list, &mut drafts);
 
-    // Resolve: consecutive paragraphs are checked together for plain-text tables.
+    // check consecutive paragraphs together for plain text tables.
     let mut pieces = Vec::new();
     let mut group: Vec<Vec<String>> = Vec::new();
     for draft in drafts {
@@ -350,11 +338,9 @@ fn blocks(text: &str, inline: &[String]) -> Vec<Piece> {
     pieces
 }
 
-/// How many lines from the start of `lines` form a table written as plain words: at least three
-/// lines with the same number (2 to 10) of short words, one of the columns made of numbers.
-/// Real sentences are long and ragged, so they don't match.
+/// how many lines from the start are a plain text table.
 fn plain_table_len(lines: &[&str]) -> usize {
-    // A line ending in a colon introduces what follows ("First table:"); it is not a row.
+    // a line ending in a colon introduces what follows.
     if lines.first().is_none_or(|l| l.trim_end().ends_with(':')) {
         return 0;
     }
@@ -369,7 +355,7 @@ fn plain_table_len(lines: &[&str]) -> usize {
         .collect();
     let numeric_column =
         (0..width).any(|c| rows.iter().skip(1).all(|r| table::is_number_like(r[c])));
-    // Two columns are only a table when the labels differ: "Problem 1 / Problem 2 / Problem 3" is not.
+    // two columns only count as a table when the labels differ.
     let labels_differ = width > 2 || {
         let mut firsts: Vec<&str> = rows.iter().map(|r| r[0]).collect();
         firsts.sort_unstable();
@@ -383,7 +369,7 @@ fn plain_table_len(lines: &[&str]) -> usize {
     }
 }
 
-/// Clean the paragraphs in `group` into pieces, turning plain-word tables into `tabular`s.
+/// clean the paragraphs in a group, turning plain text tables into tabulars.
 fn resolve_paragraphs(group: &mut Vec<Vec<String>>, inline: &[String], pieces: &mut Vec<Piece>) {
     let flat: Vec<(usize, &str)> = group
         .iter()
@@ -422,7 +408,7 @@ fn resolve_paragraphs(group: &mut Vec<Vec<String>>, inline: &[String], pieces: &
             if is_body_label(t, header) {
                 t.trim().to_string()
             } else {
-                finish(t, inline) // `inline` holds the math parked in the surrounding text
+                finish(t, inline) // inline holds the math parked in the text.
             }
         };
         match table::from_rows(&rows, &clean) {
@@ -436,7 +422,7 @@ fn resolve_paragraphs(group: &mut Vec<Vec<String>>, inline: &[String], pieces: &
     group.clear();
 }
 
-/// `itemize` / `enumerate`, nested by marker and indentation.
+/// itemize and enumerate, nested by marker and indent.
 fn list_latex(items: &[Item], inline: &[String]) -> String {
     struct Level {
         key: char,
@@ -457,7 +443,7 @@ fn list_latex(items: &[Item], inline: &[String]) -> String {
         }
         let same = stack.last().is_some_and(|l| l.key == item.key);
         if !same {
-            // back to a level we already opened, or a new, deeper one
+            // back to a level we opened, or a new deeper one.
             if let Some(pos) = stack.iter().rposition(|l| l.key == item.key) {
                 while stack.len() > pos + 1 {
                     close(&mut stack, &mut out);
@@ -496,9 +482,9 @@ fn list_latex(items: &[Item], inline: &[String]) -> String {
     out.join("\n")
 }
 
-// ---- text: one cleanup path for paragraphs, list items and headings ----
+// text, one cleanup for paragraphs, list items and headings.
 
-/// Put the parked inline math back as `$..$`.
+/// put the parked math back as $..$.
 fn restore(text: &str, inline: &[String]) -> String {
     let mut out = String::with_capacity(text.len());
     let mut chars = text.chars();
@@ -516,7 +502,7 @@ fn restore(text: &str, inline: &[String]) -> String {
     out
 }
 
-/// Apply `f` to the parts of `text` outside `$..$`.
+/// apply f to the parts outside $..$.
 fn outside_math(text: &str, f: impl Fn(&str) -> String) -> String {
     let mut out = String::with_capacity(text.len());
     for (i, part) in text.split('$').enumerate() {
@@ -532,7 +518,7 @@ fn outside_math(text: &str, f: impl Fn(&str) -> String) -> String {
     out
 }
 
-/// `“..”` and `"..."` as ``..''; dashes; the symbols pdflatex can't read as plain text.
+/// quotes, dashes and symbols pdflatex can't read.
 fn typography(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut prev: Option<char> = None;
@@ -582,7 +568,7 @@ fn escape_specials(text: &str) -> String {
     out
 }
 
-/// `**bold**` and `*italic*` as `\textbf{}` / `\emph{}`; the markers must hug the words.
+/// **bold** and *italic* as \textbf{} and \emph{}.
 fn emphasis(text: &str) -> String {
     fn wrap(text: &str, marker: &str, cmd: &str) -> String {
         let mut out = String::with_capacity(text.len());
@@ -613,7 +599,7 @@ fn emphasis(text: &str) -> String {
     wrap(&wrap(text, "**", "textbf"), "*", "emph")
 }
 
-/// A paragraph, list item or heading as LaTeX text.
+/// a paragraph, list item or heading as LaTeX text.
 fn finish(text: &str, inline: &[String]) -> String {
     let marked = prose::mark_math(&restore(
         &text.split_whitespace().collect::<Vec<_>>().join(" "),
@@ -623,7 +609,7 @@ fn finish(text: &str, inline: &[String]) -> String {
         escape_specials(&typography(&prose::replace_logos(&emphasis(t))))
     });
     let cleaned = cleaned.replace(DOLLAR, "\\$");
-    // An end mark at the end of a paragraph goes flush right, as in a proof.
+    // an end mark at the end of a paragraph goes flush right.
     for mark in ["$\\square$", "$\\blacksquare$"] {
         if let Some(head) = cleaned.strip_suffix(mark)
             && head.ends_with(' ')
@@ -770,16 +756,16 @@ mod tests {
             "{table}"
         );
         assert!(table.contains("{lr}"), "{table}");
-        // a repeated label is a list of headings, not a table
+        // a repeated label is a list of headings, so no table.
         assert!(!to_latex("Problem 1\n\nProblem 2\n\nProblem 3").contains("tabular"));
     }
 
     #[test]
     fn ordinary_lines_of_text_are_not_mistaken_for_a_table() {
-        // same word count on each line, but no column of numbers
+        // same word count per line but no column of numbers.
         let text = "Show that every tree\n\nProve that every graph\n\nFind the maximum value";
         assert!(!to_latex(text).contains("tabular"));
-        // wrapped sentence lines of different lengths
+        // wrapped sentence lines of different lengths.
         let text = "Let G be a connected graph with n vertices and\nm edges. Show that the graph has a spanning tree.";
         assert!(!to_latex(text).contains("tabular"));
     }

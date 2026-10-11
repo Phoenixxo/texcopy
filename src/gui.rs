@@ -1,13 +1,4 @@
-//! The window: a Capture button, the options, and the output text. Nothing else.
-//!
-//! Three threads cooperate, because egui redraws many times a second and nothing slow may run on the
-//! UI thread:
-//!
-//!   - the UI thread draws and handles clicks;
-//!   - one worker thread owns the loaded engines (`engine::Warm`) and does every read and install;
-//!   - a short-lived thread per Capture click hides the window and waits for the system selector.
-//!
-//! They talk over channels and wake the UI with `request_repaint`.
+//! the window, with the UI thread, one worker that owns the engines and a thread per capture click.
 
 use std::{
     path::PathBuf,
@@ -30,19 +21,19 @@ use crate::{
 };
 
 const WINDOW_SIZE: (f32, f32) = (520.0, 230.0);
-/// Time for the window to disappear before the selector starts, so it is not in the picture.
+/// time for the window to disappear before the selector starts.
 const HIDE_DELAY: Duration = Duration::from_millis(250);
-/// After this long without a read, the helper stops and the models unload (frees about 1.4 GB).
+/// after this long idle the helper stops and the models unload.
 const IDLE_BEFORE_COOLING: Duration = Duration::from_secs(150);
 
-// ---- settings, remembered between runs ----
+// settings, remembered between runs.
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 struct Settings {
     wrap: Wrap,
     engine: Engine,
-    /// The user said "not now" to the vision engine download; don't nag.
+    /// user said not now to the vision download.
     setup_declined: bool,
 }
 
@@ -80,22 +71,22 @@ impl Settings {
     }
 }
 
-// ---- messages between threads ----
+// messages between threads.
 
 enum Job {
     Read(DynamicImage, Engine),
-    /// Start the vision engine in the background so the next read is fast
+    /// start the vision engine in the background.
     Warm(Engine),
     Install,
     Quit,
 }
 
-/// A finished read, ready to show.
+/// a finished read.
 struct Done {
     latex: String,
     kind: tidy::Kind,
     engine: &'static str,
-    /// Short things worth a second look (low confidence, run-together words)
+    /// short things worth a second look.
     notes: Vec<String>,
 }
 
@@ -115,7 +106,7 @@ enum Msg {
     Installed(Result<(), String>),
 }
 
-// ---- the worker ----
+// the worker.
 
 fn spawn_worker(
     base: Options,
@@ -178,12 +169,12 @@ fn spawn_worker(
                 }
             }
         }
-        // `warm` drops here, which stops llama-server. That is why the window waits for this thread.
+        // warm drops here which stops llama-server.
     });
     (job_tx, handle)
 }
 
-/// Turn setup events into throttled `Progress` messages.
+/// turn setup events into throttled progress messages.
 fn progress_reporter<'a>(send: &'a impl Fn(Msg)) -> impl FnMut(Event<'_>) + 'a {
     let mut step = String::new();
     let (mut started, mut base, mut last_sent) = (Instant::now(), 0u64, Instant::now());
@@ -242,7 +233,7 @@ fn progress_reporter<'a>(send: &'a impl Fn(Msg)) -> impl FnMut(Event<'_>) + 'a {
     }
 }
 
-/// Turn an engine result into what the window shows; a read that failed becomes an error message.
+/// turn an engine result into what the window shows.
 fn describe(o: Outcome) -> Result<Done, String> {
     if o.stop == model::Stop::Looped {
         return Err(
@@ -276,7 +267,7 @@ fn describe(o: Outcome) -> Result<Done, String> {
     })
 }
 
-// ---- the window ----
+// the window.
 
 #[derive(Clone)]
 struct SetupItem {
@@ -291,31 +282,30 @@ struct App {
     job_tx: Sender<Job>,
     worker: Option<JoinHandle<()>>,
     base: Options,
-    /// The last picture captured, kept so changing the engine can read it again
+    /// the last picture captured, so changing the engine can read it again.
     shot: Option<DynamicImage>,
     capturing: bool,
     reading: bool,
     installing: Option<Progress>,
     done: Option<Done>,
     error: Option<String>,
-    /// What the vision engine would still download; None when it is ready (or can't be set up here)
+    /// what the vision engine would still download, None when it's ready.
     setup: Option<Vec<SetupItem>>,
     last_copied: String,
     quit: bool,
     test: Option<SelfTest>,
 }
 
-/// `--gui-selftest <png>`: pretend the user captured this picture, check the loop, print PASS/FAIL.
+/// --gui-selftest <png> pretends the user captured this picture and prints PASS or FAIL.
 struct SelfTest {
     picture: PathBuf,
     frame: u32,
     frames_while_hidden: u32,
     read_started: Option<Instant>,
-    /// How long each read took, in seconds (the second one shows the warm path)
+    /// how long each read took in seconds.
     read_secs: Vec<f32>,
     checks: Vec<(String, bool)>,
-    /// `TEXCOPY_GUI_SCREENSHOT=<png>`: save a picture of the window once the first result is showing
-    /// (used to make the README's picture; contains only the window, never the desktop)
+    /// TEXCOPY_GUI_SCREENSHOT=<png> saves a picture of the window, never the desktop.
     screenshot: Option<PathBuf>,
     settled_frames: u32,
     screenshot_requested: bool,
@@ -344,7 +334,7 @@ impl App {
         })
     }
 
-    /// Ask the worker to load the vision engine now; a no-op when it is already loaded or not set up.
+    /// ask the worker to load the vision engine now.
     fn warm_up(&self) {
         if std::env::var_os("TEXCOPY_GUI_NO_PREWARM").is_none() {
             let _ = self.job_tx.send(Job::Warm(self.settings.engine));
@@ -355,7 +345,7 @@ impl App {
         self.capturing || self.reading || self.installing.is_some()
     }
 
-    /// Hide the window, let the user drag a region, then bring the window back.
+    /// hide the window, let the user drag, bring it back.
     fn start_capture(&mut self, ctx: &egui::Context) {
         if self.busy() {
             return;
@@ -363,7 +353,7 @@ impl App {
         self.capturing = true;
         self.done = None;
         self.error = None;
-        // The engine loads while the user is still dragging out the region.
+        // the engine loads while the user is still dragging.
         self.warm_up();
         ctx.send_viewport_cmd(ViewportCommand::Visible(false));
         let (tx, ctx) = (self.msg_tx.clone(), ctx.clone());
@@ -372,7 +362,7 @@ impl App {
             std::thread::sleep(HIDE_DELAY);
             let result = match fake {
                 Some(p) => {
-                    // self-test only: stand in for the seconds a person spends dragging a region
+                    // self test only, stands in for the time spent dragging.
                     let ms = std::env::var("TEXCOPY_SELFTEST_SELECT_MS")
                         .ok()
                         .and_then(|v| v.parse().ok());
@@ -388,7 +378,7 @@ impl App {
 
     fn start_read(&mut self) {
         let Some(img) = self.shot.clone() else { return };
-        // The vision engine can only be forced once it is set up; the card handles that.
+        // the vision engine can only be forced once it's set up.
         if self.settings.engine == Engine::Vlm && self.setup.is_some() {
             return;
         }
@@ -413,7 +403,7 @@ impl App {
                             self.shot = Some(img);
                             self.start_read();
                         }
-                        Ok(None) => {} // cancelled with Esc
+                        Ok(None) => {} // cancelled with esc.
                         Err(e) => self.error = Some(e),
                     }
                 }
@@ -439,13 +429,13 @@ impl App {
                         self.error = Some(e);
                     }
                     self.refresh_setup();
-                    self.start_read(); // a capture waiting for the engine can go ahead now
+                    self.start_read(); // a capture waiting on the engine can go ahead.
                 }
             }
         }
     }
 
-    /// Write the window picture the self-test asked for, when egui hands it back.
+    /// write the picture the self test asked for.
     fn save_screenshot(&mut self, ctx: &egui::Context) {
         let Some(t) = self.test.as_mut() else { return };
         let Some(path) = t.screenshot.clone() else {
@@ -480,7 +470,7 @@ impl App {
         }
         let (frame, hidden, reads) = (t.frame, t.frames_while_hidden, t.read_secs.len());
         if t.screenshot.is_some() && reads == 1 && !t.screenshot_saved {
-            // let the result be drawn for a few frames, then ask for a picture of the window
+            // draw the result for a few frames, then ask for a picture.
             t.settled_frames += 1;
             if t.settled_frames == 8 && !t.screenshot_requested {
                 t.screenshot_requested = true;
@@ -488,7 +478,7 @@ impl App {
             }
             return;
         }
-        // two captures in a row: the first starts the helper, the second should reuse it
+        // two captures in a row, the second reuses the helper.
         if (frame == 10 || (reads == 1 && frame > 10)) && !self.busy() {
             self.start_capture(ctx);
         }
@@ -517,7 +507,7 @@ impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.poll(ctx);
         if self.test.is_some() {
-            ctx.request_repaint_after(Duration::from_millis(30)); // the self-test counts frames
+            ctx.request_repaint_after(Duration::from_millis(30)); // the self test counts frames.
         }
         self.save_screenshot(ctx);
         self.step_selftest(ctx);
@@ -639,7 +629,7 @@ impl eframe::App for App {
         if engine_changed && !self.busy() {
             self.start_read();
         }
-        // The result goes to the clipboard on its own, and again when an option changes it.
+        // the result goes to the clipboard on its own and again when an option changes it.
         let shown = self.shown_text();
         if !shown.is_empty() && !self.reading && shown != self.last_copied && self.test.is_none() {
             if let Err(e) = clipboard::copy_text(&shown) {
@@ -650,8 +640,7 @@ impl eframe::App for App {
     }
 }
 
-/// The first-run offer, shown where the output goes until the engine is set up or declined.
-/// Returns (install clicked, not-now clicked).
+/// the first run offer, returns (install clicked, not now clicked).
 fn setup_card(ui: &mut egui::Ui, items: &[SetupItem]) -> (bool, bool) {
     let total: u64 = items.iter().map(|i| i.size).sum();
     ui.add_space(6.0);
@@ -672,7 +661,7 @@ fn setup_card(ui: &mut egui::Ui, items: &[SetupItem]) -> (bool, bool) {
     (install, decline)
 }
 
-/// The download in progress, drawn where the output goes.
+/// the download in progress.
 fn install_progress(ui: &mut egui::Ui, p: &Progress) {
     ui.add_space(8.0);
     ui.label(egui::RichText::new(&p.step).strong());
@@ -705,7 +694,7 @@ fn install_progress(ui: &mut egui::Ui, p: &Progress) {
 
 impl Drop for App {
     fn drop(&mut self) {
-        // Stop the worker and wait: it owns the running llama-server and must drop it.
+        // stop the worker and wait, it owns llama-server.
         let _ = self.job_tx.send(Job::Quit);
         if let Some(handle) = self.worker.take() {
             let _ = handle.join();
@@ -721,7 +710,7 @@ impl Drop for App {
     }
 }
 
-/// The icon for the window, the taskbar and the Dock (the PNG is made by packaging/icon/make_icon.py).
+/// icon for the window, taskbar and dock.
 fn window_icon() -> egui::IconData {
     let rgba = image::load_from_memory(include_bytes!("../packaging/icon/icon-256.png"))
         .expect("the embedded icon is a valid PNG")
@@ -733,17 +722,16 @@ fn window_icon() -> egui::IconData {
     }
 }
 
-/// Open the window. `selftest` is a picture to use instead of a real screen selection.
+/// open the window, selftest is a picture to use instead of a real selection.
 pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
     let options = eframe::NativeOptions {
         viewport: ViewportBuilder::default()
             .with_title("texcopy")
-            .with_app_id("texcopy") // matches StartupWMClass in the Linux menu entry
+            .with_app_id("texcopy") // matches StartupWMClass in the linux menu entry.
             .with_icon(std::sync::Arc::new(window_icon()))
             .with_inner_size(vec2(WINDOW_SIZE.0, WINDOW_SIZE.1))
             .with_resizable(true)
-            // No minimize/zoom buttons: tiling window managers (AeroSpace) treat such a window as a
-            // dialog and leave it floating instead of tiling it.
+            // no minimize or zoom buttons, tiling window managers treat those as dialogs and leave them floating.
             .with_minimize_button(false)
             .with_maximize_button(false),
         ..Default::default()
@@ -820,7 +808,7 @@ mod tests {
             done: 0,
             total: Some(1000),
         });
-        // a burst of chunks inside the throttle window is not forwarded one by one
+        // a burst of chunks inside the throttle isn't forwarded one by one.
         for done in [10, 20, 30, 40] {
             report(Event::Bytes {
                 label: "model.gguf",

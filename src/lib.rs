@@ -122,7 +122,7 @@ struct Cli {
     hold_clipboard: bool,
 }
 
-/// The whole program: `texcopy` and `texcopy-gui` are thin launchers around this.
+/// the whole program, texcopy and texcopy-gui are thin launchers around this.
 pub fn run() -> Result<()> {
     let cli = Cli::parse();
     if cli.hold_clipboard {
@@ -162,7 +162,7 @@ pub fn run() -> Result<()> {
         return gui::run(opts, cli.gui_selftest.clone());
     }
 
-    // Grab the image first so a cancelled selection costs nothing.
+    // grab the image first so a cancelled selection costs nothing.
     let Some(img) = load_image(&cli)? else {
         eprintln!("Cancelled.");
         return Ok(());
@@ -216,7 +216,7 @@ pub fn run() -> Result<()> {
             unsure.len()
         );
         for &i in unsure.iter().take(5) {
-            // Show a little context before the token, which is marked [like this].
+            // show a little context before the marked token.
             let before: String = outcome.tokens[i.saturating_sub(4)..i]
                 .iter()
                 .map(|t| t.text.trim())
@@ -256,16 +256,16 @@ struct JsonOut<'a> {
     latex: &'a str,
     kind: tidy::Kind,
     raw: &'a str,
-    /// "small" or "vlm"
+    /// small or vlm.
     engine: &'a str,
     stop: model::Stop,
-    /// Only the small model reports per-token confidence.
+    /// only the small model reports per token confidence.
     min_prob: Option<f32>,
     mean_logprob: Option<f32>,
     tokens: &'a [model::Token],
 }
 
-/// One line of `--batch` output: the path, then the same fields as `--json`.
+/// one line of --batch output, the path then the --json fields.
 #[derive(Serialize)]
 struct BatchOut<'a> {
     path: &'a str,
@@ -273,8 +273,7 @@ struct BatchOut<'a> {
     out: JsonOut<'a>,
 }
 
-/// `--batch`: read each listed image with one set of loaded engines, printing a JSON line per image.
-/// A file that can't be read or recognised prints `{"path": ..., "error": ...}` and the run goes on.
+/// --batch reads each listed image with one set of engines and prints a JSON line each, errors print an error line and the run goes on.
 fn run_batch(cli: &Cli, list: &std::path::Path) -> Result<()> {
     let opts = engine::Options {
         engine: cli.engine,
@@ -321,7 +320,7 @@ fn run_batch(cli: &Cli, list: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-/// `None` means the user cancelled the screen selection.
+/// None means the user cancelled.
 fn load_image(cli: &Cli) -> Result<Option<DynamicImage>> {
     if let Some(path) = &cli.image {
         return Ok(Some(

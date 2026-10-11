@@ -1,10 +1,6 @@
-//! Tables. The vision model writes a table it sees as an HTML `<table>`; this turns that into a
-//! LaTeX `tabular`.
-//!
-//! The HTML says nothing about alignment or rules, so those are guesses: number-like columns are
-//! right-aligned and text columns left-aligned, with a rule above the table, under a header row and below.
+//! tables, turns the model's HTML table into a LaTeX tabular.
 
-/// A cell as the HTML described it.
+/// a cell as the HTML described it.
 struct Cell {
     text: String,
     colspan: usize,
@@ -12,15 +8,15 @@ struct Cell {
     header: bool,
 }
 
-/// A cell placed on the grid.
+/// a cell placed on the grid.
 struct Placed {
     latex: String,
-    /// the cell's plain text, to judge whether its column is numbers
+    /// the cell's plain text, to tell if the column is numbers.
     raw: String,
     colspan: usize,
 }
 
-/// Where the first `<table>...</table>` in `s` is (byte range, end exclusive).
+/// where the first <table>...</table> is, end exclusive.
 pub fn find(s: &str) -> Option<(usize, usize)> {
     let lower = s.to_ascii_lowercase();
     let start = lower.find("<table")?;
@@ -50,7 +46,7 @@ fn decode(text: &str) -> String {
         .replace("&amp;", "&")
 }
 
-/// Rows of cells. Tolerant: missing closing tags, stray text and unknown tags are fine.
+/// rows of cells, forgiving about missing closing tags and unknown tags.
 fn parse(html: &str) -> Vec<Vec<Cell>> {
     let (mut rows, mut row): (Vec<Vec<Cell>>, Vec<Cell>) = (Vec::new(), Vec::new());
     let mut cell: Option<Cell> = None;
@@ -118,14 +114,12 @@ fn parse(html: &str) -> Vec<Vec<Cell>> {
     rows
 }
 
-/// A LaTeX `tabular` (inside `center`) for the HTML table, or None if it has no cells.
-/// `clean` turns one cell's text into LaTeX (marking variables, restoring logos, ...); its flag says
-/// whether the cell is in the header row.
+/// a tabular in center for the HTML table, None if there are no cells.
 pub fn to_latex(html: &str, clean: &dyn Fn(&str, bool) -> String) -> Option<String> {
     layout(parse(html), clean)
 }
 
-/// A `tabular` for rows of plain cell texts (a table the model wrote as lines of words).
+/// a tabular for rows of plain cell text.
 pub fn from_rows(rows: &[Vec<String>], clean: &dyn Fn(&str, bool) -> String) -> Option<String> {
     let cells = rows
         .iter()
@@ -143,7 +137,7 @@ pub fn from_rows(rows: &[Vec<String>], clean: &dyn Fn(&str, bool) -> String) -> 
     layout(cells, clean)
 }
 
-/// Does `text` read as a number: `12`, `-0.5`, `1,250.00`, `$20`, `12%`?
+/// does text read as a number.
 pub fn is_number_like(text: &str) -> bool {
     let t = text
         .trim()
@@ -158,9 +152,9 @@ fn layout(rows: Vec<Vec<Cell>>, clean: &dyn Fn(&str, bool) -> String) -> Option<
     if rows.is_empty() {
         return None;
     }
-    // Place every cell on a grid, so colspan and rowspan keep the columns lined up.
-    let mut carry: Vec<usize> = Vec::new(); // rows still covered by a cell from above, per column
-    let mut grid: Vec<Vec<Option<Placed>>> = Vec::new(); // None: covered by a rowspan from above
+    // place every cell on a grid so colspan and rowspan keep columns lined up.
+    let mut carry: Vec<usize> = Vec::new(); // rows still covered by a cell from above, per column.
+    let mut grid: Vec<Vec<Option<Placed>>> = Vec::new(); // None means covered by a rowspan from above.
     for row in &rows {
         let (mut out, mut col) = (Vec::new(), 0usize);
         let skip_covered =
@@ -178,7 +172,7 @@ fn layout(rows: Vec<Vec<Cell>>, clean: &dyn Fn(&str, bool) -> String) -> Option<
             }
             carry[col..col + cell.colspan].fill(cell.rowspan - 1);
             out.push(Some(Placed {
-                latex: String::new(), // filled in below, once we know which row is the header
+                latex: String::new(), // filled in below once we know the header row.
                 raw: cell.text.clone(),
                 colspan: cell.colspan,
             }));
@@ -204,7 +198,7 @@ fn layout(rows: Vec<Vec<Cell>>, clean: &dyn Fn(&str, bool) -> String) -> Option<
         }
     }
 
-    // Number-like columns right-aligned, text columns left-aligned.
+    // number columns right aligned, text columns left.
     let mut spec = String::new();
     for target in 0..n_cols {
         let (mut numeric, mut seen) = (true, false);
@@ -254,7 +248,7 @@ mod tests {
             .replace('_', "\\_")
     }
 
-    /// What the vision model really returned for a small execution-time table.
+    /// what the vision model returned for a small execution time table.
     const TIMES: &str = "<table border=1><tr><td>n</td><td>Recursive time (ms)</td><td>DP time (ms)</td></tr><tr><td>5</td><td>0.000037</td><td>0.000022</td></tr><tr><td>7</td><td>0.000164</td><td>0.000025</td></tr><tr><td>23</td><td>13.314562</td><td>0.000154</td></tr></table>";
 
     #[test]

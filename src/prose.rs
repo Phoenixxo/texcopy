@@ -1,11 +1,4 @@
-//! Prose mode: turn the model's reading of a sentence with inline math into LaTeX text.
-//!
-//! The model is trained on formulas, so given a line of text it writes the words as
-//! `\mathrm{W o r d s ~ l i k e ~ t h i s}` (or `\text{..}`), often wraps the visual lines in
-//! an `array`, and does not mark which letters were italic math. This module undoes that:
-//! it flattens the rows into one paragraph and wraps the math in `$...$`, using rules
-//! because the model gives no italics signal. It cannot tell a variable `a` from the
-//! article "a", so `a`, `A` and `I` are always left as words.
+//! prose mode, turns the model's reading of a sentence with inline math into LaTeX text.
 
 use crate::tidy::matching_brace;
 
@@ -19,12 +12,11 @@ struct Word {
     text: String,
     math: bool,
     space_before: bool,
-    /// First word of a visual line after the first (used to repair breaks at line ends).
+    /// first word of a visual line after the first, used to repair breaks.
     row_start: bool,
 }
 
-/// Convert compacted model output into prose, or `None` if it doesn't look like a sentence.
-/// `math` tidies a math fragment (it is called on the text between the `$` signs).
+/// turn compacted model output into prose, None if it doesn't look like a sentence.
 pub fn convert(compact: &str, math: &dyn Fn(&str) -> String) -> Option<String> {
     let rows = rows(compact)?;
     let mut words: Vec<Word> = Vec::new();
@@ -76,14 +68,14 @@ pub fn convert(compact: &str, math: &dyn Fn(&str) -> String) -> Option<String> {
     Some(render(&words, math))
 }
 
-/// Strip a single-column `array` wrapper and split into visual rows.
+/// strip a single column array and split into rows.
 fn rows(s: &str) -> Option<Vec<String>> {
     let s = s.trim();
     let body = match s.strip_prefix("\\begin{array}{") {
         Some(rest) => {
             let close = rest.find('}')?;
             if !matches!(&rest[..close], "l" | "c" | "r") {
-                return None; // several columns: a table, not a paragraph
+                return None; // several columns means a table.
             }
             rest[close + 1..].strip_suffix("\\end{array}")?.trim()
         }
@@ -112,7 +104,7 @@ fn rows(s: &str) -> Option<Vec<String>> {
         .map(|r| {
             let mut r = r.trim();
             if let Some(rest) = r.strip_prefix('[').and_then(|x| x.split_once(']')) {
-                // `\\[-2pt]`: a spacing argument on the row break, not content.
+                // \\[-2pt] is spacing on the row break.
                 let len = rest.0.trim_start_matches('-');
                 if !len.is_empty()
                     && len.ends_with(|c: char| c.is_ascii_alphabetic())
@@ -131,7 +123,7 @@ fn rows(s: &str) -> Option<Vec<String>> {
     (!rows.is_empty()).then_some(rows)
 }
 
-/// Name and byte length of the control sequence starting at `s[i]` (a backslash).
+/// name and length of the control sequence at s[i].
 fn control(s: &str, i: usize) -> (&str, usize) {
     let rest = &s[i + 1..];
     let n = match rest.chars().next() {
@@ -144,7 +136,7 @@ fn control(s: &str, i: usize) -> (&str, usize) {
     (&s[i..i + 1 + n], 1 + n)
 }
 
-/// Index just past a command's name and the arguments that belong to it (`{..}`, `^x`, `_{..}`).
+/// index past a command and its arguments.
 fn command_end(s: &str, mut j: usize) -> usize {
     let b = s.as_bytes();
     loop {
@@ -162,7 +154,7 @@ fn command_end(s: &str, mut j: usize) -> usize {
     }
 }
 
-/// Index just past the single argument starting at `s[j]` (a group, a command or one character).
+/// index past the single argument at s[j].
 fn arg_end(s: &str, j: usize) -> usize {
     match s.as_bytes().get(j) {
         Some(b'{') => matching_brace(s, j).map_or(s.len(), |e| e + 1),
@@ -179,8 +171,7 @@ fn push_text(out: &mut Vec<Piece>, t: &str) {
     }
 }
 
-/// Emit a run of characters found outside any text group: digits are text, the rest is math,
-/// and trailing sentence punctuation always goes back to being text.
+/// emit characters outside a text group, digits are text and the rest math.
 fn flush(run: &mut String, out: &mut Vec<Piece>) {
     if run.is_empty() {
         return;
@@ -200,7 +191,7 @@ fn flush(run: &mut String, out: &mut Vec<Piece>) {
     push_text(out, &r[body.len()..]);
 }
 
-/// Split one row into text and math pieces.
+/// split a row into text and math pieces.
 fn scan(s: &str, in_text: bool, out: &mut Vec<Piece>) {
     let b = s.as_bytes();
     let (mut i, mut run) = (0, String::new());
@@ -228,7 +219,7 @@ fn scan(s: &str, in_text: bool, out: &mut Vec<Piece>) {
                         let open = i + len;
                         let end = matching_brace(s, open).unwrap_or(s.len() - 1);
                         flush(&mut run, out);
-                        // A new text group after unspaced text is a new word ("5.7" + "Let").
+                        // a new text group after unspaced text is a new word.
                         if let Some(Piece::Text(t)) = out.last()
                             && !t.is_empty()
                             && !t.ends_with(char::is_whitespace)
@@ -244,7 +235,7 @@ fn scan(s: &str, in_text: bool, out: &mut Vec<Piece>) {
                         i += len;
                     }
                     "\\!" => i += len,
-                    // Layout the model sometimes invents at a line break: not part of the text.
+                    // layout the model invents at a line break.
                     "\\vspace" | "\\hspace" | "\\vskip" | "\\hskip"
                         if b.get(i + len) == Some(&b'{') =>
                     {
@@ -263,7 +254,7 @@ fn scan(s: &str, in_text: bool, out: &mut Vec<Piece>) {
                     }
                 }
             }
-            // Inside a text group an exponent still has to keep its braces: `e^{i\pi}`, not `e^i\pi`.
+            // inside a text group an exponent keeps its braces.
             c @ (b'^' | b'_') if in_text => {
                 push_text(out, if c == b'^' { "^" } else { "_" });
                 let end = arg_end(s, i + 1);
@@ -290,10 +281,7 @@ fn scan(s: &str, in_text: bool, out: &mut Vec<Piece>) {
     flush(&mut run, out);
 }
 
-/// Wrap the words of running text that are math (lone letters, intervals, expressions) in `$...$`,
-/// leaving anything already inside `$...$` alone. Whitespace is preserved. This is for text that
-/// was read by a model which writes plain letters for variables, using the same word rules as
-/// prose mode.
+/// wrap the math words of running text in $...$ and leave existing $...$ alone.
 pub fn mark_math(text: &str) -> String {
     let mut out = String::with_capacity(text.len() + 16);
     for (i, part) in text.split('$').enumerate() {
@@ -301,7 +289,7 @@ pub fn mark_math(text: &str) -> String {
             out.push('$');
         }
         if i % 2 == 1 {
-            out.push_str(part); // already math
+            out.push_str(part); // already math.
             continue;
         }
         let mut word = String::new();
@@ -330,9 +318,7 @@ pub fn mark_math(text: &str) -> String {
     out
 }
 
-/// The LaTeX and TeX logos are drawn, not typed, so the model reads them as plain capitals
-/// (`LATEX`). Outside math, turn them back into the macros: `LATEX` or `LaTeX` becomes `\LaTeX{}`,
-/// `TEX` or `TeX` becomes `\TeX{}`. (The `{}` keeps the space after the macro.)
+/// the LaTeX and TeX logos get read as plain capitals, turn them back into macros outside math.
 pub fn replace_logos(text: &str) -> String {
     let mut out = String::with_capacity(text.len() + 8);
     for (i, part) in text.split('$').enumerate() {
@@ -340,7 +326,7 @@ pub fn replace_logos(text: &str) -> String {
             out.push('$');
         }
         if i % 2 == 1 {
-            out.push_str(part); // math: leave alone
+            out.push_str(part); // math, leave alone.
             continue;
         }
         let mut word = String::new();
@@ -365,8 +351,7 @@ pub fn replace_logos(text: &str) -> String {
     out
 }
 
-/// Did the model lose the spaces between words? True if running text (outside `$...$`) has a
-/// word of 20 or more letters in a row, which no ordinary English word reaches.
+/// did the model lose the spaces, a word of 20 or more letters in a row.
 pub fn has_run_together_words(prose: &str) -> bool {
     prose.split('$').step_by(2).any(|text| {
         text.split(|c: char| !c.is_ascii_alphabetic())
@@ -398,12 +383,12 @@ const RELATIONS: &[&str] = &[
     "\\ldots",
 ];
 
-/// Does this math end in something that must be followed by more math (`+`, `=`, `\\geq`...)?
+/// does this math end in something that needs more math.
 fn ends_open(m: &str) -> bool {
     m.ends_with(['+', '-', '=', '<', '>', '*', '/']) || RELATIONS.iter().any(|r| m.ends_with(r))
 }
 
-/// Does this math start with something that must follow other math (`=`, `\\leq`, `+`...)?
+/// does this math start with something that follows other math.
 fn starts_open(m: &str) -> bool {
     m.starts_with(['+', '-', '=', '<', '>'])
         || RELATIONS.iter().any(|r| {
@@ -416,8 +401,7 @@ fn is_number(w: &Word) -> bool {
     !w.math && !w.text.is_empty() && w.text.chars().all(|c| c.is_ascii_digit() || c == '.')
 }
 
-/// Words of running text that are really math (`f`, `[a,b]`, `n-1`) become math words, with any
-/// punctuation around them split off as its own word.
+/// words of running text that are really math become math words.
 fn explode_math_words(words: Vec<Word>) -> Vec<Word> {
     let mut out = Vec::with_capacity(words.len());
     for w in words {
@@ -453,7 +437,7 @@ fn explode_math_words(words: Vec<Word>) -> Vec<Word> {
     out
 }
 
-/// Repair what a visual line break did to a word: "cut-" + "vertex" is one word.
+/// repair a word split by a line break, cut- and vertex is one word.
 fn repair_line_breaks(words: &mut [Word]) {
     for i in 1..words.len() {
         if words[i].row_start
@@ -467,8 +451,7 @@ fn repair_line_breaks(words: &mut [Word]) {
     }
 }
 
-/// Merge neighbouring math into one formula: pieces touching each other, an operator and the
-/// operand after it (`n\\geq` `1`), and a formula cut by a line break (`1+2+` `\\cdots+n`).
+/// merge neighbouring math into one formula.
 fn join_math(words: &mut Vec<Word>) {
     let mut i = 1;
     while i < words.len() {
@@ -501,13 +484,13 @@ fn has_real_word(s: &str) -> bool {
         .any(|w| w.iter().all(u8::is_ascii_alphabetic))
 }
 
-/// Should this word of running text be typeset as math?
+/// should this word be math.
 fn looks_math(core: &str) -> bool {
     if core.len() == 1 {
         let c = core.as_bytes()[0];
         return c.is_ascii_alphabetic() && !matches!(c, b'a' | b'A' | b'I');
     }
-    // [12] is a reference label
+    // [12] is a reference label.
     if core.len() >= 3
         && core.starts_with('[')
         && core.ends_with(']')
@@ -515,7 +498,7 @@ fn looks_math(core: &str) -> bool {
     {
         return false;
     }
-    // my_name is a file name or identifier written in text, not a subscript
+    // my_name is an identifier in the text.
     if let Some((a, b)) = core.split_once('_')
         && a.len() >= 2
         && b.len() >= 2
@@ -534,8 +517,7 @@ fn is_punct_only(w: &Word) -> bool {
     !w.math && w.text.chars().all(|c| TRAILING.contains(&c))
 }
 
-/// A sentence: at least four real words, and at least as many word-like tokens as math-like ones.
-/// (Counting only long words against everything would punish short ones like "if", "is", "on".)
+/// a sentence has at least four real words and at least as many word-like tokens as math-like ones.
 fn is_prose(words: &[Word]) -> bool {
     let (mut real, mut wordy, mut mathy) = (0, 0, 0);
     for w in words.iter().filter(|w| !is_punct_only(w)) {
@@ -560,8 +542,7 @@ fn render(words: &[Word], math: &dyn Fn(&str) -> String) -> String {
         let space = match prev {
             None => false,
             Some(_) if w.space_before => !is_punct_only(w) && !out.ends_with(['(', '[']),
-            // No space in the model's output. Between a word and a formula there is still one in
-            // running text, unless the text side is punctuation or a hyphen: `$x$-axis`, `$G$.`
+            // no space in the model's output, in text there's one between a word and a formula unless it's punctuation or a hyphen.
             Some(p) if p.math != w.math => {
                 if w.math {
                     !p.text.ends_with(['(', '[', '-', '\'', '"'])
@@ -598,7 +579,7 @@ mod tests {
             replace_logos("plain TeX and LaTeX"),
             "plain \\TeX{} and \\LaTeX{}"
         );
-        // inside math, and inside longer words, nothing changes
+        // inside math and longer words nothing changes.
         assert_eq!(replace_logos("let $TEX$ be"), "let $TEX$ be");
         assert_eq!(replace_logos("TEXT and LATEXED"), "TEXT and LATEXED");
     }
@@ -606,7 +587,7 @@ mod tests {
     use crate::tidy::Kind;
     use crate::tidy::tidy_with_kind;
 
-    // Inputs are real model output for textbook-style sentences.
+    // inputs are real model output for textbook style sentences.
     fn prose(raw: &str) -> String {
         let (text, kind) = tidy_with_kind(raw);
         assert_eq!(kind, Kind::Prose, "not recognised as prose: {text}");
@@ -615,7 +596,7 @@ mod tests {
 
     #[test]
     fn two_row_array_with_inline_math() {
-        // The textbook screenshot this feature was built for.
+        // the sentence this feature was built for.
         assert_eq!(
             prose(
                 r"\begin{array} { c } { 5 . 4 \mathrm { ~ P r o v e ~ t h a t ~ i f ~ v ~ i s ~ a ~ c u t - v e r t e x ~ o f ~ a ~ g r a p h ~ G ~ , ~ t h e n ~ v ~ i s ~ n o t ~ a ~ c u t - v e r t e x } } \\ { \mathrm { ~ o f ~ t h e ~ c o m p l e m e n t ~ \overline { { G } } ~ o f ~ G ~ . } } \end{array}"
@@ -656,7 +637,7 @@ mod tests {
 
     #[test]
     fn textup_groups_are_text_and_glued_words_are_detected() {
-        // Real shape of a three-line read: a different text command, and the spaces are gone.
+        // real three line read, different text command and the spaces are gone.
         let out = prose(
             r"\begin{array}{l}{5.7\textup{Let}G\textup{beaconnectedgraphwith}n\textup{verticesandletvbeavertexofG.}} \\ {\textup{Provethat}G-\nu\textup{hasatmost}} \end{array}",
         );
@@ -668,7 +649,7 @@ mod tests {
         assert!(!super::has_run_together_words(
             "5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\\overline{G}$."
         ));
-        // Punctuation and hyphens stay attached to the formula before them.
+        // punctuation and hyphens stay with the formula before them.
         assert_eq!(
             prose(r"\mathrm { T h e ~ x - a x i s ~ h a s ~ t w o ~ p o i n t s ~ } x ."),
             "The x-axis has two points $x$."
@@ -688,7 +669,7 @@ mod tests {
             mark_math("If f is continuous on [a,b], then f attains a maximum value."),
             "If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value."
         );
-        // Words, the article "a" and numbers are left alone; layout is preserved.
+        // words, the article a and numbers are left alone.
         assert_eq!(
             mark_math("Show that  a 3-regular graph has order 4."),
             "Show that  a 3-regular graph has order 4."
@@ -697,7 +678,7 @@ mod tests {
 
     #[test]
     fn exponent_inside_a_text_group_keeps_its_braces() {
-        // Real output for "...Euler showed that $e^{i\pi}+1=0$,".
+        // real output for the Euler sentence.
         assert_eq!(
             prose(
                 r"\mathrm{The~quick~brown~fox~jumps~over~the~lazy~dog.~Euler~showed~that~e^{i\pi}+1=0~,}"
@@ -708,7 +689,7 @@ mod tests {
 
     #[test]
     fn operator_and_its_operands_become_one_formula() {
-        // Here the model put n inside the text group but \geq and the 1 outside it.
+        // n inside the text group but \geq and the 1 outside it.
         assert_eq!(
             prose(
                 r"\mathrm { P r o v e ~ t h a t ~ f o r ~ e v e r y ~ i n t e g e r ~ n \geq ~ 1 ~ , ~ t h e ~ s u m ~ 1 + 2 + \cdots + n ~ e q u a l s ~ n ( n + 1 ) / 2 ~ . }"
@@ -725,7 +706,7 @@ mod tests {
             ),
             r"Prove that for every integer $n\geq1$, the sum $1+2+\cdots+n$ equals $n(n+1)/2$."
         );
-        // A spacing argument on the row break, `\\[-2pt]`, is not content either.
+        // a spacing argument on the row break isn't content.
         assert_eq!(
             prose(
                 r"\begin{array} { l } { \mathrm { T h e ~ g r a p h ~ i s ~ a ~ t h r e e - } } \\ [ - 2 p t ] { \mathrm { r e g u l a r ~ g r a p h ~ h e r e } } \end{array}"
@@ -746,7 +727,7 @@ mod tests {
 
     #[test]
     fn misread_letters_are_kept_not_hidden() {
-        // The model read an italic v as \nu here; we keep what it wrote rather than guess.
+        // the model read an italic v as \nu, we keep what it wrote.
         let out = prose(
             r"\begin{array} { l } { 5 . 4 \mathrm { ~ P r o v e ~ t h a t ~ i f ~ \ v ~ i s ~ a ~ c u t - v e r t e x ~ o f ~ a ~ g r a p h ~ G ~ , ~ t h e n ~ \nu ~ } } \\ { \mathrm { i s ~ n o t ~ a ~ c u t - v e r t e x } } \\ \end{array}",
         );
@@ -765,7 +746,7 @@ mod tests {
 
     #[test]
     fn formulas_stay_formulas() {
-        // Little or no prose: must not be turned into a sentence.
+        // little or no prose stays as it is.
         for raw in [
             r"x = \frac { - b \pm \sqrt { b ^ { 2 } - 4 a c } } { 2 a }",
             r"\text { f o r ~ a l l ~ } x \in \mathbb { R } , \quad f ( x ) \geq 0 \text { w h e n e v e r ~ } x > 0",
