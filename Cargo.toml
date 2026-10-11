@@ -11,6 +11,16 @@ homepage = "https://github.com/Phoenixxo/texcopy"
 readme = "README.md"
 keywords = ["latex", "ocr", "math", "screenshot", "clipboard"]
 categories = ["command-line-utilities", "multimedia::images"]
+# keep the crate small, the window still needs packaging/icon/icon-256.png.
+exclude = [
+    ".github/",
+    "tools/",
+    "packaging/linux/",
+    "packaging/macos/",
+    "packaging/windows/",
+    "packaging/icon/make_icon.py",
+    "packaging/icon/icon-1024.png",
+]
 
 # texcopy is the command line, texcopy-gui is the same thing without a console on windows.
 [[bin]]
