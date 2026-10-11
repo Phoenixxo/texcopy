@@ -77,6 +77,8 @@ Grab the file for your system from the [latest release](https://github.com/Phoen
 
 The first time you capture, the window offers to download the vision engine (about 1 GB, checksum-verified, with a progress bar). Say "Not now" and it uses the small formula model instead. You can change your mind later with `texcopy --setup`.
 
+Got Rust? `cargo install texcopy --locked` gets you `texcopy` and `texcopy-gui`. On Linux, install the capture and window libraries first, they're listed under [Building](#building).
+
 Want to build it yourself? See [Building](#building).
 
 ## Usage
