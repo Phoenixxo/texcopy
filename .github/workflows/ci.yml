@@ -1,13 +1,12 @@
 name: CI
-# Format and lint (Linux only), then build and package on every platform.
-# The tests have their own workflow (tests.yml) and badge.
+# lint and format on linux, build and package on every platform.
 
 on:
   push:
     branches: [main]
   pull_request:
 
-# A newer push to the same branch or pull request cancels the run it replaces.
+# cancel the old run when a newer push comes in.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,7 +15,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Formatting and lint don't depend on the OS, so they run once, on Linux.
+  # lint doesn't care about the OS so it only runs on linux.
   lint:
     name: format and lint
     runs-on: ubuntu-latest
@@ -44,14 +43,14 @@ jobs:
       - run: cargo fmt --check --manifest-path tools/gen/Cargo.toml
       - run: cargo clippy --locked --all-targets --manifest-path tools/gen/Cargo.toml -- -D warnings
 
-  # Build the release binary and run the packaging script on every platform.
+  # build the release binary and package it on every platform.
   build:
     name: build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # macos-14 is Apple Silicon; Intel Macs are not a supported target.
+        # macos-14 is apple silicon.
         os: [macos-14, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
@@ -65,16 +64,16 @@ jobs:
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
         with:
-          # a new prefix starts clean caches that include the ONNX Runtime download
+          # new prefix, throws away the old caches.
           prefix-key: v1-rust
-          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          # bring in ONNX runtime from outside of target.
           cache-directories: |
             ~/.cache/ort.pyke.io
             ~/Library/Caches/ort.pyke.io
             ~/AppData/Local/ort.pyke.io
       - name: Build release
         run: cargo build --locked --release
-      # The packaging scripts run on every platform so a broken one is found before a release.
+      # run the packaging scripts everywhere so a broken one shows up before a release.
       - name: Package (macOS)
         if: runner.os == 'macOS'
         run: packaging/macos/make-app.sh target/release/texcopy dist
@@ -85,7 +84,7 @@ jobs:
         if: runner.os == 'Windows'
         run: powershell -File packaging/windows/make-zip.ps1 -Out dist
 
-  # The oldest Rust we promise (rust-version in Cargo.toml) must still build the program.
+  # the oldest rust we say works (rust-version in Cargo.toml) has to build.
   msrv:
     name: rust 1.95 (minimum)
     runs-on: ubuntu-latest
@@ -100,16 +99,16 @@ jobs:
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
         with:
-          # a new prefix starts clean caches that include the ONNX Runtime download
+          # new prefix, throws away the old caches.
           prefix-key: v1-rust
-          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          # bring in ONNX runtime from outside of target.
           cache-directories: |
             ~/.cache/ort.pyke.io
             ~/Library/Caches/ort.pyke.io
             ~/AppData/Local/ort.pyke.io
       - run: cargo check --locked
 
-  # The CLI-only build must keep working on a machine without the capture libraries.
+  # the command line build has to work without the capture libraries.
   headless:
     name: ubuntu (no capture)
     runs-on: ubuntu-latest
@@ -118,9 +117,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          # a new prefix starts clean caches that include the ONNX Runtime download
+          # new prefix, throws away the old caches.
           prefix-key: v1-rust
-          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          # bring in ONNX runtime from outside of target.
           cache-directories: |
             ~/.cache/ort.pyke.io
             ~/Library/Caches/ort.pyke.io

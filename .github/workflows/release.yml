@@ -1,8 +1,6 @@
 name: Release
 
-# Push a tag like v0.1.0 (it must match `version` in Cargo.toml) to build all three platforms and
-# publish a GitHub release with the downloads and their SHA-256 checksums. "Run workflow" on the
-# Actions page builds the same files as downloadable artifacts without publishing anything.
+# push a tag like v0.1.0 to build all three and publish a release. run workflow only builds the files.
 on:
   push:
     tags: ["v*"]
@@ -22,10 +20,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macos-14 is Apple Silicon; Intel Macs are not a supported target.
+          # macos-14 is apple silicon.
           - { os: macos-14, name: macos-arm64 }
           - { os: windows-latest, name: windows-x64 }
-          # An older Ubuntu keeps the binary usable on older distributions (it links the system glibc).
+          # older ubuntu so it runs on older distros.
           - { os: ubuntu-22.04, name: linux-x64 }
     steps:
       - uses: actions/checkout@v4
@@ -39,9 +37,9 @@ jobs:
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
         with:
-          # a new prefix starts clean caches that include the ONNX Runtime download
+          # new prefix, throws away the old caches.
           prefix-key: v1-rust
-          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          # bring in ONNX runtime from outside of target.
           cache-directories: |
             ~/.cache/ort.pyke.io
             ~/Library/Caches/ort.pyke.io
@@ -66,7 +64,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: texcopy-${{ matrix.name }}
-          # the macOS job also leaves the unzipped .app in dist/, which is not a download
+          # dist/ also has the unzipped .app, which isn't a download.
           path: |
             dist/*.zip
             dist/*.tar.gz
