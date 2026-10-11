@@ -25,7 +25,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Things that are not Rust crates but ship in, or are fetched by, texcopy. Kept by hand.
+# not Rust crates but they ship in or get fetched by texcopy, kept by hand.
 NOT_CRATES = """\
 ## Not Rust crates
 
@@ -40,8 +40,7 @@ NOT_CRATES = """\
   - `llama-server` from llama.cpp (MIT, ggml-org): <https://github.com/ggml-org/llama.cpp>
 """
 
-# For crates whose published package lacks the license file (it sits at the repository root): the
-# standard text, printed once, with the copyright holder taken from the crate's metadata.
+# crates whose package has no license file, print the standard text once with the holder from the crate's metadata.
 STANDARD_MIT = """\
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -109,11 +108,11 @@ LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|unlicense|notice|copyright)([-_
 
 
 def run(*cmd):
-    # cargo prints UTF-8; without this Windows decodes it as cp1252 and dies on some bytes
+    # cargo prints UTF-8 and windows would decode it as cp1252 without this.
     return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf8", errors="replace", check=True).stdout
 
 
-# The platforms texcopy is released for.
+# the platforms texcopy is released for.
 TARGETS = ("aarch64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu")
 
 
@@ -133,7 +132,7 @@ def shipped_crates():
 def license_texts(crate_dir):
     """The license files at the top of a crate (and in a licenses/ folder), as {filename: text}."""
     found = {}
-    # fonts/*.txt: egui's default fonts keep their own license texts next to the font files
+    # egui's default fonts keep their license texts next to the font files.
     for pattern in ("*", os.path.join("licenses", "*"), os.path.join("LICENSES", "*"), os.path.join("fonts", "*.txt")):
         for path in sorted(glob.glob(os.path.join(crate_dir, pattern))):
             name = os.path.basename(path)
@@ -149,7 +148,7 @@ def license_texts(crate_dir):
 def main():
     wanted = shipped_crates()
     meta = json.loads(run("cargo", "metadata", "--format-version", "1", "--locked"))
-    by_text = collections.defaultdict(list)   # text hash -> [(crate, version, spdx, repo, filename)]
+    by_text = collections.defaultdict(list) # text hash -> [(crate, version, spdx, repo, filename)]
     texts = {}
     without = []
     for pkg in sorted(meta["packages"], key=lambda p: (p["name"], p["version"])):
@@ -210,7 +209,7 @@ def main():
             out.append("```text\n" + STANDARD_BSL1.strip() + "\n```\n")
     text = "\n".join(out) + "\n"
     if len(sys.argv) > 1:
-        with open(sys.argv[1], "w", encoding="utf8", newline="\n") as f:  # UTF-8 on every OS
+        with open(sys.argv[1], "w", encoding="utf8", newline="\n") as f: # UTF-8 on every OS.
             f.write(text)
     else:
         sys.stdout.write(text)

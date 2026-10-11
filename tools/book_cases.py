@@ -34,7 +34,7 @@ def page_xml(p):
 def lines_of(spans):
     if not spans:
         return []
-    body = max(set(s["size"] for s in spans), key=lambda z: sum(1 for s in spans if s["size"] == z))   # most common size
+    body = max(set(s["size"] for s in spans), key=lambda z: sum(1 for s in spans if s["size"] == z)) # most common size.
     main = sorted([s for s in spans if s["size"] >= body - 3], key=lambda s: (s["top"], s["left"]))
     small = [s for s in spans if s["size"] < body - 3]
     lines = []
@@ -45,7 +45,7 @@ def lines_of(spans):
                 ln["spans"].append(s); break
         else:
             lines.append(dict(base=base, size=s["size"], spans=[s]))
-    for s in small:   # subscripts/superscripts: belong to the line they sit next to
+    for s in small: # sub and superscripts belong to the line they sit next to.
         mid = s["top"] + s["height"] / 2
         best = min(lines, key=lambda ln: abs(mid - (ln["base"] - body / 2)), default=None)
         if best is not None and abs(mid - (best["base"] - body / 2)) <= body:
@@ -65,7 +65,7 @@ def prev_ok(out, run):
 def line_truth(ln):
     """Text of one line with math runs wrapped in $...$."""
     body = ln["body"]
-    parts = []  # (kind, text, left, right)
+    parts = [] # (kind, text, left, right)
     for s in ln["spans"]:
         t = s["text"]
         script = s["size"] < body - 3
@@ -92,13 +92,13 @@ def line_truth(ln):
         mathy_next = nxt is not None and nxt[0] in ("math", "script") and nxt[2] - r <= 10
         glue = set("()[]{}|=+-*/<>0123456789")
         if run is not None and core and (
-                (gap <= 3 and all(c in glue or c in SYM for c in core)) or                      # touching: G(S), v_1, G-e
-                (gap <= 10 and all(c in "=<>+-*/" or c in SYM for c in core)) or                # "n >= 3", "k = 3"
+                (gap <= 3 and all(c in glue or c in SYM for c in core)) or # touching, like G(S), v_1, G-e.
+                (gap <= 10 and all(c in "=<>+-*/" or c in SYM for c in core)) or # like n >= 3 and k = 3.
                 (gap <= 10 and core.isdigit() and prev_ok(out, run))):
             run += "".join(SYM.get(c, c) for c in core)
             continue
         if run is None and core and mathy_next and all(c in "([{" for c in core) and (nxt[2] - r) <= 3:
-            run = core; continue                                                            # "(" right before a variable
+            run = core; continue # ( right before a variable.
         close()
         out.append(t)
     close()
@@ -108,7 +108,7 @@ def line_truth(ln):
 
 
 def main(n_pages=40, seed=7):
-    # pages that contain exercise numbers, from the text layer
+    # pages with exercise numbers, from the text layer.
     pages = subprocess.run(["pdftotext", "-layout", BOOK, "-"], capture_output=True, text=True, errors="ignore").stdout.split("\f")
     cand = [i + 1 for i, p in enumerate(pages) if re.search(r"^\s*\d{1,2}\.\d{1,2}\s+(Prove|Show|Let|Determine|Find|Give|Verify)", p, re.M)]
     random.Random(seed).shuffle(cand)
@@ -133,26 +133,26 @@ def main(n_pages=40, seed=7):
             x0, x1 = min(l["left"] for l in block), max(l["right"] for l in block)
             y0, y1 = min(l["top"] for l in block), max(l["bottom"] for l in block)
             if any(not (ix + iw < x0 or ix > x1 or it + ih < y0 or it > y1) for it, ix, iw, ih in images):
-                continue  # contains an inline image: its math is not in the text layer
+                continue # has an inline image so its math isn't in the text layer.
             truth = ""
             for l in block:
                 t = line_truth(l)
                 truth = truth + t if truth.endswith("-") and not truth.endswith(" -") else (truth + " " + t if truth else t)
             if any(re.search(r"[A-Za-z]{3,}", m) for m in re.findall(r"\$(.*?)\$", truth)):
-                continue  # an italic *word* (emphasis), not math
+                continue # an italic word is emphasis, plain text.
             if not truth.rstrip().endswith((".", "?")) or "$" not in truth or not truth.isascii() or "\\" in truth.replace("\\le", "").replace("\\ge", ""):
-                continue  # keep ASCII, plain-math cases for this first pass
+                continue # ASCII plain math cases only for this first pass.
             cases.append(dict(page=pno, lines=len(block), truth=truth, box=(x0, y0, x1, y1), scale=(w, h)))
             used_pages.add(pno)
             break
-    # render + crop
+    # render and crop.
     for i, c in enumerate(cases, 1):
         pno = c["page"]
         png = os.path.join(OUT, f"_p{pno}.png")
         if not os.path.exists(png):
             subprocess.run(["pdftoppm", "-f", str(pno), "-l", str(pno), "-r", str(DPI), "-png", "-singlefile", BOOK, png[:-4]], check=True)
         w, h = c["scale"]
-        sx = DPI / 72 / 1.5   # pdftohtml coordinates are at 1.5x points
+        sx = DPI / 72 / 1.5 # pdftohtml coordinates are 1.5x points.
         x0, y0, x1, y1 = [v * sx for v in c["box"]]
         m = 10
         geom = f"{int(x1 - x0 + 2 * m)}x{int(y1 - y0 + 2 * m)}+{int(x0 - m)}+{int(y0 - m)}"

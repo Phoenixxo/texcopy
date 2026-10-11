@@ -18,7 +18,7 @@ import bench  # noqa: E402
 
 OVIS_PROMPT = "Extract all readable content from the image in natural human reading order and output the result as a single Markdown document."
 CONFIGS = {
-    # Prompts and sampling follow each model's own card / reference client.
+    # prompts and sampling follow each model's card.
     "paddle": dict(prompts={"math": "Formula Recognition:", "prose": "OCR:", "text": "OCR:"}, system=None, sampling={}),
     "ovis": dict(prompts={"math": OVIS_PROMPT, "prose": OVIS_PROMPT, "text": OVIS_PROMPT}, system=None, sampling={}),
     "mineru": dict(
@@ -62,7 +62,7 @@ def mark_math(text):
     """The same word rules as src/prose.rs: wrap lone letters, intervals and expressions in $...$.
     Text already inside $...$ is left alone."""
     parts = text.split("$")
-    for i in range(0, len(parts), 2):  # even parts are outside any $...$
+    for i in range(0, len(parts), 2): # even parts are outside any $...$.
         def fix(m):
             w = m.group(0)
             core = w.lstrip(LEAD).rstrip(TRAIL)
@@ -81,7 +81,7 @@ class Server:
         self.cfg, self.port, self.log = CONFIGS[name], port, tempfile.NamedTemporaryFile("w+", suffix=f"-{name}.log", delete=False)
         self.cmd = ["llama-server", "-m", os.path.join(d, "model.gguf"), "--mmproj", os.path.join(d, "mmproj.gguf"),
                     "--port", str(port), "-ngl", "99", "-c", "16384", "-np", "1",
-                    "--cache-ram", "0"]  # no prompt cache: it grew memory from 1.4 GB to 3.3 GB over 45 images
+                    "--cache-ram", "0"] # no prompt cache, memory grew from 1.4 GB to 3.3 GB over 45 images.
         self.proc = None
 
     def start(self, timeout=240):
@@ -141,7 +141,7 @@ class VlmBench(bench.Bench):
     def texcopy(self, image, kind="math"):
         try:
             raw, finish, ms, usage = self.server.ask(image, kind, 3000 if kind != "math" else 1500)
-        except Exception as e:  # timeouts, server errors: count as a failed read, keep going
+        except Exception as e: # timeouts and server errors count as a failed read and we keep going.
             return "", {"stop": f"error: {str(e)[:60]}"}
         self.latencies.setdefault(kind, []).append(ms)
         out = clean_math(raw) if kind == "math" else clean_prose(raw)

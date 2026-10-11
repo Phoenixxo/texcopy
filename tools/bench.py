@@ -52,12 +52,12 @@ BASIC = {
     ],
 }
 
-# Each base formula is degraded in the ways a real screenshot might be.
+# each formula gets degraded the ways a real screenshot might be.
 DEGRADE_BASES = [
     r"x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}",
     r"f(z_0) = \frac{1}{2\pi i} \oint_{\gamma} \frac{f(z)}{z - z_0} \, dz",
 ]
-DEGRADE_OPS = {  # name -> ImageMagick args
+DEGRADE_OPS = { # name -> ImageMagick args.
     "down50%": ["-resize", "50%"],
     "down25%": ["-resize", "25%"],
     "blur": ["-blur", "0x1.5"],
@@ -66,8 +66,7 @@ DEGRADE_OPS = {  # name -> ImageMagick args
     "yellow-bg": ["-fuzz", "10%", "-fill", "#fff3b0", "-opaque", "white"],
     "noise": ["+noise", "Gaussian", "-attenuate", "0.3"],
 }
-# Loaded before amsmath (their documented order). Only fonts whose metrics are installed here: most
-# others (Palatino, Utopia, Charter, ...) render a blank page on this machine, which is detected and skipped.
+# loaded before amsmath, only fonts whose metrics are installed here since the rest render blank and get skipped.
 FONT_EARLY = {"times": r"\usepackage{mathptmx}", "txfonts": r"\usepackage{txfonts}", "lmodern": r"\usepackage{lmodern}"}
 
 STRESS = {
@@ -80,8 +79,7 @@ STRESS = {
     "array diagram": (r"\begin{array}{ccc} A & \to & B \\ \downarrow & & \downarrow \\ C & \to & D \end{array}", ""),
     "triple integral": (r"\iiint_{V} \left( \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2} + \frac{\partial^2 u}{\partial z^2} \right) dV = \oint_{\partial V} \nabla u \cdot \mathbf{n} \, dS", ""),
 }
-# Sentences with inline math, as in a textbook problem set. Rendered in a Times-like font at two
-# line widths (one long line vs a two-line block) and two resolutions.
+# sentences with inline math like a problem set, in a Times like font at two line widths and two resolutions.
 PROSE = [
     r"5.4 Prove that if $v$ is a cut-vertex of a graph $G$, then $v$ is not a cut-vertex of the complement $\overline{G}$ of $G$.",
     r"Let $G$ be a connected graph with $n$ vertices. Show that $G$ has at least $n-1$ edges.",
@@ -89,12 +87,9 @@ PROSE = [
     r"Find all real numbers $x$ such that $x^2 - 5x + 6 = 0$.",
     r"If $f$ is continuous on $[a,b]$, then $f$ attains a maximum value on $[a,b]$.",
 ]
-PROSE_EARLY = r"\usepackage{mathptmx}"  # must load before amsmath/amssymb
+PROSE_EARLY = r"\usepackage{mathptmx}" # load before amsmath and amssymb.
 
-# Whole-document elements: equations, lists, headings, theorems, tables, special characters...
-# The goal is NOT to recover the author's source (the picture can't tell \textbf from {\bf }), only
-# to produce LaTeX that renders the same. So these are graded by rendering the output in the same
-# width and comparing pixels, with a generous common preamble.
+# whole document elements, graded by rendering our output at the same width and comparing pixels, since we only need LaTeX that renders the same.
 DOC_PRE = (r"\usepackage{amsthm,booktabs}\newtheorem{theorem}{Theorem}\newtheorem{lemma}[theorem]{Lemma}"
            r"\theoremstyle{definition}\newtheorem{definition}[theorem]{Definition}")
 DOC_WIDTH_CM = 14
@@ -137,8 +132,7 @@ DOCS = {
     "bibliography": "\\begin{thebibliography}{9}\n\\bibitem{a} A. Author, \\emph{A Book}, 2020.\n\\bibitem{b} B. Writer, A Paper, 2021.\n\\end{thebibliography}",
 }
 
-# Tables are graded on what they say, not how they look: the grid of cell texts, compared position
-# by position, ignoring alignment, rules and column spec. Each is (source tabular, text above it).
+# tables are graded on cell text position by position, ignoring alignment and rules. each is (source tabular, text above it).
 TABLES = {
     "text and numbers": (r"\begin{tabular}{lcc}\hline Name & Age & City \\ \hline Ann & 31 & Oslo \\ Bob & 28 & Rome \\ Cy & 45 & Paris \\ \hline\end{tabular}", ""),
     "execution times": (r"\begin{tabular}{rcc}\hline $n$ & Recursive time (ms) & DP time (ms) \\ \hline 5 & 0.000037 & 0.000022 \\ 7 & 0.000164 & 0.000025 \\ 9 & 0.000679 & 0.000031 \\ 11 & 0.002809 & 0.000041 \\ 13 & 0.011786 & 0.000052 \\ \hline\end{tabular}", ""),
@@ -197,7 +191,7 @@ def grade_table(true_src, output):
     return ("EXACT" if want == got else "close" if sim >= 0.9 else "differs"), round(sim, 3)
 
 
-# Not expected to work: reported for information, never graded.
+# not expected to work, reported but never graded.
 INFO_ONLY = {
     "table": r"\begin{tabular}{|c|c|c|}\hline Name & Age & City \\ \hline Ann & 31 & Oslo \\ Bob & 28 & Rome \\ \hline\end{tabular}",
     "paragraph": r"The quick brown fox jumps over the lazy dog. Euler showed that $e^{i\pi}+1=0$, which many consider beautiful.",
@@ -238,8 +232,7 @@ class Bench:
         tex = (r"\documentclass" + opts + r"{article}" + early + r"\usepackage{amsmath,amssymb,array}" + pre +
                r"\pagestyle{empty}\begin{document}\noindent " + wrapped + "\n" + r"\end{document}" + "\n")
         open(os.path.join(self.work, name + ".tex"), "w").write(tex)
-        # strict: any LaTeX error is a failure (used for the model's output). Relaxed: a PDF is
-        # enough, which tolerates harmless font warnings in our own reference sources.
+        # strict means any LaTeX error fails, relaxed only needs a PDF so harmless font warnings pass.
         flags = ["-halt-on-error"] if strict else []
         r = subprocess.run(["pdflatex", "-interaction=batchmode", *flags, name + ".tex"],
                            cwd=self.work, capture_output=True, timeout=120)
@@ -248,8 +241,7 @@ class Bench:
         png = os.path.join(self.work, name + ".png")
         run("pdftoppm", "-r", str(dpi), "-png", "-singlefile", os.path.join(self.work, name + ".pdf"), png[:-4])
         run("magick", png, "-trim", "+repage", "-bordercolor", "white", "-border", "12", png)
-        # A reference with no ink (e.g. a font whose metrics are missing drops every glyph) would make
-        # every model "fail" for no reason, so treat it as a render failure.
+        # a reference with no ink counts as a render failure.
         if float(run("magick", png, "-format", "%[fx:mean]", "info:").stdout or 0) > 0.9995:
             return None
         return png
@@ -404,7 +396,7 @@ def collect(b, suites):
                 print(f"  SKIPPED  documents        {name}: reference failed to render", file=sys.stderr)
                 continue
             out, meta = b.texcopy(ref, kind="prose")
-            # a bare formula (kind "math") has no delimiters by design; show it as the display it is
+            # a bare formula has no delimiters, show it as the display it is.
             g, sim = b.grade_doc(ref, rf"\[ {out} \]" if meta.get("kind") == "math" and out else out)
             rows.append({"suite": "documents", "case": name, "grade": g, "sim": sim, "output": out, "raw": meta.get("raw"),
                          "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
@@ -419,7 +411,7 @@ def collect(b, suites):
             out, meta = b.texcopy(ref, kind="prose")
             g, sim = grade_table(src, out)
             if g != "FAIL" and not b.render(out, pre=DOC_PRE, raw=True, opts="[12pt]", strict=True):
-                g = "FAIL"  # the grid was right but the LaTeX does not compile
+                g = "FAIL" # the grid was right but the LaTeX doesn't compile.
             rows.append({"suite": "tables", "case": name, "grade": g, "sim": sim, "output": out, "raw": meta.get("raw"),
                          "stop": meta.get("stop"), "min_prob": meta.get("min_prob"), "mean_logprob": meta.get("mean_logprob")})
             print(f"  {g:8} {'tables':16} {name}", file=sys.stderr)
@@ -448,7 +440,7 @@ def collect(b, suites):
     return rows
 
 
-# Settings for the generated suite, filled in from the command line.
+# settings for the generated suite, filled in from the command line.
 GEN = {"seed": 1, "count": 100, "kinds": None, "dir": None, "worst": 8}
 
 
