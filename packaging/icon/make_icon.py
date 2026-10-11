@@ -24,7 +24,7 @@ def main():
     font_path = next((p for p in FONT_CANDIDATES if os.path.exists(p)), None)
     if not font_path:
         raise SystemExit("no serif font found; add one to FONT_CANDIDATES")
-    # vertical gradient, then a rounded-square mask (the macOS icon grid leaves a margin of ~10%)
+    # vertical gradient with a rounded square mask.
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     grad = Image.new("RGBA", (S, S))
     gd = ImageDraw.Draw(grad)
@@ -37,7 +37,7 @@ def main():
     img.paste(grad, (0, 0), mask)
 
     d = ImageDraw.Draw(img)
-    # capture corners
+    # grab the corners.
     a, b, arm, w = margin + 150, S - margin - 150, 120, 30
     for (x, y, dx, dy) in [(a, a, 1, 1), (b, a, -1, 1), (a, b, 1, -1), (b, b, -1, -1)]:
         d.line([(x, y), (x + dx * arm, y)], fill=ACCENT, width=w)
@@ -45,7 +45,7 @@ def main():
         d.ellipse([x - w // 2, y - w // 2, x + w // 2, y + w // 2], fill=ACCENT)
         d.ellipse([x + dx * arm - w // 2, y - w // 2, x + dx * arm + w // 2, y + w // 2], fill=ACCENT)
         d.ellipse([x - w // 2, y + dy * arm - w // 2, x + w // 2, y + dy * arm + w // 2], fill=ACCENT)
-    # the sigma, centred
+    # centre the sigma.
     font = ImageFont.truetype(font_path, 520)
     box = d.textbbox((0, 0), "\u03a3", font=font)
     d.text(((S - (box[2] - box[0])) / 2 - box[0], (S - (box[3] - box[1])) / 2 - box[1]), "\u03a3", font=font, fill=INK)

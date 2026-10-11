@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
-# Builds texcopy.app and a zip of it from an already-built binary.
-#
-#   packaging/macos/make-app.sh [binary] [output-dir] [version]
-#   packaging/macos/make-app.sh target/release/texcopy dist 0.1.0
-#
-# The app is signed ad hoc (no Apple Developer account needed). macOS Gatekeeper will still ask the
-# first time a *downloaded* copy is opened; see the README for how to allow it.
+# builds texcopy.app and a zip of it from a built binary. usage: make-app.sh [binary] [output-dir] [version]
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -20,7 +14,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/texcopy"
 
-# Icon: the 1024-pixel master, scaled to the sizes an .icns holds.
+# icon from the 1024 master scaled to the sizes .icns needs.
 iconset="$(mktemp -d)/texcopy.iconset"
 mkdir -p "$iconset"
 master="$root/packaging/icon/icon-1024.png"
@@ -30,7 +24,7 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/texcopy.icns"
 
-# Licence notices that MIT, Apache, BSD and the font licences require to travel with the program.
+# licence notices go with the program.
 cp "$root/LICENSE" "$app/Contents/Resources/LICENSE"
 python3 "$root/tools/third_party_licenses.py" "$app/Contents/Resources/THIRD_PARTY_LICENSES.md"
 
@@ -54,12 +48,12 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Ad-hoc signature: required for a bundle to run on Apple Silicon, and gives the app a stable identity.
+# ad hoc signature, apple silicon needs one to run.
 codesign --force --deep --sign - "$app"
 codesign --verify --deep --strict "$app"
 
 zip="$out/texcopy-$version-macos-$arch.zip"
 rm -f "$zip"
-ditto -c -k --norsrc --keepParent "$app" "$zip"  # --norsrc: no ._* metadata files in the zip
+ditto -c -k --norsrc --keepParent "$app" "$zip" # no ._* files in the zip.
 echo "built $app"
 echo "built $zip ($(du -h "$zip" | cut -f1))"

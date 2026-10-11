@@ -1,7 +1,5 @@
 #!/usr/bin/env sh
-# Installs texcopy for the current user (no root needed): the program, a menu entry and the icon.
-#   ./install.sh            install under ~/.local
-#   ./install.sh --remove   take it out again
+# installs texcopy for this user, ./install.sh to install and --remove to take it out.
 set -eu
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -19,7 +17,7 @@ fi
 mkdir -p "$bin" "$apps" "$icons"
 install -m 755 "$here/texcopy" "$bin/texcopy"
 install -m 644 "$here/texcopy.png" "$icons/texcopy.png"
-# The menu entry names the program by full path, so it works even if ~/.local/bin is not on PATH.
+# the menu entry uses the full path so it works when ~/.local/bin isn't on PATH.
 sed "s|^Exec=texcopy|Exec=$bin/texcopy|" "$here/texcopy.desktop" > "$apps/texcopy.desktop"
 chmod 644 "$apps/texcopy.desktop"
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$apps" >/dev/null 2>&1 || true

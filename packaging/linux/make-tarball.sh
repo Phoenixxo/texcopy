@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Packs an already-built texcopy into a .tar.gz with an installer, a menu entry and the icon.
-#   packaging/linux/make-tarball.sh [binary] [output-dir] [version]
+# packs a built texcopy into a tar.gz with the installer, menu entry and icon. usage: make-tarball.sh [binary] [output-dir] [version]
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
