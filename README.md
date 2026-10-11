@@ -32,29 +32,29 @@ texcopy fixes that. Drag a box around anything that was rendered with LaTeX and 
 </p>
 
 <p align="center">
-  <a href="#-features">Features</a> •
-  <a href="#-install">Install</a> •
-  <a href="#-usage">Usage</a> •
-  <a href="#-what-it-can-read">What it can read</a> •
-  <a href="#-configuration">Configuration</a> •
-  <a href="#-how-accurate-is-it">Accuracy</a> •
-  <a href="#-faq">FAQ</a> •
+  <a href="#-features">Features</a> -
+  <a href="#-install">Install</a> -
+  <a href="#-usage">Usage</a> -
+  <a href="#-what-it-can-read">What it can read</a> -
+  <a href="#-configuration">Configuration</a> -
+  <a href="#-how-accurate-is-it">Accuracy</a> -
+  <a href="#-faq">FAQ</a> -
   <a href="#-contributing">Contributing</a>
 </p>
 
 ---
 
-## ✨ Features
+## Features
 
 - **More than formulas.** Sentences with inline math, numbered and unnumbered display equations, bullet and numbered lists, headings and tables all come back as LaTeX.
-- **Looks the same, not the same source.** The picture doesn't have the author's original LaTeX in it, so texcopy can't give you that. It gives you LaTeX that renders the same as what you selected.
+- **Looks the same, not the same source.** Aims to give you the same rendered output, without needing the source. It gives you LaTeX that renders the same as what you selected.
 - **Private.** Everything runs on your machine. The only thing that touches the network is the one-time model download.
 - **Fast.** About a third of a second per capture once it's warm (Apple M4 Pro). The window loads the model while you're still dragging the box.
 - **App and command line.** There's a small window (a Capture button, a couple of options, the output text) and a `texcopy` command with JSON output for scripts.
 - **Two engines.** A 118 MB formula model that works anywhere, and an optional 1 GB vision model that reads paragraphs, long equations and tables. The window offers the download the first time you capture.
 - **Measured.** A benchmark renders known LaTeX, runs texcopy on the picture and compares the result. See [how accurate it is](#-how-accurate-is-it).
 
-## 📦 Install
+## Install
 
 Grab the file for your system from the [latest release](https://github.com/Phoenixxo/texcopy/releases/latest). Each release has SHA-256 checksums in `SHA256SUMS`.
 
@@ -79,7 +79,7 @@ The first time you capture, the window offers to download the vision engine (abo
 
 Want to build it yourself? See [Building](#-building).
 
-## 🚀 Usage
+## Usage
 
 ### The window
 
@@ -106,7 +106,7 @@ texcopy --engine small|vlm|auto
 
 `texcopy --help` has the rest.
 
-## 📝 What it can read
+## What it can read
 
 | You select | You get |
 |---|---|
@@ -122,7 +122,7 @@ texcopy --engine small|vlm|auto
 
 What it won't get back is styling that isn't part of the content: bold, italic, small caps, underline, vertical table rules, theorem boxes. Those come out as plain text. [docs/OUTPUT.md](docs/OUTPUT.md) has the details and examples.
 
-## ⚙️ Configuration
+## Configuration
 
 The window remembers `wrap` and `engine` in a `settings.json` in your user config folder. Everything else is a flag or an environment variable:
 
@@ -135,7 +135,7 @@ The window remembers `wrap` and `engine` in a `settings.json` in your user confi
 | `TEXCOPY_VLM_DIR` | folder with the vision model files |
 | `TEXCOPY_LLAMA_SERVER` | path to your own `llama-server` (a GPU build, say) |
 
-## 🧠 How it works
+## How it works
 
 A screenshot of LaTeX doesn't contain the LaTeX, so getting it back is OCR:
 
@@ -148,7 +148,7 @@ A screenshot of LaTeX doesn't contain the LaTeX, so getting it back is OCR:
 
 The small model reads one formula at a time and runs inside the program. The vision model is a 0.8 billion parameter model run by a short-lived local `llama-server`, and it reads whole pages. Whatever the model says then gets rebuilt into LaTeX that compiles: sections, lists, equation environments, tables, escaped characters. The long version is in [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 
-## 📊 How accurate is it?
+## How accurate is it?
 
 The benchmark (`tools/bench.py`) renders known LaTeX with `pdflatex`, runs texcopy on the picture, then re-renders the answer and compares. On an Apple M4 Pro with the vision engine:
 
@@ -161,11 +161,11 @@ The benchmark (`tools/bench.py`) renders known LaTeX with `pdflatex`, runs texco
 
 That's a benchmark, not a promise, so **proofread what you paste.** A confident answer can still be wrong, usually a symbol that looks like another one (`\epsilon` and `e`, an italic `v` and `\nu`). The full results, and a list of where it gets things wrong, are in [docs/BENCHMARKS.md](docs/BENCHMARKS.md#where-it-gets-things-wrong). If you find a case it gets wrong, [open an issue](https://github.com/Phoenixxo/texcopy/issues/new/choose).
 
-## 🔒 Privacy
+## Privacy
 
-texcopy never uploads your screenshots or your text. It only goes online to download the models and the helper, once: the small model and the vision model from Hugging Face, and `llama-server` from GitHub. Every file's size and SHA-256 get checked before it's used, and a mismatch deletes it.
+texcopy never uploads your screenshots or your text. It only goes online to download the models and the helper, once: the small model and the vision model from Hugging Face, and `llama-server` from GitHub. Every file's size and SHA-256 get checked before it's used and will be deleted if there is a mismatch.
 
-## ❓ FAQ
+## FAQ
 
 <details>
 <summary><b>macOS says it can't verify the developer</b></summary>
@@ -209,7 +209,7 @@ Yes, once the models are downloaded.
 It's built and measured for rendered LaTeX on a screen. Other stuff might work, but I haven't tested it.
 </details>
 
-## 🔧 Building
+## Building
 
 ```bash
 git clone https://github.com/Phoenixxo/texcopy.git
@@ -226,23 +226,11 @@ sudo apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1
   libxcursor-dev libxi-dev libgl1-mesa-dev
 ```
 
-`cargo build --release --no-default-features` builds just the command line, with no window and no screen capture, and without those libraries. The scripts that build the macOS app, the Windows zip and the Linux tarball are in [`packaging/`](packaging). Pushing a tag like `v0.1.0` makes CI build and publish all three.
-
-## 🧭 Roadmap
-
-Stuff I'd like to get to, no promises:
-
-- Run and fix the Windows and Linux builds on real machines. This is the most useful thing anyone can help with right now.
-- A global keyboard shortcut and a menu-bar / tray icon.
-- Notarised macOS builds, plus Homebrew, winget and Scoop packages.
-- Reading very long paragraphs by splitting them into lines.
-- Training a smaller model of my own, and a much smaller ONNX Runtime build.
-
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome. Wrong or malformed output is expected in plenty of cases, so [issues](https://github.com/Phoenixxo/texcopy/issues/new/choose) are welcome too, and pull requests that fix them even more. A screenshot of what you selected helps the most. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, it covers the setup, the benchmark (and why to compare against the previous build) and the commit style. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 texcopy runs on other people's models and runtimes:
 
