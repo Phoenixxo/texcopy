@@ -38,14 +38,20 @@ jobs:
             libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev \
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
+        with:
+          # a new prefix starts clean caches that include the ONNX Runtime download
+          prefix-key: v1-rust
+          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          cache-directories: |
+            ~/.cache/ort.pyke.io
+            ~/Library/Caches/ort.pyke.io
+            ~/AppData/Local/ort.pyke.io
       - name: Check the tag matches the version in Cargo.toml
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
           test "v$version" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} does not match Cargo.toml version $version"; exit 1; }
-      - name: Test
-        run: cargo test --locked --release
       - name: Build
         run: cargo build --locked --release
       - name: Package (macOS)

@@ -33,6 +33,14 @@ jobs:
             libdbus-1-dev libpipewire-0.3-dev libwayland-dev libegl-dev \
             libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
       - uses: Swatinem/rust-cache@v2
+        with:
+          # a new prefix starts clean caches that include the ONNX Runtime download
+          prefix-key: v1-rust
+          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          cache-directories: |
+            ~/.cache/ort.pyke.io
+            ~/Library/Caches/ort.pyke.io
+            ~/AppData/Local/ort.pyke.io
       - run: cargo test --locked
 
   # The command-line-only build (no window, no screen capture) must keep passing without the
@@ -44,6 +52,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          # a new prefix starts clean caches that include the ONNX Runtime download
+          prefix-key: v1-rust
+          # ort-sys downloads ONNX Runtime outside target/; a restored target/ expects it to still be there
+          cache-directories: |
+            ~/.cache/ort.pyke.io
+            ~/Library/Caches/ort.pyke.io
+            ~/AppData/Local/ort.pyke.io
       - run: cargo test --locked --no-default-features
 
   # The benchmark's case generator (tools/gen) is its own small crate.
