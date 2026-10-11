@@ -223,7 +223,7 @@ You need Rust 1.95 or newer ([rustup.rs](https://rustup.rs)). The first build do
 ```bash
 sudo apt-get install pkg-config libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev \
   libpipewire-0.3-dev libwayland-dev libegl-dev libxkbcommon-dev libx11-dev \
-  libxcursor-dev libxi-dev libgl1-mesa-dev
+  libxcursor-dev libxi-dev libgl1-mesa-dev libgbm-dev
 ```
 
 ## Contributing
