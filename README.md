@@ -52,7 +52,7 @@ texcopy fixes that. Drag a box around anything that was rendered with LaTeX and 
 - **Fast.** About a third of a second per capture once it's warm (Apple M4 Pro). The window loads the model while you're still dragging the box.
 - **App and command line.** There's a small window (a Capture button, a couple of options, the output text) and a `texcopy` command with JSON output for scripts.
 - **Two engines.** A 118 MB formula model that works anywhere, and an optional 1 GB vision model that reads paragraphs, long equations and tables. The window offers the download the first time you capture.
-- **Measured.** A benchmark renders known LaTeX, runs texcopy on the picture and compares the result. See [how accurate it is](#-how-accurate-is-it).
+- **Measured.** A benchmark renders known LaTeX, runs texcopy on the picture and compares the result. See [how accurate it is](#how-accurate-is-it).
 
 ## Install
 
@@ -77,7 +77,7 @@ Grab the file for your system from the [latest release](https://github.com/Phoen
 
 The first time you capture, the window offers to download the vision engine (about 1 GB, checksum-verified, with a progress bar). Say "Not now" and it uses the small formula model instead. You can change your mind later with `texcopy --setup`.
 
-Want to build it yourself? See [Building](#-building).
+Want to build it yourself? See [Building](#building).
 
 ## Usage
 
@@ -170,7 +170,7 @@ texcopy never uploads your screenshots or your text. It only goes online to down
 <details>
 <summary><b>macOS says it can't verify the developer</b></summary>
 
-See [first launch](#-install) above: right-click, **Open**. The app isn't notarised because that needs a paid Apple developer account.
+See [first launch](#install) above: right-click, **Open**. The app isn't notarised because that needs a paid Apple developer account.
 </details>
 
 <details>
