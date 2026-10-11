@@ -23,8 +23,8 @@ jobs:
           # macos-14 is apple silicon.
           - { os: macos-14, name: macos-arm64 }
           - { os: windows-latest, name: windows-x64 }
-          # older ubuntu so it runs on older distros.
-          - { os: ubuntu-22.04, name: linux-x64 }
+          # 22.04's pipewire is too old for libspa, so this needs 24.04.
+          - { os: ubuntu-24.04, name: linux-x64 }
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
