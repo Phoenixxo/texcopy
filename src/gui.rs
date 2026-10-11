@@ -645,7 +645,6 @@ fn setup_card(ui: &mut egui::Ui, items: &[SetupItem]) -> (bool, bool) {
     let total: u64 = items.iter().map(|i| i.size).sum();
     ui.add_space(6.0);
     ui.label(egui::RichText::new("Vision engine (optional, much better for sentences)").strong());
-    ui.label("Reads whole sentences and long equations that the small model gets wrong. One-time download; everything runs on your computer.");
     ui.add_space(4.0);
     for i in items {
         ui.label(format!("• {}  ({})", i.what, ui::human_bytes(i.size)));
