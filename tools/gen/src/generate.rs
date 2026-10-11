@@ -1,4 +1,4 @@
-//! Making a set of cases from a seed: pick categories, build the LaTeX, render it, write the manifest.
+//! makes a set of cases from a seed.
 
 use std::{
     collections::BTreeSet,
@@ -35,7 +35,7 @@ const FONTS_PDFLATEX: Pool = &[
 const FONTS_DOCUMENT: Pool = &[("latex-cm", 65), ("xelatex-stix", 35)];
 const WEB: Pool = &[("katex", 1)];
 
-/// name, weight in the mix, how it is graded, which renderers draw it
+/// name, weight in the mix, how it's graded, which renderers draw it.
 const CATEGORIES: [(&str, u32, Grading, Pool); 10] = [
     ("formula-simple", 14, Grading::Formula, FONTS_ALL),
     ("formula-medium", 18, Grading::Formula, FONTS_ALL),
@@ -56,8 +56,7 @@ fn category(name: &str) -> &'static (&'static str, u32, Grading, Pool) {
         .expect("a known category")
 }
 
-/// Make one case. LaTeX cases are rendered here; web cases are only described (Chrome renders them
-/// together later). `None` means it did not compile or came out blank.
+/// make one case, web cases are only described and rendered together later, None if it didn't compile or came out blank.
 fn make_case(seed: u64, index: usize, category_name: &str, out_dir: &Path) -> Option<Case> {
     let (_, _, grading, pool) = category(category_name);
     let case_seed = format!("{seed}-{index}");
@@ -127,7 +126,7 @@ fn make_case(seed: u64, index: usize, category_name: &str, out_dir: &Path) -> Op
     Some(case)
 }
 
-/// The categories to make, `count` of them, drawn by weight from the allowed ones.
+/// the categories to make, drawn by weight.
 fn plan(rng: &mut Rng, count: usize, kinds: Option<&BTreeSet<String>>) -> Vec<&'static str> {
     let allowed: Vec<(&'static str, u32)> = CATEGORIES
         .iter()
@@ -142,7 +141,7 @@ fn plan(rng: &mut Rng, count: usize, kinds: Option<&BTreeSet<String>>) -> Vec<&'
     (0..count).map(|_| *rng.weighted(&allowed)).collect()
 }
 
-/// Where a run is kept: `tools/fixtures/generated/seed7-n200[-kinds]`.
+/// where a run is kept.
 pub fn default_dir(seed: u64, count: usize, kinds: Option<&BTreeSet<String>>) -> PathBuf {
     let tag = match kinds {
         Some(k) if !k.is_empty() => format!(
@@ -162,7 +161,7 @@ pub fn generate(
     jobs: usize,
 ) -> Result<Manifest> {
     fs::create_dir_all(out_dir)?;
-    // "corpus" cases come from real papers (fetch-arxiv first): all of `count` on their own, a quarter mixed in
+    // "corpus" cases come from real papers, run fetch-arxiv first.
     let want_corpus = kinds.is_some_and(|k| k.contains("corpus"));
     let others: Option<BTreeSet<String>> =
         kinds.map(|k| k.iter().filter(|x| *x != "corpus").cloned().collect());
@@ -251,7 +250,7 @@ mod tests {
 
     #[test]
     fn a_case_description_depends_only_on_the_seed_and_index() {
-        // the web branch needs no rendering, so the whole description can be compared
+        // the web branch needs no rendering so the whole description can be compared.
         let dir = std::env::temp_dir();
         let a = make_case(7, 3, "web-formula", &dir).unwrap();
         let b = make_case(7, 3, "web-formula", &dir).unwrap();

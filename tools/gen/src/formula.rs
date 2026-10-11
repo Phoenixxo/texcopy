@@ -1,7 +1,4 @@
-//! Random formulas from a small grammar. Every method returns a string of LaTeX.
-//!
-//! The formulas are mathematical nonsense on purpose: what is being tested is whether texcopy reads
-//! the symbols, not whether it knows the mathematics.
+//! random formulas from a small grammar, nonsense on purpose since we test reading symbols.
 
 use crate::rng::Rng;
 
@@ -45,7 +42,7 @@ impl<'a> FormulaGen<'a> {
         self.r.pick(&LATIN)
     }
 
-    /// A letter, Greek letter or capital Greek letter.
+    /// a letter, greek letter or capital greek letter.
     fn letter(&mut self) -> &'static str {
         if self.r.chance(0.75) {
             let i = self
@@ -75,7 +72,7 @@ impl<'a> FormulaGen<'a> {
             };
         }
         if self.r.chance(0.15) {
-            // no `{*}` here: with Times math the TeX install used for the benchmark pulls in a missing script font
+            // no {*} here, with Times math the TeX install used for the benchmark pulls in a missing script font.
             out += &format!("^{}", self.r.pick(&["2", "3", "n", "k"]));
         }
         out
@@ -100,7 +97,7 @@ impl<'a> FormulaGen<'a> {
         }
     }
 
-    /// A variable or number with no script of its own, so `x^2^3` cannot happen.
+    /// a variable or number with no script of its own so x^2^3 can't happen.
     fn atom_no_script(&mut self) -> String {
         if self.r.chance(0.7) {
             let i = self.r.int(0, (LATIN.len() + GREEK.len()) as i64 - 1) as usize;
@@ -293,7 +290,7 @@ impl<'a> FormulaGen<'a> {
         format!(r"\begin{{aligned}} {} \end{{aligned}}", rows.join(r" \\ "))
     }
 
-    /// One formula of the given category (`formula-simple`, `matrix`, ...).
+    /// one formula of the given category.
     pub fn formula(&mut self, category: &str) -> String {
         match category {
             "formula-simple" => self.relation(1),

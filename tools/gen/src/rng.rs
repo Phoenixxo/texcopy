@@ -1,12 +1,9 @@
-//! A small deterministic random number generator (SplitMix64).
-//!
-//! A seed has to give the same benchmark cases forever, on every machine. Writing the generator here
-//! (twenty lines) means no dependency can change its algorithm underneath the seeds.
+//! a small deterministic random number generator (SplitMix64), written here so no dependency can change the algorithm under the seeds.
 
 pub struct Rng(u64);
 
 impl Rng {
-    /// Seed from text such as `"7-12-formula-hard"`: FNV-1a over its bytes.
+    /// seed from text like "7-12-formula-hard", FNV-1a over its bytes.
     pub fn from_text(seed: &str) -> Self {
         let mut h: u64 = 0xcbf2_9ce4_8422_2325;
         for b in seed.bytes() {
@@ -14,7 +11,7 @@ impl Rng {
             h = h.wrapping_mul(0x0100_0000_01b3);
         }
         let mut rng = Rng(h);
-        rng.next_u64(); // spread a low-entropy seed
+        rng.next_u64(); // spread a low entropy seed.
         rng
     }
 
@@ -26,17 +23,17 @@ impl Rng {
         z ^ (z >> 31)
     }
 
-    /// A number in 0.0..1.0.
+    /// a number in 0.0..1.0.
     pub fn float(&mut self) -> f64 {
         (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
     }
 
-    /// A whole number from `lo` to `hi`, both included.
+    /// a whole number from lo to hi, both included.
     pub fn int(&mut self, lo: i64, hi: i64) -> i64 {
         lo + (self.next_u64() % (hi - lo + 1) as u64) as i64
     }
 
-    /// True with probability `p`.
+    /// true with probability p.
     pub fn chance(&mut self, p: f64) -> bool {
         self.float() < p
     }
@@ -45,7 +42,7 @@ impl Rng {
         &items[self.next_u64() as usize % items.len()]
     }
 
-    /// An item chosen with the given weights.
+    /// an item chosen with the given weights.
     pub fn weighted<'a, T>(&mut self, items: &'a [(T, u32)]) -> &'a T {
         let total: u64 = items.iter().map(|(_, w)| u64::from(*w)).sum();
         let mut left = self.next_u64() % total;
@@ -77,8 +74,7 @@ mod tests {
             (0..5).map(|_| a.next_u64()).collect::<Vec<_>>(),
             (0..5).map(|_| b.next_u64()).collect::<Vec<_>>()
         );
-        // pinned (checked against an independent Python implementation of FNV-1a + SplitMix64): if this
-        // changes, every saved seed would give different cases
+        // pinned, checked against an independent python FNV-1a and SplitMix64. if it changes every saved seed gives different cases.
         assert_eq!(
             Rng::from_text("texcopy").next_u64(),
             11_567_265_878_473_622_684

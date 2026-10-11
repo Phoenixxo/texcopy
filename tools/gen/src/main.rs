@@ -1,20 +1,4 @@
-//! texcopy-gen: makes benchmark cases with real tools. A picture of some LaTeX, and the exact source
-//! it came from, so texcopy's answer can be checked by re-rendering it.
-//!
-//!     cargo run --release --manifest-path tools/gen/Cargo.toml -- generate --seed 7 --count 200
-//!     cargo run --release --manifest-path tools/gen/Cargo.toml -- fetch-arxiv --count 12
-//!     cargo run --release --manifest-path tools/gen/Cargo.toml -- generate --seed 7 --count 60 --kinds corpus
-//!
-//! The cases land in `tools/fixtures/generated/<run>/` (git-ignored) as PNGs plus a `manifest.json`. The
-//! same seed always makes the same cases. `tools/bench.py --suite generated` reads them and grades
-//! texcopy on them. Nothing but this generator is committed: the recipe is the source, the pictures
-//! are build output.
-//!
-//! Where the pictures come from, so the benchmark is not only the fonts it happened to be written with:
-//!   - pdflatex and xelatex, with several text and math fonts (Computer Modern, Times, Latin Modern, STIX Two)
-//!   - KaTeX in headless Chrome, light and dark, like a web page
-//!   - real equations, lists and tables cut out of CC-BY arXiv papers
-//!   - random degradation (smaller, blurrier, JPEG, noisy), like a real screenshot
+//! texcopy-gen makes benchmark cases with real tools, see docs/BENCHMARKS.md.
 
 mod corpus;
 mod document;

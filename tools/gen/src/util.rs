@@ -1,11 +1,11 @@
-//! Small shared helpers: running work on several threads, paths, and a stable hash.
+//! small shared helpers, threads, paths and a stable hash.
 
 use std::{
     path::{Path, PathBuf},
     sync::Mutex,
 };
 
-/// Run `f` over `items` on `jobs` threads, keeping the results in the order of `items`.
+/// run f over items on jobs threads and keep the order.
 pub fn par_map<T: Send, R: Send>(items: Vec<T>, jobs: usize, f: impl Fn(T) -> R + Sync) -> Vec<R> {
     let n = items.len();
     let work: Mutex<Vec<(usize, T)>> = Mutex::new(items.into_iter().enumerate().rev().collect());
@@ -30,7 +30,7 @@ pub fn par_map<T: Send, R: Send>(items: Vec<T>, jobs: usize, f: impl Fn(T) -> R 
         .collect()
 }
 
-/// `tools/` (this crate lives in `tools/gen`).
+/// tools/, this crate lives in tools/gen.
 pub fn tools_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -38,7 +38,7 @@ pub fn tools_dir() -> PathBuf {
         .to_path_buf()
 }
 
-/// FNV-1a: a hash that is the same on every machine, for telling cases apart.
+/// FNV-1a, same on every machine.
 pub fn fnv(text: &str) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for b in text.bytes() {

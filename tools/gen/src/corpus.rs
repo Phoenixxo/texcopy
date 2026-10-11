@@ -1,11 +1,4 @@
-//! Real-world LaTeX: equations, lists and tables cut out of CC-BY arXiv papers.
-//!
-//! `fetch_arxiv` downloads the sources of recent papers, but only ones whose arXiv page shows a CC-BY,
-//! CC-BY-SA or CC0 license, pausing between requests as arXiv asks. `corpus_cases` then cuts each
-//! equation, align, itemize, enumerate and tabular environment out of the .tex files, gives it the
-//! paper's own macro definitions so `\R` and friends work, compiles it, and keeps what renders.
-//!
-//! The downloaded sources and the pictures stay in `tools/fixtures/` (git-ignored).
+//! real world LaTeX, equations, lists and tables cut out of CC-BY arXiv papers.
 
 use std::{
     collections::{HashMap, HashSet},
@@ -42,7 +35,7 @@ const ENVIRONMENTS: [&str; 10] = [
     "enumerate",
 ];
 
-/// A picture of these would not match its source: unresolved references, figures, files.
+/// these have references and figures that don't resolve.
 const UNUSABLE: [&str; 21] = [
     r"\ref",
     r"\eqref",
@@ -79,9 +72,9 @@ fn category_of(env: &str) -> &'static str {
     }
 }
 
-// ---- downloading ----------------------------------------------------------------------------
+// downloading.
 
-/// Download with curl: it uses the system's certificates and exists on every platform we support.
+/// download with curl, it uses the system certificates and is on every platform.
 fn get(url: &str) -> Result<Vec<u8>> {
     let out = Command::new("curl")
         .args(["-sSLf", "-A", UA, "--max-time", "120", url])
@@ -100,14 +93,14 @@ fn get_text(url: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&get(url)?).into_owned())
 }
 
-/// The text between `<name>` and `</name>`.
+/// the text between <name> and </name>.
 fn tag<'a>(s: &'a str, name: &str) -> Option<&'a str> {
     let start = s.find(&format!("<{name}>"))? + name.len() + 2;
     let len = s[start..].find(&format!("</{name}>"))?;
     Some(s[start..start + len].trim())
 }
 
-/// `http://arxiv.org/abs/2610.12326v1` -> `2610.12326`.
+/// http://arxiv.org/abs/2610.12326v1 becomes 2610.12326.
 fn arxiv_id(url: &str) -> String {
     let id = url.rsplit("/abs/").next().unwrap_or(url);
     match id.rfind('v') {
@@ -118,7 +111,7 @@ fn arxiv_id(url: &str) -> String {
     }
 }
 
-/// The Creative Commons license link on an arXiv abstract page, if it is one we can reuse.
+/// the creative commons license link on an abstract page, if we can reuse it.
 fn open_license(page: &str) -> Result<String, Option<String>> {
     let Some(i) = page.find("creativecommons.org/") else {
         return Err(None);
@@ -136,7 +129,7 @@ fn open_license(page: &str) -> Result<String, Option<String>> {
     }
 }
 
-/// Download papers (up to `count` in the corpus) whose license allows reuse. Returns how many are there.
+/// download papers whose license allows reuse, returns how many are there.
 pub fn fetch_arxiv(count: usize, categories: &[String]) -> Result<usize> {
     let dir = corpus_dir();
     fs::create_dir_all(&dir)?;
@@ -206,7 +199,7 @@ pub fn fetch_arxiv(count: usize, categories: &[String]) -> Result<usize> {
     Ok(kept)
 }
 
-/// Write the .tex files of an e-print (a tarball, or one gzipped file) into `folder`. Returns how many.
+/// write the .tex files of an e-print into folder, returns how many.
 fn save_tex_files(data: &[u8], folder: &Path) -> Result<usize> {
     fs::create_dir_all(folder)?;
     let bytes = if data.starts_with(&[0x1f, 0x8b]) {
@@ -258,7 +251,7 @@ fn save_tex_files(data: &[u8], folder: &Path) -> Result<usize> {
     Ok(count)
 }
 
-// ---- cutting environments out -----------------------------------------------------------------
+// cutting environments out.
 
 fn strip_comments(text: &str) -> String {
     text.lines()
@@ -280,7 +273,7 @@ fn at(s: &str, i: usize) -> &str {
     s.get(i..).unwrap_or("")
 }
 
-/// The index just after the `{...}` group that opens at `s[start]`.
+/// the index just after the {...} group that opens at s[start].
 fn balanced(s: &str, start: usize) -> Option<usize> {
     let b = s.as_bytes();
     if b.get(start) != Some(&b'{') {
@@ -289,7 +282,7 @@ fn balanced(s: &str, start: usize) -> Option<usize> {
     let (mut depth, mut i) = (0i32, start);
     while i < b.len() {
         match b[i] {
-            b'\\' => i += 1, // skip the escaped character
+            b'\\' => i += 1, // skip the escaped character.
             b'{' => depth += 1,
             b'}' => {
                 depth -= 1;
@@ -311,7 +304,7 @@ fn skip_space(s: &str, mut i: usize) -> usize {
     i
 }
 
-/// End of the control word that starts at `s[i]` (`\name`).
+/// end of the control word at s[i].
 fn control_word_end(s: &str, i: usize) -> Option<usize> {
     let b = s.as_bytes();
     if b.get(i) != Some(&b'\\') {
@@ -324,7 +317,7 @@ fn control_word_end(s: &str, i: usize) -> Option<usize> {
     (j > i + 1).then_some(j)
 }
 
-/// The paper's own `\newcommand` / `\DeclareMathOperator` / `\def` lines, so its shorthand compiles.
+/// the paper's own macro definitions so its shorthand compiles.
 fn macro_definitions(preamble: &str) -> String {
     const KINDS: [&str; 5] = [
         "newcommand",
@@ -358,7 +351,7 @@ fn macro_definitions(preamble: &str) -> String {
                 .chars()
                 .all(|c| c == '#' || c.is_ascii_digit())
             {
-                continue; // a \def pattern we don't handle
+                continue; // a \def pattern we don't handle.
             }
             balanced(preamble, brace)
         } else {
@@ -370,7 +363,7 @@ fn macro_definitions(preamble: &str) -> String {
             let Some(mut j) = name_end else { continue };
             j = skip_space(preamble, j);
             while at(preamble, j).starts_with('[') {
-                // [number of arguments] and [default]
+                // [number of arguments] and [default].
                 let Some(close) = at(preamble, j).find(']') else {
                     break;
                 };
@@ -385,7 +378,7 @@ fn macro_definitions(preamble: &str) -> String {
         let Some(end) = end else { continue };
         let text = preamble[idx..end].trim();
         if text.len() > 10 && text.len() < 400 && !text.contains("\n\n") {
-            // an existing name must not stop the build
+            // an existing name shouldn't stop the build.
             out.push(match text.strip_prefix("\\newcommand") {
                 Some(rest) => format!("\\providecommand{rest}"),
                 None => text.to_string(),
@@ -395,7 +388,7 @@ fn macro_definitions(preamble: &str) -> String {
     out.join("\n")
 }
 
-/// The environments we care about, whole (with their `\begin` and `\end`).
+/// the environments we care about, whole.
 fn environments(body: &str) -> Vec<(String, String)> {
     let mut found = Vec::new();
     for env in ENVIRONMENTS.iter().copied().chain(["tabular"]) {
@@ -424,7 +417,7 @@ fn environments(body: &str) -> Vec<(String, String)> {
     found
 }
 
-/// Remove `\label{...}`: harmless to drop, and it keeps the text cleaner.
+/// remove \label{...} to keep the text clean.
 fn without_labels(text: &str) -> String {
     let mut out = String::new();
     let mut rest = text;
@@ -498,13 +491,13 @@ fn candidates() -> Vec<Candidate> {
     out
 }
 
-/// Render up to `count` corpus cases into `out_dir`.
+/// render up to count corpus cases into out_dir.
 pub fn corpus_cases(seed: u64, count: usize, out_dir: &Path, jobs: usize) -> Vec<Case> {
     let mut all = candidates();
     let found = all.len();
     let mut rng = Rng::from_text(&format!("corpus-{seed}"));
     rng.shuffle(&mut all);
-    // a cap per paper so one paper does not dominate (it grows when few papers have usable text)
+    // a cap per paper so one doesn't take over, it grows when few papers have usable text.
     let papers = all
         .iter()
         .map(|c| c.paper.as_str())

@@ -1,5 +1,4 @@
-//! Sentences and small documents: paragraphs, display equations, lists, tables and headings.
-//! All the wording is original, written for this generator.
+//! sentences and small documents, all the wording is original.
 
 use crate::{formula::FormulaGen, rng::Rng};
 
@@ -64,7 +63,7 @@ impl<'a> DocGen<'a> {
         FormulaGen::new(self.r)
     }
 
-    /// Inline math in dollar signs: a small relation or expression.
+    /// inline math in dollar signs, a small relation or expression.
     fn inline(&mut self) -> String {
         let simple = self.r.chance(0.6);
         let mut f = self.formulas();
@@ -187,7 +186,7 @@ impl<'a> DocGen<'a> {
         format!("\\section*{{{}}}", self.r.pick(&TOPICS))
     }
 
-    /// A few blocks: mostly paragraphs, sometimes a display equation, list, table or heading.
+    /// a few blocks, mostly paragraphs and sometimes a display equation, list, table or heading.
     pub fn document(&mut self) -> String {
         let mut blocks = Vec::new();
         if self.r.chance(0.25) {

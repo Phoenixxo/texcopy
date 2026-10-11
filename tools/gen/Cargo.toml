@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 description = "Makes benchmark cases for texcopy: pictures of LaTeX with their exact source. A dev tool, not shipped."
 
-# Standalone: not part of the texcopy package, so it never touches the program's dependencies or builds.
+# standalone so it never touches the program's dependencies or builds.
 [workspace]
 
 [dependencies]

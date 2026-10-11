@@ -1,5 +1,4 @@
-//! Turning LaTeX into a picture with the real tools (pdflatex or xelatex, then pdftoppm), and the
-//! image clean-up and degradation that make it look like a screenshot.
+//! turns LaTeX into a picture with the real tools and makes it look like a screenshot.
 
 use std::{
     fs,
@@ -18,15 +17,14 @@ use image::{
 
 use crate::{manifest::Grading, rng::Rng};
 
-/// A way of drawing LaTeX: which program, and what to load right after `\documentclass`.
+/// a way of drawing LaTeX, which program and what to load after \documentclass.
 pub struct Renderer {
     pub name: &'static str,
     pub engine: &'static str,
     pub early: &'static str,
 }
 
-// No Times (mathptmx) here: with this TeX install `\leq`, `\neq`, `\in`, `\cdot` and friends need the missing
-// `rsfs` font, so nearly every formula fails. STIX Two (below) is the Times-like face instead.
+// no Times (mathptmx), with this TeX install \leq, \neq, \in and \cdot need the missing rsfs font so nearly every formula fails. STIX Two stands in.
 pub const RENDERERS: [Renderer; 4] = [
     Renderer {
         name: "latex-cm",
@@ -57,7 +55,7 @@ pub fn renderer(name: &str) -> &'static Renderer {
         .unwrap_or_else(|| panic!("no renderer {name}"))
 }
 
-/// The whole .tex file for a formula (shown as display math) or a document body (in a minipage).
+/// the whole .tex file for a formula or a document body.
 pub fn latex_source(
     body: &str,
     kind: Grading,
@@ -67,7 +65,7 @@ pub fn latex_source(
     preamble: &str,
 ) -> String {
     let packages = if r.engine == "xelatex" {
-        // unicode-math replaces amssymb, and amsmath has to come first
+        // unicode-math replaces amssymb and amsmath has to come first.
         format!("\\usepackage{{amsmath,amsthm,array,booktabs}}\n{}", r.early)
     } else {
         format!(
@@ -86,7 +84,7 @@ pub fn latex_source(
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-/// A fresh empty folder under the system temp folder. Removed when dropped.
+/// a fresh empty folder under the temp folder, removed when dropped.
 pub struct Scratch(pub PathBuf);
 
 impl Scratch {
@@ -104,7 +102,7 @@ impl Drop for Scratch {
     }
 }
 
-/// Run a command, giving up after `secs`. Returns whether it finished in time.
+/// run a command and give up after secs, says if it finished in time.
 pub fn run_timed(cmd: &mut Command, secs: u64) -> Result<bool> {
     let mut child = cmd
         .stdin(Stdio::null())
@@ -125,7 +123,7 @@ pub fn run_timed(cmd: &mut Command, secs: u64) -> Result<bool> {
     }
 }
 
-/// How a render ended: a picture was written, or why not.
+/// how a render ended.
 pub enum Rendered {
     Done,
     Failed(String),
@@ -137,7 +135,7 @@ impl Rendered {
     }
 }
 
-/// The first line of a LaTeX log that starts with `!` (the error), for saying why a render failed.
+/// the first line of the log starting with !, the error.
 fn first_error(log: &Path) -> String {
     fs::read_to_string(log)
         .ok()
@@ -149,7 +147,7 @@ fn first_error(log: &Path) -> String {
         .unwrap_or_else(|| "no PDF was produced".to_string())
 }
 
-/// Compile and rasterise. Says whether a usable (not blank) picture was written to `out`.
+/// compile and rasterise, says if a usable picture was written.
 #[allow(clippy::too_many_arguments)]
 pub fn render_latex(
     body: &str,
@@ -203,7 +201,7 @@ pub fn render_latex(
     Ok(Rendered::Done)
 }
 
-/// Crop to the ink and put a margin of the background colour around it.
+/// crop to the ink and add a margin.
 pub fn trim_border(img: &RgbImage, border: u32) -> RgbImage {
     let bg = *img.get_pixel(0, 0);
     let differs = |p: &Rgb<u8>| {
@@ -234,7 +232,7 @@ pub fn trim_border(img: &RgbImage, border: u32) -> RgbImage {
     out
 }
 
-/// Nothing drawn: all background, or the whole thing black.
+/// nothing drawn, all background or all black.
 pub fn is_blank(img: &RgbImage) -> bool {
     let n = u64::from(img.width()) * u64::from(img.height());
     let sum: u64 = img
@@ -245,7 +243,7 @@ pub fn is_blank(img: &RgbImage) -> bool {
     mean > 0.9995 || mean < 0.0005
 }
 
-/// Make the picture look like an imperfect screenshot, in place. Returns what was done.
+/// make the picture look like an imperfect screenshot, returns what was done.
 pub fn degrade(path: &Path, rng: &mut Rng) -> Result<&'static str> {
     let name = *rng.pick(&["shrink", "blur", "noise", "jpeg"]);
     let img = image::open(path)?.to_rgb8();
@@ -262,7 +260,7 @@ pub fn degrade(path: &Path, rng: &mut Rng) -> Result<&'static str> {
         "noise" => {
             let mut noisy = img.clone();
             for p in noisy.pixels_mut() {
-                // Box-Muller: a bell-curve shaped nudge to each pixel
+                // box-muller, a bell curve nudge for each pixel.
                 let (u1, u2) = (rng.float().max(1e-12), rng.float());
                 let gauss = (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos();
                 let delta = (gauss * 14.0) as i16;

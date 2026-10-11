@@ -1,7 +1,4 @@
-//! Web-style pictures: KaTeX drawn in headless Chrome, light and dark, like a page on screen.
-//!
-//! KaTeX (MIT) is installed on first use into `tools/.cache/katex` (git-ignored) with npm. Needs
-//! `node`, `npm` and Chrome (set CHROME to point at it if it is somewhere unusual).
+//! web style pictures, KaTeX in headless Chrome light and dark. needs node, npm and Chrome (CHROME points at it).
 
 use std::{
     collections::HashSet,
@@ -97,7 +94,7 @@ fn have(tool: &str) -> bool {
     Command::new(tool).arg("--version").output().is_ok()
 }
 
-/// Install KaTeX once. Returns the folder that holds `node_modules/katex`.
+/// install KaTeX once, returns the folder with node_modules/katex.
 fn ensure_katex() -> Result<PathBuf> {
     let dir = katex_dir();
     if dir.join("node_modules").join("katex").is_dir() {
@@ -124,7 +121,7 @@ fn ensure_katex() -> Result<PathBuf> {
     Ok(dir)
 }
 
-/// Split LaTeX text with `$...$` into text and math pieces. A formula is one display piece.
+/// split LaTeX with $...$ into text and math pieces.
 fn parts_of(truth: &str, kind: Grading) -> Vec<Part> {
     if kind == Grading::Formula {
         return vec![Part {
@@ -195,7 +192,7 @@ fn screenshot(chrome: &Path, html: &Path, png: &Path, width: u32) -> Result<bool
     Ok(true)
 }
 
-/// Render the queued web cases into `out_dir`. Returns the names that worked.
+/// render the queued web cases into out_dir, returns the names that worked.
 pub fn render_katex_cases(
     cases: &mut [Case],
     out_dir: &Path,
