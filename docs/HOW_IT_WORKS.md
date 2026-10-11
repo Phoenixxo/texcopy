@@ -50,7 +50,7 @@ With `--engine small`, the model is trained on formulas, so it writes sentences 
 
 It only kicks in when there are at least four real words and no more math-looking tokens than word-looking ones, so a formula with a bit of `\text{if }` in it is left alone. `--wrap` is ignored for sentences, and `--json` reports `"kind": "prose"` or `"math"`.
 
-Limits of the small model (measured with `--engine small` on `tools/bench.py --suite prose`, 21 cases, 17 exact; the vision engine reads 3 to 6 line paragraphs):
+Limits of the small model (measured with `--engine small` on `tools/bench.py --suite prose`, 20 cases, 16 exact; the vision engine reads 3 to 6 line paragraphs):
 
 - **One or two lines work, three or more are unreliable.** The model reads the whole image at once and on a tall block it can lose the spaces between words (`beaconnectedgraphwith`). texcopy warns when it sees that. Select one line at a time.
 - **It can't see italics**, so it can't tell the variable `a` from the word "a" (both stay words), and it sometimes reads an italic `v` as `\nu`. texcopy prints a note whenever it outputs `\nu`.
