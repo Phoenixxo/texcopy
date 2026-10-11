@@ -54,6 +54,10 @@ lto = "fat"
 # no unwinding, saves about 0.8 MB since we never catch panics.
 panic = "abort"
 
+# docs.rs has no pipewire or X11 libraries, so document the command line build.
+[package.metadata.docs.rs]
+no-default-features = true
+
 [features]
 default = ["capture", "gui"]
 # screen capture, needs pipewire, dbus and X11 dev packages on linux.
