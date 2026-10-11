@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 description = "Select LaTeX-rendered math on screen and get its LaTeX source on your clipboard"
 license = "MIT"
-# The newest requirement among the dependencies (egui) is 1.95; CI checks this version.
+# egui needs 1.95 and CI checks it.
 rust-version = "1.95"
 repository = "https://github.com/Phoenixxo/texcopy"
 homepage = "https://github.com/Phoenixxo/texcopy"
@@ -12,7 +12,7 @@ readme = "README.md"
 keywords = ["latex", "ocr", "math", "screenshot", "clipboard"]
 categories = ["command-line-utilities", "multimedia::images"]
 
-# `texcopy` is the command line; `texcopy-gui` is the same program without a console window on Windows.
+# texcopy is the command line, texcopy-gui is the same thing without a console on windows.
 [[bin]]
 name = "texcopy-gui"
 path = "src/bin/texcopy-gui.rs"
@@ -39,14 +39,14 @@ zip = { version = "9.0.0", default-features = false, features = ["deflate"] }
 
 [profile.release]
 strip = true
-# Whole-program optimization across all crates: ~2 MB smaller than "thin" at the cost of a slower build.
+# fat lto, about 2 MB smaller than thin but it builds slower.
 lto = "fat"
-# No unwinding machinery (~0.8 MB). texcopy never catches panics.
+# no unwinding, saves about 0.8 MB since we never catch panics.
 panic = "abort"
 
 [features]
 default = ["capture", "gui"]
-# Screen capture (--screen/--region). Needs pipewire/dbus/X11 dev packages to build on Linux.
+# screen capture, needs pipewire, dbus and X11 dev packages on linux.
 capture = ["dep:xcap"]
-# The window (`texcopy` with no arguments). Without it the binary is command-line only and much smaller.
+# the window. without it you get a smaller command line only build.
 gui = ["dep:eframe"]
