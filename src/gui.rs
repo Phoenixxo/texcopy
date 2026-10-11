@@ -684,11 +684,6 @@ fn install_progress(ui: &mut egui::Ui, p: &Progress) {
     } else {
         ui.add(egui::ProgressBar::new(0.0).animate(true));
     }
-    ui.label(
-        egui::RichText::new("Closing the window is safe; the download resumes next time.")
-            .small()
-            .weak(),
-    );
 }
 
 impl Drop for App {
