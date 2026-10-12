@@ -28,7 +28,7 @@ You're reading a textbook PDF, a paper or a slide, and you want that equation in
 texcopy fixes that. Drag a box around anything that was rendered with LaTeX and the LaTeX ends up on your clipboard. It's not just single formulas either. Sentences with inline math, numbered equations, lists, headings and tables work too. Everything runs on your computer. No account, no API key, nothing gets uploaded.
 
 <p align="center">
-  <img src=".github/assets/readme/demo.png" alt="A sentence and a numbered equation on screen, and the LaTeX texcopy puts on the clipboard" width="620">
+  <img src=".github/assets/readme/demo.gif" alt="Dragging a box over an equation in a PDF and the LaTeX showing up in the texcopy window" width="520">
 </p>
 
 <p align="center">
