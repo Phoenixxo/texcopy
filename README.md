@@ -32,14 +32,14 @@ texcopy fixes that. Drag a box around anything that was rendered with LaTeX and 
 </p>
 
 <p align="center">
-  <a href="#-features">Features</a> -
-  <a href="#-install">Install</a> -
-  <a href="#-usage">Usage</a> -
-  <a href="#-what-it-can-read">What it can read</a> -
-  <a href="#-configuration">Configuration</a> -
-  <a href="#-how-accurate-is-it">Accuracy</a> -
-  <a href="#-faq">FAQ</a> -
-  <a href="#-contributing">Contributing</a>
+  <a href="#features">Features</a> -
+  <a href="#install">Install</a> -
+  <a href="#usage">Usage</a> -
+  <a href="#what-it-can-read">What it can read</a> -
+  <a href="#configuration">Configuration</a> -
+  <a href="#how-accurate-is-it">Accuracy</a> -
+  <a href="#faq">FAQ</a> -
+  <a href="#contributing">Contributing</a>
 </p>
 
 ---
