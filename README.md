@@ -85,7 +85,7 @@ Want to build it yourself? See [Building](#building).
 
 ### The window
 
-Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX shows up and it's already on your clipboard. Esc closes the window.
+Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX shows up and it's already on your clipboard, and the window says "Copied to the clipboard" under the output so you know. Esc closes the window.
 
 - **wrap** puts `$ … $` or `\[ … \]` around a single formula. Sentences already have their own.
 - **engine** is `auto` (default), `small` (formula model only) or `vlm` (vision model only). Changing it re-reads the same picture.
