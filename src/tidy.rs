@@ -92,7 +92,45 @@ fn tidy_math(s: String) -> String {
     let s = unbrace_scripts(&s);
     // a trailing row break before \end is noise.
     let s = s.replace("\\\\ \\end{", "\\end{");
+    let s = drop_wide_spaces(&s);
     trim_spacing(&s)
+}
+
+/// `\;` and `\:` between plain symbols are spacing nobody types by hand. Next to a command or a
+/// group they can be doing real work, so those stay.
+fn drop_wide_spaces(s: &str) -> String {
+    let plain = |c: char| c.is_ascii_alphanumeric() || "+-=<>()[]|,.".contains(c);
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '\\'
+            && let Some(&next) = chars.get(i + 1)
+        {
+            let wide = next == ';' || next == ':';
+            if wide
+                && out.chars().next_back().is_some_and(plain)
+                && !ends_with_control_word(&out)
+                && chars.get(i + 2).copied().is_some_and(plain)
+            {
+                i += 2;
+                continue;
+            }
+            out.push('\\');
+            out.push(next);
+            i += 2;
+            continue;
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
+/// does the text end in a command name like `\alpha`, so a letter after it would join the name.
+fn ends_with_control_word(s: &str) -> bool {
+    let head = s.trim_end_matches(|c: char| c.is_ascii_alphabetic());
+    head.len() < s.len() && head.chars().rev().take_while(|&c| c == '\\').count() % 2 == 1
 }
 
 /// spacing macros that can end up at either end, the model reads an equation number as a run of them.
@@ -674,7 +712,9 @@ fn mathrm_to_text(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{starts_with_relation, tidy, trim_spacing};
+    use super::{
+        drop_wide_spaces, ends_with_control_word, starts_with_relation, tidy, trim_spacing,
+    };
 
     // inputs below are real model output for pdflatex formulas.
     #[test]
@@ -864,6 +904,37 @@ mod tests {
         assert_eq!(
             tidy(raw),
             r"\begin{aligned}x &=\frac{1}{2} \\ y &=z^n\end{aligned}"
+        );
+    }
+
+    #[test]
+    fn wide_spaces_between_plain_symbols_are_dropped() {
+        assert_eq!(drop_wide_spaces(r"a\;b"), "ab");
+        assert_eq!(drop_wide_spaces(r"x=1\;,\;y"), "x=1,y");
+        assert_eq!(drop_wide_spaces(r"f(x)\:=\:2"), "f(x)=2");
+    }
+
+    #[test]
+    fn wide_spaces_next_to_commands_and_groups_stay() {
+        for keep in [
+            r"\alpha\;b",
+            r"x\;\leq\;y",
+            r"x>0\;\text{and}\;y>0",
+            r"\mathrm{d}\;x",
+            r"a\\;b",
+        ] {
+            assert_eq!(drop_wide_spaces(keep), keep, "{keep}");
+        }
+    }
+
+    #[test]
+    fn a_command_name_is_recognised_at_the_end_of_text() {
+        assert!(ends_with_control_word(r"\alpha"));
+        assert!(ends_with_control_word(r"x+\int"));
+        assert!(!ends_with_control_word(r"x"));
+        assert!(
+            !ends_with_control_word(r"a\\b"),
+            "a row break then a letter"
         );
     }
 }
