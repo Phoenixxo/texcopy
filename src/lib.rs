@@ -110,7 +110,12 @@ struct Cli {
     #[arg(long, env = "TEXCOPY_MODEL_DIR")]
     model_dir: Option<PathBuf>,
 
-    /// Skip cleanup and print the model's token stream as-is
+    /// How the output reads. human: cleaned up to look hand-written (the default). exact: the
+    /// model's text character for character
+    #[arg(long, value_enum, env = "TEXCOPY_MODE")]
+    mode: Option<Mode>,
+
+    /// Same as --mode exact
     #[arg(long)]
     raw: bool,
 
@@ -131,10 +136,21 @@ struct Cli {
     hold_clipboard: bool,
 }
 
+impl Cli {
+    /// --raw wins, then --mode, then human.
+    fn mode(&self) -> Mode {
+        if self.raw {
+            Mode::Exact
+        } else {
+            self.mode.unwrap_or_default()
+        }
+    }
+}
+
 /// the whole program, texcopy and texcopy-gui are thin launchers around this.
 pub fn run() -> Result<()> {
     let cli = Cli::parse();
-    let mode = if cli.raw { Mode::Exact } else { Mode::Human };
+    let mode = cli.mode();
     if cli.hold_clipboard {
         let mut text = String::new();
         std::io::stdin().read_to_string(&mut text)?;
@@ -356,6 +372,30 @@ fn load_image(cli: &Cli) -> Result<Option<DynamicImage>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn mode_of(args: &[&str]) -> Mode {
+        let mut argv = vec!["texcopy"];
+        argv.extend_from_slice(args);
+        Cli::try_parse_from(argv).unwrap().mode()
+    }
+
+    #[test]
+    fn the_mode_is_human_unless_asked_otherwise() {
+        assert!(mode_of(&[]) == Mode::Human);
+        assert!(mode_of(&["--mode", "human"]) == Mode::Human);
+        assert!(mode_of(&["--mode", "exact"]) == Mode::Exact);
+    }
+
+    #[test]
+    fn raw_is_a_shortcut_for_exact_and_wins_over_mode() {
+        assert!(mode_of(&["--raw"]) == Mode::Exact);
+        assert!(mode_of(&["--raw", "--mode", "human"]) == Mode::Exact);
+    }
+
+    #[test]
+    fn an_unknown_mode_is_refused() {
+        assert!(Cli::try_parse_from(["texcopy", "--mode", "loose"]).is_err());
+    }
 
     #[test]
     fn a_batch_line_has_the_path_and_the_same_fields_as_json_output() {
