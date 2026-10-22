@@ -137,13 +137,17 @@ struct Cli {
 }
 
 impl Cli {
-    /// --raw wins, then --mode, then human.
-    fn mode(&self) -> Mode {
+    /// --raw wins over --mode. None when neither was given.
+    fn mode_choice(&self) -> Option<Mode> {
         if self.raw {
-            Mode::Exact
+            Some(Mode::Exact)
         } else {
-            self.mode.unwrap_or_default()
+            self.mode
         }
+    }
+
+    fn mode(&self) -> Mode {
+        self.mode_choice().unwrap_or_default()
     }
 }
 
@@ -188,7 +192,7 @@ pub fn run() -> Result<()> {
             yes: false,
             quiet: true,
         };
-        return gui::run(opts, cli.gui_selftest.clone());
+        return gui::run(opts, cli.mode_choice(), cli.gui_selftest.clone());
     }
 
     // grab the image first so a cancelled selection costs nothing.

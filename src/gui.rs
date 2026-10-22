@@ -14,13 +14,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     capture, clipboard,
-    engine::{self, Engine, Options, Outcome, Warm, Wrap},
+    engine::{self, Engine, Mode, Options, Outcome, Warm, Wrap},
     fetch, model, prose, tidy,
     ui::{self, Event},
     vlm,
 };
 
-const WINDOW_SIZE: (f32, f32) = (520.0, 230.0);
+const WINDOW_SIZE: (f32, f32) = (640.0, 230.0);
 /// time for the window to disappear before the selector starts.
 const HIDE_DELAY: Duration = Duration::from_millis(250);
 /// after this long idle the helper stops and the models unload.
@@ -33,6 +33,7 @@ const IDLE_BEFORE_COOLING: Duration = Duration::from_secs(150);
 struct Settings {
     wrap: Wrap,
     engine: Engine,
+    mode: Mode,
     /// user said not now to the vision download.
     setup_declined: bool,
 }
@@ -42,6 +43,7 @@ impl Default for Settings {
         Settings {
             wrap: Wrap::None,
             engine: Engine::Auto,
+            mode: Mode::Human,
             setup_declined: false,
         }
     }
@@ -84,9 +86,22 @@ enum Job {
 struct Done {
     latex: String,
     kind: tidy::Kind,
+    /// the model's own text, shown in exact mode.
+    raw: String,
+    raw_kind: tidy::Kind,
     engine: &'static str,
     /// short things worth a second look.
     notes: Vec<String>,
+}
+
+impl Done {
+    /// the text and what it is, for a mode.
+    fn view(&self, mode: Mode) -> (&str, tidy::Kind) {
+        match mode {
+            Mode::Human => (&self.latex, self.kind),
+            Mode::Exact => (&self.raw, self.raw_kind),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -261,6 +276,8 @@ fn describe(o: Outcome) -> Result<Done, String> {
     Ok(Done {
         latex: o.latex,
         kind: o.kind,
+        raw: o.raw,
+        raw_kind: o.raw_kind,
         engine: o.engine,
         notes,
     })
@@ -361,7 +378,8 @@ impl App {
 
     fn shown_text(&self) -> String {
         self.done.as_ref().map_or(String::new(), |d| {
-            engine::wrapped(self.settings.wrap, d.kind, &d.latex)
+            let (text, kind) = d.view(self.settings.mode);
+            engine::wrapped(self.settings.wrap, kind, text)
         })
     }
 
@@ -581,6 +599,17 @@ impl eframe::App for App {
                     }
                 }
                 ui.separator();
+                ui.label("mode");
+                for (m, label) in [(Mode::Human, "human"), (Mode::Exact, "exact")] {
+                    if ui
+                        .selectable_label(self.settings.mode == m, label)
+                        .clicked()
+                    {
+                        self.settings.mode = m;
+                        options_changed = true;
+                    }
+                }
+                ui.separator();
                 ui.label("engine");
                 for (e, label) in [
                     (Engine::Auto, "auto"),
@@ -773,7 +802,7 @@ fn window_icon() -> egui::IconData {
 }
 
 /// open the window, selftest is a picture to use instead of a real selection.
-pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
+pub fn run(base: Options, mode: Option<Mode>, selftest: Option<PathBuf>) -> Result<()> {
     let options = eframe::NativeOptions {
         viewport: ViewportBuilder::default()
             .with_title("texcopy")
@@ -792,8 +821,13 @@ pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
         Box::new(move |cc| {
             let (msg_tx, msg_rx) = mpsc::channel();
             let (job_tx, worker) = spawn_worker(base.clone(), cc.egui_ctx.clone(), msg_tx.clone());
+            let mut settings = Settings::load();
+            // --mode or --raw on the command line wins over what the window remembered.
+            if let Some(mode) = mode {
+                settings.mode = mode;
+            }
             let mut app = App {
-                settings: Settings::load(),
+                settings,
                 msg_rx,
                 msg_tx,
                 job_tx,
@@ -833,6 +867,32 @@ pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
 mod tests {
     use super::*;
     use std::cell::RefCell;
+
+    fn done(latex: &str, raw: &str) -> Done {
+        Done {
+            latex: latex.into(),
+            kind: tidy::Kind::Math,
+            raw: raw.into(),
+            raw_kind: tidy::Kind::Prose,
+            engine: "small",
+            notes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_result_shows_the_cleaned_or_the_raw_text_by_mode() {
+        let d = done("x^2", "x ^ { 2 }");
+        assert_eq!(d.view(Mode::Human), ("x^2", tidy::Kind::Math));
+        assert_eq!(d.view(Mode::Exact), ("x ^ { 2 }", tidy::Kind::Prose));
+    }
+
+    #[test]
+    fn settings_saved_before_modes_existed_still_load() {
+        let old = r#"{"wrap":"inline","engine":"small","setup_declined":true}"#;
+        let s: Settings = serde_json::from_str(old).unwrap();
+        assert!(s.mode == Mode::Human);
+        assert!(s.wrap == Wrap::Inline && s.setup_declined);
+    }
 
     #[test]
     fn the_same_text_is_not_copied_twice() {
