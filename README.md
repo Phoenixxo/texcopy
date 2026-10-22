@@ -81,6 +81,19 @@ Got Rust? `cargo install texcopy --locked` gets you `texcopy` and `texcopy-gui`.
 
 Want to build it yourself? See [Building](#building).
 
+### Uninstall
+
+`texcopy --uninstall` lists what texcopy downloaded and saved, asks, then deletes it: the formula model, the vision model, the `llama-server` helper and your settings (about 1.1 GB if you set up the vision engine). Add `--dry-run` to only look, or `--yes` to skip the question. Quit the window first.
+
+It only removes things it knows it made. A `./models` folder, anything you pointed it at with `--model-dir` or `--vlm-dir`, and a `llama-server` you installed yourself all stay.
+
+Then remove the program:
+
+- **macOS:** drag `texcopy.app` to the Trash.
+- **Windows:** delete the folder you unzipped.
+- **Linux:** `./install.sh --remove --purge` does both steps. Plain `--remove` leaves the downloads.
+- **cargo:** `cargo uninstall texcopy`.
+
 ## Usage
 
 ### The window
@@ -103,6 +116,7 @@ texcopy -w inline             # wrap a formula as $...$   (-w display: \[ ... \]
 texcopy --no-copy             # print only, leave the clipboard alone
 texcopy --json                # machine-readable: latex, engine, kind, confidence
 texcopy --setup               # set up the vision engine (asks first)
+texcopy --uninstall           # remove the downloads and saved settings (asks first, --dry-run to just look)
 texcopy --engine small|vlm|auto
 ```
 
@@ -133,6 +147,7 @@ The window remembers `wrap` and `engine` in a `settings.json` in your user confi
 | `TEXCOPY_ENGINE` | default engine: `auto`, `small` or `vlm` |
 | `TEXCOPY_SELECTOR` | set to `overlay` to force texcopy's own selection overlay |
 | `TEXCOPY_CACHE_DIR` | where models and the helper live (default: your OS cache folder) |
+| `TEXCOPY_CONFIG_DIR` | where the window keeps `settings.json` (default: your OS config folder) |
 | `TEXCOPY_MODEL_DIR` | use a different small-model folder, see [custom models](docs/CUSTOM_MODELS.md) |
 | `TEXCOPY_VLM_DIR` | folder with the vision model files |
 | `TEXCOPY_LLAMA_SERVER` | path to your own `llama-server` (a GPU build, say) |
