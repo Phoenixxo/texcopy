@@ -930,6 +930,7 @@ mod tests {
             latex: latex.into(),
             kind: tidy::Kind::Math,
             raw: String::new(),
+            raw_kind: tidy::Kind::Math,
             engine: "small",
             stop,
             min_prob: None,

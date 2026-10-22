@@ -32,6 +32,17 @@ pub enum Wrap {
     Display,
 }
 
+/// what the output looks like.
+#[derive(Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    /// cleaned up to read like LaTeX a person wrote.
+    #[default]
+    Human,
+    /// exactly what the model wrote.
+    Exact,
+}
+
 /// sentences already have their own $...$ so this only applies to formulas.
 pub fn wrapped(wrap: Wrap, kind: tidy::Kind, latex: &str) -> String {
     match (wrap, kind) {
@@ -45,8 +56,6 @@ pub fn wrapped(wrap: Wrap, kind: tidy::Kind, latex: &str) -> String {
 #[derive(Clone)]
 pub struct Options {
     pub engine: Engine,
-    /// skip cleanup and keep the model's output.
-    pub raw: bool,
     pub fit: Option<Fit>,
     pub model_dir: Option<PathBuf>,
     pub max_tokens: usize,
@@ -62,7 +71,6 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             engine: Engine::Auto,
-            raw: false,
             fit: None,
             model_dir: None,
             max_tokens: 512,
@@ -76,14 +84,27 @@ impl Default for Options {
 
 /// what an engine read.
 pub struct Outcome {
+    /// the cleaned text, what human mode shows.
     pub latex: String,
     pub kind: tidy::Kind,
+    /// the model's own text, what exact mode shows.
     pub raw: String,
+    pub raw_kind: tidy::Kind,
     pub engine: &'static str,
     pub stop: model::Stop,
     pub min_prob: Option<f32>,
     pub mean_logprob: Option<f32>,
     pub tokens: Vec<model::Token>,
+}
+
+impl Outcome {
+    /// the text and what it is, for a mode.
+    pub fn view(&self, mode: Mode) -> (&str, tidy::Kind) {
+        match mode {
+            Mode::Human => (&self.latex, self.kind),
+            Mode::Exact => (&self.raw, self.raw_kind),
+        }
+    }
 }
 
 /// engines kept loaded between reads.
@@ -155,9 +176,10 @@ pub fn read(
         model::Stop::Eos
     };
     let from_vision = |latex: String, kind| Outcome {
-        latex: if opts.raw { raw.clone() } else { latex },
+        latex,
         kind,
         raw: raw.clone(),
+        raw_kind: kind,
         engine: "vlm",
         stop,
         min_prob: None,
@@ -230,14 +252,11 @@ fn read_small(
     }
     let rec = warm.recognizer.as_mut().expect("loaded above");
     let result = rec.recognize(img, opts.max_tokens)?;
-    let (latex, kind) = if opts.raw {
-        (result.text.clone(), tidy::Kind::Math)
-    } else {
-        tidy::tidy_with_kind(&result.text)
-    };
+    let (latex, kind) = tidy::tidy_with_kind(&result.text);
     Ok(Outcome {
         latex,
         kind,
+        raw_kind: tidy::Kind::Math,
         min_prob: Some(result.min_prob()),
         mean_logprob: Some(result.mean_logprob()),
         raw: result.text,

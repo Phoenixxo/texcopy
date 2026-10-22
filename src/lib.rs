@@ -24,7 +24,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use engine::{Engine, Wrap};
+use engine::{Engine, Mode, Wrap};
 use image::DynamicImage;
 use serde::Serialize;
 
@@ -134,6 +134,7 @@ struct Cli {
 /// the whole program, texcopy and texcopy-gui are thin launchers around this.
 pub fn run() -> Result<()> {
     let cli = Cli::parse();
+    let mode = if cli.raw { Mode::Exact } else { Mode::Human };
     if cli.hold_clipboard {
         let mut text = String::new();
         std::io::stdin().read_to_string(&mut text)?;
@@ -156,14 +157,13 @@ pub fn run() -> Result<()> {
     }
 
     if let Some(list) = cli.batch.clone() {
-        return run_batch(&cli, &list);
+        return run_batch(&cli, &list, mode);
     }
 
     #[cfg(feature = "gui")]
     if cli.image.is_none() && !cli.clipboard && !cli.screen && !cli.select {
         let opts = engine::Options {
             engine: cli.engine,
-            raw: cli.raw,
             fit: cli.fit,
             model_dir: cli.model_dir.clone(),
             max_tokens: cli.max_tokens,
@@ -183,7 +183,6 @@ pub fn run() -> Result<()> {
 
     let opts = engine::Options {
         engine: cli.engine,
-        raw: cli.raw,
         fit: cli.fit,
         model_dir: cli.model_dir.clone(),
         max_tokens: cli.max_tokens,
@@ -198,9 +197,10 @@ pub fn run() -> Result<()> {
     })?;
 
     if cli.json {
+        let (shown, shown_kind) = outcome.view(mode);
         let out = JsonOut {
-            latex: &outcome.latex,
-            kind: outcome.kind,
+            latex: shown,
+            kind: shown_kind,
             raw: &outcome.raw,
             engine: outcome.engine,
             stop: outcome.stop,
@@ -243,8 +243,8 @@ pub fn run() -> Result<()> {
         }
     }
 
-    let (latex, kind) = (outcome.latex, outcome.kind);
-    if kind == tidy::Kind::Prose && prose::has_run_together_words(&latex) {
+    let (latex, kind) = outcome.view(mode);
+    if kind == tidy::Kind::Prose && prose::has_run_together_words(latex) {
         eprintln!(
             "warning: some words look run together (the model lost the spaces). Try selecting one line at a time."
         );
@@ -255,7 +255,7 @@ pub fn run() -> Result<()> {
         );
     }
 
-    let out = engine::wrapped(cli.wrap, kind, &latex);
+    let out = engine::wrapped(cli.wrap, kind, latex);
     println!("{out}");
     if !cli.no_copy {
         clipboard::copy_text(&out)?;
@@ -287,10 +287,9 @@ struct BatchOut<'a> {
 }
 
 /// --batch reads each listed image with one set of engines and prints a JSON line each, errors print an error line and the run goes on.
-fn run_batch(cli: &Cli, list: &std::path::Path) -> Result<()> {
+fn run_batch(cli: &Cli, list: &std::path::Path, mode: Mode) -> Result<()> {
     let opts = engine::Options {
         engine: cli.engine,
-        raw: cli.raw,
         fit: cli.fit,
         model_dir: cli.model_dir.clone(),
         max_tokens: cli.max_tokens,
@@ -308,11 +307,12 @@ fn run_batch(cli: &Cli, list: &std::path::Path) -> Result<()> {
             .and_then(|img| engine::read(&opts, &img, &mut warm, &mut ui::silent));
         match result {
             Ok(o) => {
+                let (shown, shown_kind) = o.view(mode);
                 let line = BatchOut {
                     path,
                     out: JsonOut {
-                        latex: &o.latex,
-                        kind: o.kind,
+                        latex: shown,
+                        kind: shown_kind,
                         raw: &o.raw,
                         engine: o.engine,
                         stop: o.stop,
