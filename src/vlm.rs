@@ -16,7 +16,7 @@ use image::{DynamicImage, ImageFormat, imageops::FilterType};
 use crate::{
     convert,
     fetch::{self, Download},
-    helper, table,
+    helper, table, tidy,
     ui::{self, Event, Reporter},
 };
 
@@ -676,7 +676,7 @@ pub fn interpret(raw: &str) -> Reading {
         .iter()
         .find(|s| s.math)
         .map_or_else(|| outside.trim().to_string(), |s| s.body.clone());
-    Reading::Formula(formula)
+    Reading::Formula(tidy::tidy_formula(&formula))
 }
 
 #[cfg(test)]
@@ -712,7 +712,7 @@ mod tests {
         assert_eq!(
             interpret(NYU_RAW),
             Reading::Prose(
-                "Hello World! Today I am learning \\LaTeX{}. \\LaTeX{} is a great program for writing math. I can write in line math such as $a^2 + b^2 = c^2$.\n\nI can also give equations their own space:\n\\begin{equation}\n\\gamma^{2}+\\theta^{2}=\\omega^{2}\n\\end{equation}"
+                "Hello World! Today I am learning \\LaTeX{}. \\LaTeX{} is a great program for writing math. I can write in line math such as $a^2 + b^2 = c^2$.\n\nI can also give equations their own space:\n\\begin{equation}\n\\gamma^2+\\theta^2=\\omega^2\n\\end{equation}"
                     .into()
             )
         );
@@ -896,12 +896,18 @@ mod tests {
     #[test]
     fn one_line_exercises_keep_their_words() {
         // real shapes of short exercises that used to become bare formulas and lose their words.
-        for raw in [
-            "3.42 Let $G = 3K_{2} + K_{1}$.",
-            "11.28 Determine $mr(C_{3}, C_{4})$.",
-            "8.49 Is $C_{6}$ bi-graceful?",
+        for (raw, expected) in [
+            (
+                "3.42 Let $G = 3K_{2} + K_{1}$.",
+                "3.42 Let $G = 3K_2 + K_1$.",
+            ),
+            (
+                "11.28 Determine $mr(C_{3}, C_{4})$.",
+                "11.28 Determine $mr(C_3, C_4)$.",
+            ),
+            ("8.49 Is $C_{6}$ bi-graceful?", "8.49 Is $C_6$ bi-graceful?"),
         ] {
-            assert_eq!(interpret(raw), Reading::Prose(raw.into()), "{raw}");
+            assert_eq!(interpret(raw), Reading::Prose(expected.into()), "{raw}");
         }
     }
 

@@ -1,6 +1,6 @@
 //! turns the vision model's markdown into LaTeX that renders the same.
 
-use crate::{prose, table, vlm};
+use crate::{prose, table, tidy, vlm};
 
 /// a literal $ in text, hidden while we split on $ and put back as \$.
 const DOLLAR: char = '\u{E000}';
@@ -32,7 +32,7 @@ pub fn to_latex(raw: &str) -> String {
             buf.push(OPEN);
             buf.push_str(&inline.len().to_string());
             buf.push(CLOSE);
-            inline.push(seg.body.clone());
+            inline.push(tidy::tidy_formula(&seg.body));
         } else {
             flush_text(&mut buf, &inline, &mut pieces);
             let (body, tagged) = strip_tag(&seg.body);
@@ -43,6 +43,7 @@ pub fn to_latex(raw: &str) -> String {
             if let Some((_, used)) = &number {
                 skip = *used;
             }
+            let body = tidy::tidy_formula(&body);
             pieces.push(Piece::Raw(display(&body, tagged || number.is_some())));
             had_display = true;
         }
@@ -115,7 +116,7 @@ fn inline(raw: &str) -> String {
             buf.push(OPEN);
             buf.push_str(&parked.len().to_string());
             buf.push(CLOSE);
-            parked.push(seg.body);
+            parked.push(tidy::tidy_formula(&seg.body));
         } else {
             buf.push_str(&seg.body.replace('$', &DOLLAR.to_string()));
         }
@@ -639,7 +640,7 @@ mod tests {
     fn bullets_and_numbers_become_lists_with_math_inside() {
         assert_eq!(
             to_latex("- First point\n\n- Second point with $x^{2}$\n\n- Third point"),
-            "\\begin{itemize}\n  \\item First point\n  \\item Second point with $x^{2}$\n  \\item Third point\n\\end{itemize}"
+            "\\begin{itemize}\n  \\item First point\n  \\item Second point with $x^2$\n  \\item Third point\n\\end{itemize}"
         );
         assert_eq!(
             to_latex("1. Prove the claim.\n2. Show that $n \\geq 2$.\n3. Conclude."),
@@ -695,7 +696,7 @@ mod tests {
             to_latex(
                 "We compute\n\n$$ \\begin{align*}a&=1\\\\b&=2\\end{align*} $$\n\nas required."
             ),
-            "We compute\n\\begin{align*}a&=1\\\\b&=2\\end{align*}\nas required."
+            "We compute\n\\begin{align*}a &=1 \\\\ b &=2\\end{align*}\nas required."
         );
     }
 

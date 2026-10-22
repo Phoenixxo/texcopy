@@ -80,6 +80,11 @@ pub fn tidy_with_kind(raw: &str) -> (String, Kind) {
     }
 }
 
+/// the formula rules for math the vision engine wrote. It is already normal LaTeX, so it isn't compacted.
+pub fn tidy_formula(math: &str) -> String {
+    tidy_math(math.to_string())
+}
+
 /// the formula rules, on compacted text.
 fn tidy_math(s: String) -> String {
     let s = modernize_fonts(&s);
