@@ -14,6 +14,7 @@ mod spec;
 mod table;
 mod tidy;
 mod ui;
+mod uninstall;
 mod vlm;
 
 use std::{
@@ -89,6 +90,14 @@ struct Cli {
     #[arg(short, long)]
     yes: bool,
 
+    /// Remove the models, the llama.cpp helper and the saved settings texcopy downloaded, then exit
+    #[arg(long, conflicts_with_all = ["image", "clipboard", "screen", "select", "setup", "batch"])]
+    uninstall: bool,
+
+    /// With --uninstall, list what would be removed and remove nothing
+    #[arg(long, requires = "uninstall")]
+    dry_run: bool,
+
     /// Directory with the vision model files (model.gguf and mmproj.gguf)
     #[arg(long, env = "TEXCOPY_VLM_DIR")]
     vlm_dir: Option<PathBuf>,
@@ -134,6 +143,10 @@ pub fn run() -> Result<()> {
     #[cfg(all(feature = "gui", feature = "capture"))]
     if let Some(out) = cli.select_overlay.clone() {
         return overlay::run(out);
+    }
+
+    if cli.uninstall {
+        return uninstall::run(cli.dry_run, cli.yes);
     }
 
     if cli.setup {

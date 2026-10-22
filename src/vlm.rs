@@ -53,6 +53,11 @@ const PROMPT: &str = "Extract all readable content from the image in natural hum
 const MAX_SIDE: u32 = 2000;
 const MAX_TOKENS: u32 = 2048;
 
+/// the file names the vision model is saved under.
+pub(crate) fn model_file_names() -> Vec<&'static str> {
+    MODEL_FILES.iter().map(|f| f.local).collect()
+}
+
 fn model_download_bytes() -> u64 {
     MODEL_FILES.iter().map(|f| f.size).sum()
 }
@@ -279,7 +284,7 @@ fn pidfile(owner: u32) -> PathBuf {
 }
 
 /// kill helpers left by a texcopy that crashed, only if the owner is gone and it really is llama-server.
-fn reap_orphans() {
+pub(crate) fn reap_orphans() {
     reap_in(
         &std::env::temp_dir(),
         &process_alive,

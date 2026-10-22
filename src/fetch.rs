@@ -22,6 +22,14 @@ pub(crate) fn cache_dir() -> Option<PathBuf> {
     directories::ProjectDirs::from("", "", "texcopy").map(|d| d.cache_dir().to_path_buf())
 }
 
+/// per user config dir, where the window keeps its settings. TEXCOPY_CONFIG_DIR overrides it.
+pub(crate) fn config_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("TEXCOPY_CONFIG_DIR") {
+        return Some(PathBuf::from(dir));
+    }
+    directories::ProjectDirs::from("", "", "texcopy").map(|d| d.config_dir().to_path_buf())
+}
+
 /// find a complete model dir, downloading the default into the cache if needed.
 pub fn locate(over: Option<PathBuf>, report: Reporter) -> Result<(PathBuf, ModelSpec)> {
     let cache = cache_dir();

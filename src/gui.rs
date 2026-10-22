@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     capture, clipboard,
     engine::{self, Engine, Options, Outcome, Warm, Wrap},
-    model, prose, tidy,
+    fetch, model, prose, tidy,
     ui::{self, Event},
     vlm,
 };
@@ -49,8 +49,7 @@ impl Default for Settings {
 
 impl Settings {
     fn path() -> Option<PathBuf> {
-        let dirs = directories::ProjectDirs::from("", "", "texcopy")?;
-        Some(dirs.config_dir().join("settings.json"))
+        fetch::config_dir().map(|d| d.join("settings.json"))
     }
 
     fn load() -> Self {
