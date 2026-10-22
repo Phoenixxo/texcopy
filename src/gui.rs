@@ -275,6 +275,38 @@ struct SetupItem {
     size: u64,
 }
 
+/// how long the "copied" note stays up.
+const COPIED_FOR: Duration = Duration::from_millis(2500);
+
+/// what went to the clipboard last, so the same text isn't copied twice and the window can say it copied.
+#[derive(Default)]
+struct CopyState {
+    last: String,
+    confirmed_at: Option<Instant>,
+}
+
+impl CopyState {
+    fn wants(&self, text: &str) -> bool {
+        !text.is_empty() && text != self.last
+    }
+
+    fn record(&mut self, text: String, copied: bool, now: Instant) {
+        self.last = text;
+        self.confirmed_at = copied.then_some(now);
+    }
+
+    /// a new read always copies again, the clipboard may have changed since.
+    fn forget(&mut self) {
+        self.last.clear();
+    }
+
+    /// time left on the "copied" note, if it is up.
+    fn showing(&self, now: Instant) -> Option<Duration> {
+        let age = now.checked_duration_since(self.confirmed_at?)?;
+        COPIED_FOR.checked_sub(age)
+    }
+}
+
 struct App {
     settings: Settings,
     msg_rx: Receiver<Msg>,
@@ -291,7 +323,7 @@ struct App {
     error: Option<String>,
     /// what the vision engine would still download, None when it's ready.
     setup: Option<Vec<SetupItem>>,
-    last_copied: String,
+    copy: CopyState,
     quit: bool,
     test: Option<SelfTest>,
 }
@@ -419,6 +451,7 @@ impl App {
                         Ok(d) => {
                             eprintln!("[engine] {}", d.engine);
                             self.done = Some(d);
+                            self.copy.forget();
                         }
                         Err(e) => self.error = Some(e),
                     }
@@ -591,7 +624,10 @@ impl eframe::App for App {
                     .as_ref()
                     .map(|d| d.notes.clone())
                     .unwrap_or_default();
-                let note_height = if notes.is_empty() { 0.0 } else { 20.0 };
+                // the row stays reserved while a result is up so the box doesn't jump when the note goes away.
+                let note_row = self.done.is_some() && self.error.is_none();
+                let copied = self.copy.showing(Instant::now()).is_some();
+                let note_height = if note_row { 20.0 } else { 0.0 };
                 let size = vec2(
                     ui.available_width(),
                     (ui.available_height() - note_height).max(40.0),
@@ -600,8 +636,19 @@ impl eframe::App for App {
                     size,
                     egui::TextEdit::multiline(&mut text).font(egui::TextStyle::Monospace),
                 );
-                if !notes.is_empty() {
-                    ui.label(egui::RichText::new(notes.join("  ")).small().weak());
+                if note_row {
+                    ui.horizontal(|ui| {
+                        if copied {
+                            ui.label(
+                                egui::RichText::new("Copied to the clipboard")
+                                    .small()
+                                    .strong(),
+                            );
+                        }
+                        if !notes.is_empty() {
+                            ui.label(egui::RichText::new(notes.join("  ")).small().weak());
+                        }
+                    });
                 }
             }
         });
@@ -632,11 +679,20 @@ impl eframe::App for App {
         }
         // the result goes to the clipboard on its own and again when an option changes it.
         let shown = self.shown_text();
-        if !shown.is_empty() && !self.reading && shown != self.last_copied && self.test.is_none() {
-            if let Err(e) = clipboard::copy_text(&shown) {
+        if !self.reading && self.copy.wants(&shown) {
+            // the self test leaves the real clipboard alone but still shows the note for its screenshot.
+            let result = if self.test.is_none() {
+                clipboard::copy_text(&shown)
+            } else {
+                Ok(())
+            };
+            if let Err(e) = &result {
                 self.error = Some(format!("Couldn't copy to the clipboard: {e:#}"));
             }
-            self.last_copied = shown;
+            self.copy.record(shown, result.is_ok(), Instant::now());
+        }
+        if let Some(left) = self.copy.showing(Instant::now()) {
+            ctx.request_repaint_after(left);
         }
     }
 }
@@ -751,7 +807,7 @@ pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
                 done: None,
                 error: None,
                 setup: None,
-                last_copied: String::new(),
+                copy: CopyState::default(),
                 quit: false,
                 test: selftest.map(|picture| SelfTest {
                     picture,
@@ -778,6 +834,39 @@ pub fn run(base: Options, selftest: Option<PathBuf>) -> Result<()> {
 mod tests {
     use super::*;
     use std::cell::RefCell;
+
+    #[test]
+    fn the_same_text_is_not_copied_twice() {
+        let mut c = CopyState::default();
+        assert!(!c.wants(""), "nothing to copy yet");
+        assert!(c.wants("x^2"));
+        c.record("x^2".into(), true, Instant::now());
+        assert!(!c.wants("x^2"), "unchanged text stays put");
+        assert!(c.wants("$x^2$"), "a different wrap is new text");
+    }
+
+    #[test]
+    fn a_new_read_copies_again_even_if_the_text_matches() {
+        let mut c = CopyState::default();
+        c.record("x^2".into(), true, Instant::now());
+        c.forget();
+        assert!(c.wants("x^2"), "the clipboard may have changed since");
+    }
+
+    #[test]
+    fn the_copied_note_shows_for_a_moment_and_only_after_a_good_copy() {
+        let t0 = Instant::now();
+        let mut c = CopyState::default();
+        assert!(c.showing(t0).is_none());
+        c.record("x".into(), true, t0);
+        assert!(c.showing(t0 + Duration::from_millis(100)).is_some());
+        assert!(
+            c.showing(t0 + COPIED_FOR + Duration::from_millis(1))
+                .is_none()
+        );
+        c.record("y".into(), false, t0);
+        assert!(c.showing(t0).is_none(), "a failed copy is never confirmed");
+    }
 
     fn progress_of(msgs: &[Msg]) -> Vec<Progress> {
         msgs.iter()
