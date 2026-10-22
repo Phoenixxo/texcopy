@@ -4,6 +4,17 @@ Everything notable gets listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+### Added
+- The window says "Copied to the clipboard" under the output after it copies. A new read always copies again, and text that hasn't changed isn't copied twice.
+- `texcopy --uninstall` removes the models, the `llama-server` helper and the saved settings texcopy downloaded. `--dry-run` only lists them and `--yes` skips the question. On Linux, `install.sh --remove --purge` does it before removing the program.
+- Human and exact output modes. `--mode human|exact` (or `TEXCOPY_MODE`) on the command line and a **mode** choice in the window, remembered between runs. `--raw` still works and means exact.
+- `TEXCOPY_CONFIG_DIR` moves the folder where the window keeps its settings.
+
+### Changed
+- Human mode cleans more: spacing macros at the start and end of a formula (the small model reads an equation number as a run of `\qquad`), braces around cells in `aligned`, `array`, `gathered` and similar environments, `{}=` after an `&`, and `\;` or `\:` between plain symbols.
+- The vision engine's math gets the same cleanup, so human mode looks the same whichever engine read the picture.
+- The window is wider so the mode buttons fit on one row.
+
 ## [0.1.0] - 2026-10-11
 
 First release.
