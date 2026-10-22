@@ -18,7 +18,7 @@ Today I am learning \LaTeX{}. I can write in line math such as $a^2 + b^2 = c^2$
 
 I can also give equations their own space:
 \begin{equation}
-\gamma^{2}+\theta^{2}=\omega^{2}
+\gamma^2+\theta^2=\omega^2
 \end{equation}
 ```
 
@@ -29,6 +29,21 @@ I can also give equations their own space:
 - **Text is made safe for LaTeX.** `& % # _` and prices (`\$5`) get escaped, `"..."` and curly quotes become ` ``...'' `, dashes become `--` and `---`, a `□` ends a proof flush right, and the drawn `LATEX` and `TEX` logos become `\LaTeX{}` and `\TeX{}`.
 - **Code** in a fenced block becomes `verbatim`. If the model writes `**bold**` or `*italic*` Markdown, those become `\textbf` and `\emph`.
 - **Not recoverable:** the model usually gives back bold, italic, small caps, underline and typewriter text as plain words, and it doesn't report vertical table rules, so those come out plain.
+
+## Human mode and exact mode
+
+By default texcopy is in **human** mode. It cleans the model's output up so it reads like LaTeX someone typed:
+
+- `x^{2}` and `K_{2}` become `x^2` and `K_2`.
+- The braces the model puts around every cell in `aligned`, `array`, `gathered`, `cases` and matrices go away, and a `{}=` after an `&` becomes `&=`. The column spec of an `array` stays.
+- `\;` and `\:` between plain symbols are dropped. Next to a command or a group they stay, because there they can be doing real work.
+- Spacing macros at the very start or end are removed. The small model reads an equation number like `(1)` as a long run of `\qquad`, and that's what this catches.
+
+None of that changes what gets typeset, apart from the spacing bits.
+
+**Exact** mode skips all of it and gives you the model's text character for character. It's for debugging, or when you want to see what the model actually said. Pick it with `--mode exact` (`--raw` does the same), `TEXCOPY_MODE=exact`, or the **mode** buttons in the window. The window remembers your choice, and switching doesn't read the picture again.
+
+`--json` always has both: `latex` follows the mode you picked, and `raw` is the model's text.
 
 ## Tables
 

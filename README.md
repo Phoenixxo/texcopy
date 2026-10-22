@@ -101,6 +101,7 @@ Then remove the program:
 Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX shows up and it's already on your clipboard, and the window says "Copied to the clipboard" under the output so you know. Esc closes the window.
 
 - **wrap** puts `$ … $` or `\[ … \]` around a single formula. Sentences already have their own.
+- **mode** is `human` (default) or `exact`. Human cleans the output up so it reads like LaTeX you'd type. Exact is the model's text as it came out. Switching doesn't re-read the picture, see [what texcopy writes](docs/OUTPUT.md#human-mode-and-exact-mode).
 - **engine** is `auto` (default), `small` (formula model only) or `vlm` (vision model only). Changing it re-reads the same picture.
 - You'll see small grey notes under the text only when something deserves a second look, like a symbol the model wasn't sure about.
 
@@ -114,6 +115,7 @@ texcopy --select              # drag-select in the terminal, no window
 texcopy --screen --region 100,200,600,150   # capture the screen, crop to x,y,w,h
 texcopy -w inline             # wrap a formula as $...$   (-w display: \[ ... \])
 texcopy --no-copy             # print only, leave the clipboard alone
+texcopy --mode exact          # the model's text, no cleanup (--raw does the same)
 texcopy --json                # machine-readable: latex, engine, kind, confidence
 texcopy --setup               # set up the vision engine (asks first)
 texcopy --uninstall           # remove the downloads and saved settings (asks first, --dry-run to just look)
@@ -145,6 +147,7 @@ The window remembers `wrap` and `engine` in a `settings.json` in your user confi
 | Variable | What it does |
 |---|---|
 | `TEXCOPY_ENGINE` | default engine: `auto`, `small` or `vlm` |
+| `TEXCOPY_MODE` | default output mode: `human` or `exact` |
 | `TEXCOPY_SELECTOR` | set to `overlay` to force texcopy's own selection overlay |
 | `TEXCOPY_CACHE_DIR` | where models and the helper live (default: your OS cache folder) |
 | `TEXCOPY_CONFIG_DIR` | where the window keeps `settings.json` (default: your OS config folder) |
