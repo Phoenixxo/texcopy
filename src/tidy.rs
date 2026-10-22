@@ -91,7 +91,33 @@ fn tidy_math(s: String) -> String {
     let s = collapse_double_braces(&s);
     let s = unbrace_scripts(&s);
     // a trailing row break before \end is noise.
-    s.replace("\\\\ \\end{", "\\end{")
+    let s = s.replace("\\\\ \\end{", "\\end{");
+    trim_spacing(&s)
+}
+
+/// spacing macros that can end up at either end, the model reads an equation number as a run of them.
+const SPACING: &[&str] = &["\\qquad", "\\quad", "\\,", "\\;", "\\:", "\\!", "\\ "];
+
+/// drop spacing macros at the very start and end of a formula, they don't separate anything.
+fn trim_spacing(s: &str) -> String {
+    let mut s = s.trim();
+    loop {
+        let before = s;
+        for m in SPACING {
+            // a `\` row break followed by a space or a comma is not spacing.
+            if let Some(head) = s.strip_suffix(m)
+                && !head.ends_with('\\')
+            {
+                s = head.trim_end();
+            }
+            if let Some(tail) = s.strip_prefix(m) {
+                s = tail.trim_start();
+            }
+        }
+        if s == before {
+            return s.to_string();
+        }
+    }
 }
 
 /// \overline{{G}} to \overline{G}, an outer group with one inner group.
@@ -549,7 +575,7 @@ fn mathrm_to_text(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::tidy;
+    use super::{tidy, trim_spacing};
 
     // inputs below are real model output for pdflatex formulas.
     #[test]
@@ -669,5 +695,29 @@ mod tests {
         // no \atop or a different closing delimiter, no binomial.
         assert_eq!(tidy(r"\left( a + b \right)"), r"\left(a+b\right)");
         assert_eq!(tidy(r"\left( n \atop k \right]"), r"\left(n\atop k\right]");
+    }
+
+    #[test]
+    fn spacing_macros_at_the_ends_are_dropped() {
+        assert_eq!(trim_spacing("x=1\\qquad\\qquad\\qquad"), "x=1");
+        assert_eq!(trim_spacing("\\quad x=1 \\, "), "x=1");
+        assert_eq!(trim_spacing("a\\;\\:\\!"), "a");
+    }
+
+    #[test]
+    fn spacing_between_things_and_row_breaks_stay() {
+        assert_eq!(trim_spacing("x=1\\qquad y=2"), "x=1\\qquad y=2");
+        assert_eq!(trim_spacing("\\int f\\,dx"), "\\int f\\,dx");
+        assert_eq!(trim_spacing("a \\\\ "), "a \\\\");
+        assert_eq!(trim_spacing("a\\\\,"), "a\\\\,");
+    }
+
+    #[test]
+    fn an_equation_number_read_as_spacing_leaves_no_trace() {
+        let raw = r"\int _ { - \infty } ^ { \infty } e ^ { - x ^ { 2 } } \, d x = \sqrt { \pi } . \qquad \qquad \qquad";
+        assert_eq!(
+            tidy(raw),
+            r"\int_{-\infty}^{\infty}e^{-x^2}\,dx=\sqrt{\pi}."
+        );
     }
 }
