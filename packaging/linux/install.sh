@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# installs texcopy for this user, ./install.sh to install and --remove to take it out.
+# installs texcopy for this user, ./install.sh to install and --remove to take it out (--remove --purge also deletes the downloaded models).
 set -eu
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -8,7 +8,25 @@ bin="$prefix/bin"
 apps="$prefix/share/applications"
 icons="$prefix/share/icons/hicolor/256x256/apps"
 
-if [ "${1:-}" = "--remove" ]; then
+remove=0
+purge=0
+for arg in "$@"; do
+  case "$arg" in
+    --remove) remove=1 ;;
+    --purge) purge=1 ;;
+    *) echo "usage: ./install.sh [--remove [--purge]]" >&2; exit 2 ;;
+  esac
+done
+if [ "$purge" = 1 ] && [ "$remove" = 0 ]; then
+  echo "--purge only goes with --remove" >&2
+  exit 2
+fi
+
+if [ "$remove" = 1 ]; then
+  # the program has to still be there to clean up after itself.
+  if [ "$purge" = 1 ] && [ -x "$bin/texcopy" ]; then
+    "$bin/texcopy" --uninstall --yes || echo "couldn't remove the downloads, run 'texcopy --uninstall' yourself" >&2
+  fi
   rm -f "$bin/texcopy" "$bin/texcopy-gui" "$apps/texcopy.desktop" "$icons/texcopy.png"
   echo "removed texcopy from $prefix"
   exit 0
