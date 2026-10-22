@@ -11,12 +11,12 @@ Measured on an Apple M4 Pro with the vision engine (`--engine auto`), 182 cases:
 | `basic` (T1-T3) | single formulas, from `E=mc^2` to nested continued fractions | 15 | 0 | 0 | 0 | 15 |
 | `basic` (T4) | multi-line: `aligned`, `cases`, matrices | 2 | 0 | 1 | 0 | 3 |
 | `degraded` | the same formulas at 50-800 dpi, blurred, noisy, inverted, JPEG, other fonts | 28 | 2 | 0 | 0 | 30 |
-| `prose` | sentences with inline math at two widths and two resolutions | 17 | 3 | 0 | 0 | 20 |
+| `prose` | sentences with inline math at two widths and two resolutions | 19 | 1 | 0 | 0 | 20 |
 | `real` | 45 exercises cut from a real graph-theory textbook (kept private) | 44 | 1 | 0 | 0 | 45 |
 | `tables` | 18 tables, graded on their *cells* | 16 | 0 | 2 | 0 | 18 |
 | `documents` | 36 page elements: equations, lists, headings, quotes, specials, theorems... | 15 | 1 | 20 | 0 | 36 |
 | `stress` | very wide equations, big matrices, rare symbols, text inside math | 9 | 4 | 2 | 0 | 15 |
-| **Total** | | **146** | **11** | **25** | **0** | **182** |
+| **Total** | | **148** | **9** | **25** | **0** | **182** |
 
 How to read the table:
 
