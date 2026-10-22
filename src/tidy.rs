@@ -333,10 +333,62 @@ fn unbrace_scripts(s: &str) -> String {
     out
 }
 
+/// how an environment lays out its cells.
+#[derive(Clone, Copy, PartialEq)]
+enum Cells {
+    /// matrices and cases, cells are joined with ` & `.
+    Grid,
+    /// array, the first group is the column spec and stays as it is.
+    Array,
+    /// aligned and friends, a cell that starts with a relation hugs the `&`.
+    Align,
+}
+
 /// environments where the model wraps cells in extra braces.
-const CELL_ENVS: &[&str] = &[
-    "matrix", "pmatrix", "bmatrix", "vmatrix", "Vmatrix", "Bmatrix", "cases",
+const CELL_ENVS: &[(&str, Cells)] = &[
+    ("matrix", Cells::Grid),
+    ("pmatrix", Cells::Grid),
+    ("bmatrix", Cells::Grid),
+    ("vmatrix", Cells::Grid),
+    ("Vmatrix", Cells::Grid),
+    ("Bmatrix", Cells::Grid),
+    ("cases", Cells::Grid),
+    ("array", Cells::Array),
+    ("aligned", Cells::Align),
+    ("gathered", Cells::Align),
+    ("split", Cells::Align),
+    ("align", Cells::Align),
+    ("align*", Cells::Align),
 ];
+
+/// what a cell can start with to be a relation, as in `x &= 1`.
+const RELATIONS: &[&str] = &[
+    "=",
+    "<",
+    ">",
+    "\\leq",
+    "\\le",
+    "\\geq",
+    "\\ge",
+    "\\neq",
+    "\\ne",
+    "\\approx",
+    "\\equiv",
+    "\\sim",
+    "\\simeq",
+    "\\to",
+    "\\subset",
+    "\\subseteq",
+    "\\in",
+];
+
+fn starts_with_relation(cell: &str) -> bool {
+    RELATIONS.iter().any(|r| {
+        cell.strip_prefix(r).is_some_and(|rest| {
+            !r.starts_with('\\') || !rest.starts_with(|c: char| c.is_ascii_alphabetic())
+        })
+    })
+}
 
 /// \left<d1>\begin{matrix}..\end{matrix}\right<d2> to the named environment.
 const MATRIX_DELIMS: &[(&str, &str, &str)] = &[
@@ -401,30 +453,50 @@ fn delimited_matrices(s: &str) -> String {
 }
 
 /// remove the braces around every cell and a trailing empty row.
-fn unwrap_cells(body: &str) -> String {
+fn unwrap_cells(body: &str, style: Cells) -> String {
+    let chars: Vec<char> = body.chars().collect();
     let mut rows: Vec<Vec<String>> = vec![vec![String::new()]];
-    let (mut depth, mut chars) = (0i32, body.chars().peekable());
-    while let Some(c) = chars.next() {
-        match c {
-            '\\' => match chars.next() {
-                Some('\\') if depth == 0 => rows.push(vec![String::new()]),
-                Some(n) => {
-                    let cell = rows.last_mut().unwrap().last_mut().unwrap();
-                    cell.push('\\');
-                    cell.push(n);
+    // braces and nested environments hide their own `&` and `\\`.
+    let (mut depth, mut env_depth, mut i) = (0i32, 0i32, 0usize);
+    while i < chars.len() {
+        let c = chars[i];
+        if c == '\\' {
+            let Some(&n) = chars.get(i + 1) else { break };
+            if n == '\\' && depth == 0 && env_depth == 0 {
+                rows.push(vec![String::new()]);
+                i += 2;
+                continue;
+            }
+            let cell = rows.last_mut().unwrap().last_mut().unwrap();
+            cell.push('\\');
+            cell.push(n);
+            i += 2;
+            if n.is_ascii_alphabetic() {
+                let mut word = n.to_string();
+                while i < chars.len() && chars[i].is_ascii_alphabetic() {
+                    word.push(chars[i]);
+                    cell.push(chars[i]);
+                    i += 1;
                 }
-                None => {}
-            },
-            '&' if depth == 0 => rows.last_mut().unwrap().push(String::new()),
-            _ => {
-                match c {
-                    '{' => depth += 1,
-                    '}' => depth -= 1,
+                match word.as_str() {
+                    "begin" => env_depth += 1,
+                    "end" => env_depth -= 1,
                     _ => {}
                 }
-                rows.last_mut().unwrap().last_mut().unwrap().push(c);
             }
+            continue;
         }
+        if c == '&' && depth == 0 && env_depth == 0 {
+            rows.last_mut().unwrap().push(String::new());
+        } else {
+            match c {
+                '{' => depth += 1,
+                '}' => depth -= 1,
+                _ => {}
+            }
+            rows.last_mut().unwrap().last_mut().unwrap().push(c);
+        }
+        i += 1;
     }
     if rows.len() > 1
         && rows
@@ -435,26 +507,44 @@ fn unwrap_cells(body: &str) -> String {
     }
     rows.iter()
         .map(|row| {
-            row.iter()
-                .map(|cell| {
-                    let cell = cell.trim();
-                    match matching_brace(cell, 0) {
-                        Some(end) if cell.starts_with('{') && end == cell.len() - 1 => {
-                            cell[1..end].trim().to_string()
-                        }
-                        _ => cell.to_string(),
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join(" & ")
+            let mut out = String::new();
+            for (k, cell) in row.iter().enumerate() {
+                let cell = unwrap_cell(cell, style);
+                if k > 0 {
+                    out.push_str(if style == Cells::Align && starts_with_relation(&cell) {
+                        " &"
+                    } else {
+                        " & "
+                    });
+                }
+                out.push_str(&cell);
+            }
+            out
         })
         .collect::<Vec<_>>()
         .join(" \\\\ ")
 }
 
+/// one cell without the group the model put around it, and in aligned text without the `{}` that
+/// stands in for the empty left side of `&=`.
+fn unwrap_cell(cell: &str, style: Cells) -> String {
+    let cell = cell.trim();
+    let mut cell = match matching_brace(cell, 0) {
+        Some(end) if cell.starts_with('{') && end == cell.len() - 1 => cell[1..end].trim(),
+        _ => cell,
+    };
+    if style == Cells::Align
+        && let Some(rest) = cell.strip_prefix("{}")
+        && starts_with_relation(rest.trim_start())
+    {
+        cell = rest.trim_start();
+    }
+    cell.to_string()
+}
+
 fn unwrap_matrix_cells(s: &str) -> String {
     let mut s = s.to_string();
-    for env in CELL_ENVS {
+    for (env, style) in CELL_ENVS {
         let (begin, end_tag) = (format!("\\begin{{{env}}}"), format!("\\end{{{env}}}"));
         let mut out = String::with_capacity(s.len());
         let mut rest = s.as_str();
@@ -463,7 +553,16 @@ fn unwrap_matrix_cells(s: &str) -> String {
             match find_env_end(&rest[body_start..], env) {
                 Some(len) => {
                     out.push_str(&rest[..body_start]);
-                    out.push_str(&unwrap_cells(&rest[body_start..body_start + len]));
+                    let body = &rest[body_start..body_start + len];
+                    // an array's first group is its column spec.
+                    let (spec, cells) = match matching_brace(body, 0) {
+                        Some(end) if *style == Cells::Array && body.starts_with('{') => {
+                            body.split_at(end + 1)
+                        }
+                        _ => ("", body),
+                    };
+                    out.push_str(spec);
+                    out.push_str(&unwrap_cells(cells, *style));
                     rest = &rest[body_start + len..];
                     out.push_str(&end_tag);
                     rest = &rest[end_tag.len()..];
@@ -575,7 +674,7 @@ fn mathrm_to_text(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{tidy, trim_spacing};
+    use super::{starts_with_relation, tidy, trim_spacing};
 
     // inputs below are real model output for pdflatex formulas.
     #[test]
@@ -718,6 +817,53 @@ mod tests {
         assert_eq!(
             tidy(raw),
             r"\int_{-\infty}^{\infty}e^{-x^2}\,dx=\sqrt{\pi}."
+        );
+    }
+
+    #[test]
+    fn aligned_cells_lose_their_braces_and_the_empty_group_before_equals() {
+        let raw = r"\begin{aligned} { x_1 } & { { } = a_1 + b_1 ^ { 2 } } \\ { x_2 } & { { } = a_2 + b_2 ^ { 2 } } \end{aligned}";
+        assert_eq!(
+            tidy(raw),
+            r"\begin{aligned}x_1 &=a_1+b_1^2 \\ x_2 &=a_2+b_2^2\end{aligned}"
+        );
+    }
+
+    #[test]
+    fn an_array_keeps_its_column_spec_and_loses_the_cell_braces() {
+        let raw = r"\begin{array}{ccc} { A } & { \to } & { B } \\ { \downarrow } & { } & { \downarrow } \end{array}";
+        assert_eq!(
+            tidy(raw),
+            r"\begin{array}{ccc}A & \to & B \\ \downarrow &  & \downarrow\end{array}"
+        );
+    }
+
+    #[test]
+    fn a_cell_that_starts_with_a_command_that_only_looks_like_a_relation_gets_a_space() {
+        assert!(starts_with_relation("=1"));
+        assert!(starts_with_relation(r"\leq 2"));
+        assert!(
+            !starts_with_relation(r"\leftarrow"),
+            "that is a longer command"
+        );
+        assert!(!starts_with_relation("x=1"));
+    }
+
+    #[test]
+    fn a_matrix_inside_an_aligned_cell_keeps_its_own_columns() {
+        let raw = r"\begin{aligned} { A } & { { } = \begin{pmatrix} { 1 } & { 2 } \\ { 3 } & { 4 } \end{pmatrix} } \end{aligned}";
+        assert_eq!(
+            tidy(raw),
+            r"\begin{aligned}A &=\begin{pmatrix}1 & 2 \\ 3 & 4\end{pmatrix}\end{aligned}"
+        );
+    }
+
+    #[test]
+    fn braces_that_belong_to_the_math_stay() {
+        let raw = r"\begin{aligned} x & = \frac { 1 } { 2 } \\ y & = z ^ { n } \end{aligned}";
+        assert_eq!(
+            tidy(raw),
+            r"\begin{aligned}x &=\frac{1}{2} \\ y &=z^n\end{aligned}"
         );
     }
 }
