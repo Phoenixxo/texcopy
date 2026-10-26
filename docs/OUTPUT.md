@@ -36,14 +36,14 @@ By default texcopy is in **human** mode. It cleans the model's output up so it r
 
 - `x^{2}` and `K_{2}` become `x^2` and `K_2`.
 - The braces the model puts around every cell in `aligned`, `array`, `gathered`, `cases` and matrices go away, and a `{}=` after an `&` becomes `&=`. The column spec of an `array` stays.
-- `\;` and `\:` between plain symbols are dropped. Next to a command or a group they stay, because there they can be doing real work.
-- Spacing macros at the very start or end are removed. The small model reads an equation number like `(1)` as a long run of `\qquad`, and that's what this catches.
+- `\;` and `\:` between plain symbols are dropped. Next to a command or a group they stay.
+- Spacing macros at the start or end are removed. The small model reads an equation number like `(1)` as a run of `\qquad`.
 
 None of that changes what gets typeset, apart from the spacing bits.
 
-**Exact** mode skips all of it and gives you the model's text character for character. It's for debugging, or when you want to see what the model actually said. Pick it with `--mode exact` (`--raw` does the same), `TEXCOPY_MODE=exact`, or the **mode** buttons in the window. The window remembers your choice, and switching doesn't read the picture again.
+**Exact** mode skips all of it and gives you the model's text as it came out, which is handy for debugging. Pick it with `--mode exact` (`--raw` does the same), `TEXCOPY_MODE=exact`, or the **mode** buttons in the window. The window remembers your choice.
 
-`--json` always has both: `latex` follows the mode you picked, and `raw` is the model's text.
+`--json` has both: `latex` follows the mode and `raw` is always the model's text.
 
 ## Tables
 

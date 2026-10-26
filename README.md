@@ -83,9 +83,7 @@ Want to build it yourself? See [Building](#building).
 
 ### Uninstall
 
-`texcopy --uninstall` lists what texcopy downloaded and saved, asks, then deletes it: the formula model, the vision model, the `llama-server` helper and your settings (about 1.1 GB if you set up the vision engine). Add `--dry-run` to only look, or `--yes` to skip the question. Quit the window first.
-
-It only removes things it knows it made. A `./models` folder, anything you pointed it at with `--model-dir` or `--vlm-dir`, and a `llama-server` you installed yourself all stay.
+`texcopy --uninstall` lists what texcopy downloaded (the models, the `llama-server` helper and your settings, about 1.1 GB with the vision engine), asks, then deletes it. `--dry-run` only lists and `--yes` skips the question. Quit the window first. A `./models` folder and anything you pointed it at yourself stay.
 
 Then remove the program:
 
@@ -98,10 +96,10 @@ Then remove the program:
 
 ### The window
 
-Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX shows up and it's already on your clipboard, and the window says "Copied to the clipboard" under the output so you know. Esc closes the window.
+Open texcopy, click **Capture** (or press `C`), and drag a box over what you want. The LaTeX shows up and it's already on your clipboard. The window says "Copied to the clipboard" under the output. Esc closes the window.
 
 - **wrap** puts `$ … $` or `\[ … \]` around a single formula. Sentences already have their own.
-- **mode** is `human` (default) or `exact`. Human cleans the output up so it reads like LaTeX you'd type. Exact is the model's text as it came out. Switching doesn't re-read the picture, see [what texcopy writes](docs/OUTPUT.md#human-mode-and-exact-mode).
+- **mode** is `human` (default), which cleans the output up, or `exact`, the model's text as it came out. Switching doesn't re-read the picture. See [what texcopy writes](docs/OUTPUT.md#human-mode-and-exact-mode).
 - **engine** is `auto` (default), `small` (formula model only) or `vlm` (vision model only). Changing it re-reads the same picture.
 - You'll see small grey notes under the text only when something deserves a second look, like a symbol the model wasn't sure about.
 
