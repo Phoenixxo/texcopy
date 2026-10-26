@@ -86,7 +86,6 @@ enum Job {
 struct Done {
     latex: String,
     kind: tidy::Kind,
-    /// the model's own text, shown in exact mode.
     raw: String,
     raw_kind: tidy::Kind,
     engine: &'static str,
@@ -95,7 +94,6 @@ struct Done {
 }
 
 impl Done {
-    /// the text and what it is, for a mode.
     fn view(&self, mode: Mode) -> (&str, tidy::Kind) {
         match mode {
             Mode::Human => (&self.latex, self.kind),
@@ -291,10 +289,9 @@ struct SetupItem {
     size: u64,
 }
 
-/// how long the "copied" note stays up.
 const COPIED_FOR: Duration = Duration::from_millis(2500);
 
-/// what went to the clipboard last, so the same text isn't copied twice and the window can say it copied.
+/// the last copy, so the same text isn't copied twice and the note knows when to show.
 #[derive(Default)]
 struct CopyState {
     last: String,
@@ -316,7 +313,6 @@ impl CopyState {
         self.last.clear();
     }
 
-    /// time left on the "copied" note, if it is up.
     fn showing(&self, now: Instant) -> Option<Duration> {
         let age = now.checked_duration_since(self.confirmed_at?)?;
         COPIED_FOR.checked_sub(age)

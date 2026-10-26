@@ -101,8 +101,7 @@ fn tidy_math(s: String) -> String {
     trim_spacing(&s)
 }
 
-/// `\;` and `\:` between plain symbols are spacing nobody types by hand. Next to a command or a
-/// group they can be doing real work, so those stay.
+/// `\;` and `\:` between plain symbols, next to a command or a group they can matter so they stay.
 fn drop_wide_spaces(s: &str) -> String {
     let plain = |c: char| c.is_ascii_alphanumeric() || "+-=<>()[]|,.".contains(c);
     let chars: Vec<char> = s.chars().collect();
@@ -132,22 +131,22 @@ fn drop_wide_spaces(s: &str) -> String {
     out
 }
 
-/// does the text end in a command name like `\alpha`, so a letter after it would join the name.
+/// does the text end in a command name like `\alpha`.
 fn ends_with_control_word(s: &str) -> bool {
     let head = s.trim_end_matches(|c: char| c.is_ascii_alphabetic());
     head.len() < s.len() && head.chars().rev().take_while(|&c| c == '\\').count() % 2 == 1
 }
 
-/// spacing macros that can end up at either end, the model reads an equation number as a run of them.
+/// the model reads an equation number as a run of these.
 const SPACING: &[&str] = &["\\qquad", "\\quad", "\\,", "\\;", "\\:", "\\!", "\\ "];
 
-/// drop spacing macros at the very start and end of a formula, they don't separate anything.
+/// drop spacing macros at the start and end of a formula.
 fn trim_spacing(s: &str) -> String {
     let mut s = s.trim();
     loop {
         let before = s;
         for m in SPACING {
-            // a `\` row break followed by a space or a comma is not spacing.
+            // skip the tail of a `\\` row break.
             if let Some(head) = s.strip_suffix(m)
                 && !head.ends_with('\\')
             {
@@ -376,7 +375,6 @@ fn unbrace_scripts(s: &str) -> String {
     out
 }
 
-/// how an environment lays out its cells.
 #[derive(Clone, Copy, PartialEq)]
 enum Cells {
     /// matrices and cases, cells are joined with ` & `.
@@ -568,8 +566,7 @@ fn unwrap_cells(body: &str, style: Cells) -> String {
         .join(" \\\\ ")
 }
 
-/// one cell without the group the model put around it, and in aligned text without the `{}` that
-/// stands in for the empty left side of `&=`.
+/// one cell without its outer group, and in aligned text without the `{}` left of `&=`.
 fn unwrap_cell(cell: &str, style: Cells) -> String {
     let cell = cell.trim();
     let mut cell = match matching_brace(cell, 0) {
@@ -597,7 +594,6 @@ fn unwrap_matrix_cells(s: &str) -> String {
                 Some(len) => {
                     out.push_str(&rest[..body_start]);
                     let body = &rest[body_start..body_start + len];
-                    // an array's first group is its column spec.
                     let (spec, cells) = match matching_brace(body, 0) {
                         Some(end) if *style == Cells::Array && body.starts_with('{') => {
                             body.split_at(end + 1)

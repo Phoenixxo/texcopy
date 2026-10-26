@@ -53,7 +53,6 @@ const PROMPT: &str = "Extract all readable content from the image in natural hum
 const MAX_SIDE: u32 = 2000;
 const MAX_TOKENS: u32 = 2048;
 
-/// the file names the vision model is saved under.
 pub(crate) fn model_file_names() -> Vec<&'static str> {
     MODEL_FILES.iter().map(|f| f.local).collect()
 }

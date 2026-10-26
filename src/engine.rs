@@ -32,7 +32,6 @@ pub enum Wrap {
     Display,
 }
 
-/// what the output looks like.
 #[derive(Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Mode {
@@ -98,7 +97,6 @@ pub struct Outcome {
 }
 
 impl Outcome {
-    /// the text and what it is, for a mode.
     pub fn view(&self, mode: Mode) -> (&str, tidy::Kind) {
         match mode {
             Mode::Human => (&self.latex, self.kind),

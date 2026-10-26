@@ -110,8 +110,8 @@ struct Cli {
     #[arg(long, env = "TEXCOPY_MODEL_DIR")]
     model_dir: Option<PathBuf>,
 
-    /// How the output reads. human: cleaned up to look hand-written (the default). exact: the
-    /// model's text character for character
+    /// Output style. human (default): cleaned up to read like hand-written LaTeX. exact: the
+    /// model's text as it came out
     #[arg(long, value_enum, env = "TEXCOPY_MODE")]
     mode: Option<Mode>,
 

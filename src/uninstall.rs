@@ -9,7 +9,6 @@ use anyhow::{Result, bail};
 
 use crate::{fetch, spec::ModelSpec, ui, vlm};
 
-/// one thing that would be removed.
 pub struct Item {
     pub path: PathBuf,
     pub what: &'static str,
@@ -48,7 +47,6 @@ fn add_with_partial(items: &mut Vec<Item>, dir: &Path, name: &str, what: &'stati
     add(items, dir.join(format!("{name}.part")), what);
 }
 
-/// the llama.cpp release folders (`b11146`), their archives and leftovers from a stopped install.
 fn add_helper_downloads(items: &mut Vec<Item>, dir: &Path) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
@@ -140,7 +138,7 @@ pub fn run(dry_run: bool, assume_yes: bool) -> Result<()> {
     eprintln!("  {:>9}  in total", ui::human_bytes(total));
     eprintln!();
     eprintln!(
-        "The program itself, a ./models folder and anything given with --model-dir or --vlm-dir stay where they are."
+        "Kept: the program, a ./models folder, and anything given with --model-dir or --vlm-dir."
     );
 
     if dry_run {
