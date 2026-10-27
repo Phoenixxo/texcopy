@@ -4,6 +4,8 @@ Everything notable gets listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-27
+
 ### Added
 - The window says "Copied to the clipboard" after it copies.
 - `texcopy --uninstall` removes the models, the helper and the settings texcopy downloaded. `--dry-run` only lists them. On Linux, `install.sh --remove --purge` does it too.

@@ -1,6 +1,6 @@
 [package]
 name = "texcopy"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Select LaTeX-rendered math on screen and get its LaTeX source on your clipboard"
 license = "MIT"
